@@ -1,6 +1,6 @@
 # Reels Studio Roadmap
 
-## v0.1.0 — Editor walking skeleton *(planned)*
+## v0.1.0 — Editor walking skeleton ✓ shipped
 
 End-to-end editor with the kadr v0.9 + kadr-ui v0.6 + kadr-captions v0.4 + kadr-photos v0.4 surface. Loads sample clips, lets the user pick from Photos, drop overlays, attach music, edit on the timeline, and export.
 
@@ -33,4 +33,4 @@ Polish, App Store listing copy + screenshots, App Store submission alongside kad
 
 | Reels Studio | kadr | kadr-ui | kadr-captions | kadr-photos |
 |---|---|---|---|---|
-| 0.1.0 *(planned)* | ≥ 0.9.2 | ≥ 0.6.0 | ≥ 0.4.0 | ≥ 0.4.0 |
+| 0.1.0 | ≥ 0.9.2 | ≥ 0.6.0 | ≥ 0.4.0 | ≥ 0.4.0 |
