@@ -8,6 +8,12 @@ import KadrUI
 struct TimelineArea: View {
 
     @ObservedObject var store: ProjectStore
+    /// Tap callbacks for each toolbar button — owned by the parent so it can
+    /// present sheets with shared state.
+    var onAddClip: () -> Void = {}
+    var onAddOverlay: () -> Void = {}
+    var onAddMusic: () -> Void = {}
+    var onExport: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 8) {
@@ -21,19 +27,11 @@ struct TimelineArea: View {
     @ViewBuilder
     private var toolbar: some View {
         HStack(spacing: 12) {
-            ToolbarButton(systemImage: "plus.rectangle", label: "Clip") {
-                // Tier 2 — PhotoPicker sheet. Stub for now.
-            }
-            ToolbarButton(systemImage: "textformat", label: "Overlay") {
-                // Tier 3 — Add Overlay sheet.
-            }
-            ToolbarButton(systemImage: "music.note", label: "Music") {
-                // Tier 3 — Add Music sheet.
-            }
+            ToolbarButton(systemImage: "plus.rectangle", label: "Clip", action: onAddClip)
+            ToolbarButton(systemImage: "textformat", label: "Overlay", action: onAddOverlay)
+            ToolbarButton(systemImage: "music.note", label: "Music", action: onAddMusic)
             Spacer()
-            ToolbarButton(systemImage: "square.and.arrow.up", label: "Export") {
-                // Tier 6 — Export sheet.
-            }
+            ToolbarButton(systemImage: "square.and.arrow.up", label: "Export", action: onExport)
         }
         .padding(.horizontal)
     }

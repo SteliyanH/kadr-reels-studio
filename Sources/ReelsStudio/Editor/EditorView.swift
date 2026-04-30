@@ -9,17 +9,22 @@ import SwiftUI
 struct EditorView: View {
 
     @StateObject private var store = ProjectStore.sample()
+    @State private var showPhotoPicker = false
 
     var body: some View {
         VStack(spacing: 16) {
             PreviewArea(store: store)
                 .padding(.horizontal)
             Spacer(minLength: 8)
-            TimelineArea(store: store)
+            TimelineArea(
+                store: store,
+                onAddClip: { showPhotoPicker = true }
+            )
             Spacer(minLength: 16)
         }
         .padding(.top)
         .background(Color(.systemGray6).ignoresSafeArea())
+        .addClipFlow(isPresented: $showPhotoPicker, store: store)
     }
 }
 
