@@ -10,7 +10,20 @@ A real consumer codebase using every kadr + kadr-ui + kadr-captions + kadr-photo
 
 ## Status
 
-Early scaffolding — see [ROADMAP.md](ROADMAP.md) for the full plan and [DESIGN.md](DESIGN.md) for the v0.1 RFC. The first usable build lands once Tier 1 (editor screen with timeline + preview + project state) merges.
+**v0.1.0 shipped — end-to-end editor walking skeleton.** Every toolbar button maps to a real flow against kadr v0.9.2 + kadr-ui v0.6 + kadr-captions v0.4 + kadr-photos v0.4.
+
+| Toolbar | Flow |
+|---|---|
+| `+ Clip` | kadr-photos `PhotoPicker` → `PhotosClipResolver.clips(from:)` → project clips |
+| `+ Overlay` | text overlay editor (TextField + size + weight + ColorPicker + live preview) |
+| `+ Music` | audio file importer + volume slider + auto-duck toggle |
+| `+ SFX` | audio file importer + pin-time slider + volume |
+| `Captions` | caption file importer (`.srt` / `.vtt` / `.itt` / `.ass` / `.ssa`) → `Caption.load(_:)` auto-detect |
+| `Export` | preset picker (Reels/Shorts, TikTok, Square, Cinema) + live progress + share sheet |
+
+Tap a clip on the timeline → inspector + keyframe tracks slide in (transform / opacity / filter intensity sliders edit the project; keyframe writes are read-only in v0.1).
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release entry, [ROADMAP.md](ROADMAP.md) for what's next, and [DESIGN.md](DESIGN.md) for the v0.1 RFC.
 
 ## Why this exists
 
