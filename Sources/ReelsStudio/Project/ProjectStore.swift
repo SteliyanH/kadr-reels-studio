@@ -67,4 +67,77 @@ final class ProjectStore: ObservableObject {
     func replaceClips(_ newClips: [any Clip]) {
         project.clips = newClips
     }
+
+    /// Find the chain clip with the given `ClipID` and replace it with the result of
+    /// `transform`. No-op if the ID isn't found. Used by the inspector to apply
+    /// `Transform` / opacity / filter-intensity edits without rebuilding the
+    /// entire clip array.
+    func updateClip(id: ClipID, _ transform: (any Clip) -> any Clip) {
+        project.clips = project.clips.map { clip in
+            clip.clipID == id ? transform(clip) : clip
+        }
+    }
+
+    /// Apply a Transform to the selected clip (across `VideoClip` / `ImageClip` /
+    /// `TitleSequence`).
+    func applyTransform(id: ClipID, _ t: Transform) {
+        updateClip(id: id) { clip in
+            if let v = clip as? VideoClip { return v.transform(t) }
+            if let i = clip as? ImageClip { return i.transform(t) }
+            if let title = clip as? TitleSequence { return title.transform(t) }
+            return clip
+        }
+    }
+
+    /// Apply opacity (0...1) to the selected clip.
+    func applyOpacity(id: ClipID, _ opacity: Double) {
+        updateClip(id: id) { clip in
+            if let v = clip as? VideoClip { return v.opacity(opacity) }
+            if let i = clip as? ImageClip { return i.opacity(opacity) }
+            if let title = clip as? TitleSequence { return title.opacity(opacity) }
+            return clip
+        }
+    }
+
+    /// Replace the scalar of `VideoClip.filters[index]` and rebuild the clip with
+    /// the new filter list. No-op when the clip isn't a `VideoClip` or the index is
+    /// out of range. Mirrors kadr's internal `Filter.withScalar(_:)` (which isn't
+    /// publicly accessible as of kadr 0.9.2; revisit if it becomes public).
+    func applyFilterIntensity(id: ClipID, filterIndex: Int, value: Double) {
+        updateClip(id: id) { clip in
+            guard let video = clip as? VideoClip else { return clip }
+            guard filterIndex >= 0, filterIndex < video.filters.count else { return clip }
+            var rebuilt = VideoClip(url: video.url)
+            if let trim = video.trimRange { rebuilt = rebuilt.trimmed(to: trim) }
+            for (i, filter) in video.filters.enumerated() {
+                let updated = (i == filterIndex)
+                    ? Self.filter(filter, withScalar: value)
+                    : filter
+                rebuilt = rebuilt.filter(updated)
+            }
+            if let id = video.clipID { rebuilt = rebuilt.id(id) }
+            if let t = video.transform { rebuilt = rebuilt.transform(t) }
+            if let o = video.opacity { rebuilt = rebuilt.opacity(o) }
+            return rebuilt
+        }
+    }
+
+    /// Build a new `Filter` case substituting `scalar` for the primary numeric
+    /// parameter. Mirrors kadr's internal `Filter.withScalar(_:)`. Filters without a
+    /// scalar parameter return unchanged.
+    private static func filter(_ filter: Filter, withScalar scalar: Double) -> Filter {
+        switch filter {
+        case .brightness:   return .brightness(scalar)
+        case .contrast:     return .contrast(scalar)
+        case .saturation:   return .saturation(scalar)
+        case .exposure:     return .exposure(scalar)
+        case .sepia:        return .sepia(intensity: scalar)
+        case .gaussianBlur: return .gaussianBlur(radius: scalar)
+        case .vignette:     return .vignette(intensity: scalar)
+        case .sharpen:      return .sharpen(amount: scalar)
+        case .zoomBlur:     return .zoomBlur(amount: scalar)
+        case .glow:         return .glow(intensity: scalar)
+        case .mono, .lut, .chromaKey: return filter
+        }
+    }
 }
