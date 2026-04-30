@@ -26,6 +26,11 @@ struct EditorView: View {
                 onAddMusic: { showMusicSheet = true },
                 onAddSFX: { showSFXSheet = true }
             )
+            if store.selectedClipID != nil {
+                KeyframeArea(store: store)
+                InspectorArea(store: store)
+                    .padding(.horizontal)
+            }
             Spacer(minLength: 16)
         }
         .padding(.top)
