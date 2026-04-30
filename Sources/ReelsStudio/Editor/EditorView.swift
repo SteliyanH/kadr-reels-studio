@@ -13,6 +13,7 @@ struct EditorView: View {
     @State private var showOverlaySheet = false
     @State private var showMusicSheet = false
     @State private var showSFXSheet = false
+    @State private var showCaptionsSheet = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -24,7 +25,8 @@ struct EditorView: View {
                 onAddClip: { showPhotoPicker = true },
                 onAddOverlay: { showOverlaySheet = true },
                 onAddMusic: { showMusicSheet = true },
-                onAddSFX: { showSFXSheet = true }
+                onAddSFX: { showSFXSheet = true },
+                onAddCaptions: { showCaptionsSheet = true }
             )
             if store.selectedClipID != nil {
                 KeyframeArea(store: store)
@@ -44,6 +46,9 @@ struct EditorView: View {
         }
         .sheet(isPresented: $showSFXSheet) {
             AddSFXSheet(store: store)
+        }
+        .sheet(isPresented: $showCaptionsSheet) {
+            AddCaptionsSheet(store: store)
         }
     }
 }
