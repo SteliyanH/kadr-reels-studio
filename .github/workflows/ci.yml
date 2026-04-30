@@ -15,30 +15,42 @@ jobs:
         run: brew install xcodegen
       - name: Generate Xcode project
         run: xcodegen generate
-      - name: Pick an available iPhone simulator
+      - name: Pick an iPhone simulator UDID
         id: simulator
         run: |
-          # Robust to runner-image changes: macos-15 currently ships iPhone 16;
-          # macos-14 was iPhone 15. List available iOS simulators and pick the
-          # last iPhone alphabetically (newest model name).
-          DEVICE=$(xcrun simctl list devices available -j \
-            | python3 -c "import json,sys; data=json.load(sys.stdin); \
-              devs=[d for runtime,ds in data['devices'].items() for d in ds \
-                if runtime.startswith('com.apple.CoreSimulator.SimRuntime.iOS') \
-                and 'iPhone' in d['name']]; \
-              devs.sort(key=lambda d: d['name']); \
-              print(devs[-1]['name'] if devs else '')")
-          if [ -z "$DEVICE" ]; then
+          # List available iPhone simulators across all iOS runtimes; pick the one
+          # with the highest runtime version. Using a UDID destination avoids the
+          # `OS=latest` mismatch that bites when an older device (e.g. iPhone SE)
+          # has no current-OS runtime.
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys, re
+          data = json.load(sys.stdin)
+          candidates = []
+          for runtime, devices in data['devices'].items():
+              if 'iOS' not in runtime:
+                  continue
+              m = re.search(r'iOS-(\d+(?:-\d+)*)', runtime)
+              if not m:
+                  continue
+              version = tuple(int(p) for p in m.group(1).split('-'))
+              for d in devices:
+                  if 'iPhone' in d['name']:
+                      candidates.append((version, d['name'], d['udid']))
+          candidates.sort()
+          if candidates:
+              print(candidates[-1][2])
+          ")
+          if [ -z "$UDID" ]; then
             echo "::error::No iPhone simulator available on this runner"
             xcrun simctl list devices available
             exit 1
           fi
-          echo "Using simulator: $DEVICE"
-          echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
+          echo "Using simulator UDID: $UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
       - name: Build + test
         run: |
           xcodebuild test \
             -project ReelsStudio.xcodeproj \
             -scheme ReelsStudio \
-            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.device }},OS=latest" \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             CODE_SIGNING_ALLOWED=NO
