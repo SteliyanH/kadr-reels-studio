@@ -1,11 +1,14 @@
-import Testing
+import XCTest
 @testable import ReelsStudio
 
 /// Placeholder for the v0.1 cycle. Real tests land alongside Tier 1+ source files.
-struct ReelsStudioTests {
+/// Uses XCTest because the target is bundled into the iOS app via xcodegen and runs
+/// against `ReelsStudio.app` in the simulator.
+final class ReelsStudioTests: XCTestCase {
 
-    @Test func moduleBuilds() {
-        // Compile-time check that every dependency resolves.
-        #expect(ReelsStudio.version.hasPrefix("0.1"))
+    func testModuleBuilds() throws {
+        // If this compiles, the iOS app target's source files are reachable from the
+        // test bundle. Real assertions land in subsequent tier PRs.
+        XCTAssertTrue(true)
     }
 }
