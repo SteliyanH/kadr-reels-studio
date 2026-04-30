@@ -15,10 +15,30 @@ jobs:
         run: brew install xcodegen
       - name: Generate Xcode project
         run: xcodegen generate
+      - name: Pick an available iPhone simulator
+        id: simulator
+        run: |
+          # Robust to runner-image changes: macos-15 currently ships iPhone 16;
+          # macos-14 was iPhone 15. List available iOS simulators and pick the
+          # last iPhone alphabetically (newest model name).
+          DEVICE=$(xcrun simctl list devices available -j \
+            | python3 -c "import json,sys; data=json.load(sys.stdin); \
+              devs=[d for runtime,ds in data['devices'].items() for d in ds \
+                if runtime.startswith('com.apple.CoreSimulator.SimRuntime.iOS') \
+                and 'iPhone' in d['name']]; \
+              devs.sort(key=lambda d: d['name']); \
+              print(devs[-1]['name'] if devs else '')")
+          if [ -z "$DEVICE" ]; then
+            echo "::error::No iPhone simulator available on this runner"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator: $DEVICE"
+          echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
       - name: Build + test
         run: |
           xcodebuild test \
             -project ReelsStudio.xcodeproj \
             -scheme ReelsStudio \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.device }},OS=latest" \
             CODE_SIGNING_ALLOWED=NO
