@@ -14,6 +14,7 @@ struct TimelineArea: View {
     var onAddOverlay: () -> Void = {}
     var onAddMusic: () -> Void = {}
     var onAddSFX: () -> Void = {}
+    var onAddCaptions: () -> Void = {}
     var onExport: () -> Void = {}
 
     var body: some View {
@@ -32,6 +33,7 @@ struct TimelineArea: View {
             ToolbarButton(systemImage: "textformat", label: "Overlay", action: onAddOverlay)
             ToolbarButton(systemImage: "music.note", label: "Music", action: onAddMusic)
             ToolbarButton(systemImage: "speaker.wave.2", label: "SFX", action: onAddSFX)
+            ToolbarButton(systemImage: "captions.bubble", label: "Captions", action: onAddCaptions)
             Spacer()
             ToolbarButton(systemImage: "square.and.arrow.up", label: "Export", action: onExport)
         }
