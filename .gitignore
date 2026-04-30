@@ -2,12 +2,19 @@
 .build/
 .swiftpm/
 Package.resolved
-*.xcodeproj/xcuserdata/
-*.xcworkspace/xcuserdata/
 DerivedData/
 xcuserdata/
 *.xcscmblueprint
 *.xccheckout
+
+# Xcode project — generated from project.yml via xcodegen.
+# Run `make project` (or `xcodegen generate`) to regenerate locally.
+*.xcodeproj
+*.xcworkspace
+
+# Info.plist is regenerated from project.yml's `info.properties` on each
+# `xcodegen generate`. Source of truth lives in project.yml.
+Sources/ReelsStudio/Info.plist
 
 # macOS
 .DS_Store
