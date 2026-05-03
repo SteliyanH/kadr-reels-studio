@@ -88,3 +88,192 @@ Reels Studio v0.1.0 requires:
 - **`@Observable` vs `ObservableObject`.** `@Observable` is iOS 17+; we target iOS 16+. For v0.1 we'll use `ObservableObject` to keep the deployment floor; a v0.2 patch can switch when iOS 17+ is acceptable.
 - **App Store name.** "Reels Studio" likely conflicts with Meta trademarks. Working title only — final name decided alongside v1.0 submission.
 - **State store choice.** Plain `ObservableObject` for v0.1. If state grows complicated, a v0.2+ swap to TCA / a real architecture is fine.
+
+---
+
+## v0.2 — Production polish (Foundation)
+
+**Status:** RFC. No code yet.
+
+### Motivation
+
+v0.1 ships a walking-skeleton editor against the kadr v0.9.2 + kadr-ui v0.6 surface. Every toolbar button maps to a real flow, but the app feels like a prototype because it lacks four production-table-stakes layers:
+
+1. **Persistence.** The current build launches into a hardcoded sample project; there is no way to save / load / list user work. Closing the app loses everything. (`Project.swift:8` notes "v0.1.0 keeps everything in memory — no persistence. v0.2 adds Codable + JSON.")
+2. **Error surfacing.** Four `print()` sites silently swallow real failures: photo resolution failure (`AddClipFlow.swift:60`), and the three keyframe editor stubs (`KeyframeArea.swift:29, 32, 35`). Users see no feedback when something goes wrong.
+3. **Undo / redo.** Every mutation is destructive; deleting a clip or moving a marker is permanent. Real editor apps treat undo as table stakes — top toolbar, always visible.
+4. **First-run UX.** Launch jumps straight into a sample editor. There is no project list, no empty state, no way for the user to start from a blank canvas.
+
+The v0.2 cycle closes these four gaps. The downstream cycles (v0.3 wire-up, v0.4→v1.0 polish) can't build a production-feeling app without them.
+
+### Public surface
+
+```swift
+// MARK: - Persistence
+
+public struct Project: Codable, Identifiable, Sendable, Equatable {
+    public var id: UUID
+    public var name: String
+    public var createdAt: Date
+    public var modifiedAt: Date
+    public var clips: [ProjectClip]    // sumtype mirroring `any Clip` for codable round-trip
+    public var overlays: [ProjectOverlay]
+    public var audioTracks: [ProjectAudioTrack]
+    public var captions: [Caption]
+    public var compositionDuration: CMTime
+}
+
+@MainActor
+public final class ProjectStore: ObservableObject {
+    @Published public private(set) var project: Project
+    public let undoManager: UndoManager
+
+    /// Apply a mutation through the undo stack. Pure store-side — the View calls
+    /// these for every edit so undo / redo and auto-save happen transparently.
+    public func apply(_ mutation: ProjectMutation)
+    public func undo()
+    public func redo()
+}
+
+public enum ProjectMutation: Sendable {
+    case addClip(ProjectClip)
+    case removeClip(id: UUID)
+    case reorderClips(from: Int, to: Int)
+    case trimClip(id: UUID, leadingTrim: CMTime, trailingTrim: CMTime)
+    case setClipTransform(id: UUID, transform: Transform)
+    case setClipOpacity(id: UUID, opacity: Double)
+    case setClipFilterIntensity(id: UUID, filterIndex: Int, intensity: Double)
+    case addOverlay(ProjectOverlay)
+    case removeOverlay(id: UUID)
+    case addAudioTrack(ProjectAudioTrack)
+    case removeAudioTrack(id: UUID)
+    case setCaptions([Caption])
+    case rename(String)
+    // v0.3 adds: addKeyframe / removeKeyframe / retimeKeyframe / setSpeedCurve
+}
+
+// MARK: - Project library
+
+@MainActor
+public final class ProjectLibrary: ObservableObject {
+    @Published public private(set) var projects: [Project]
+
+    public func newProject(name: String) -> Project
+    public func load(id: UUID) throws -> Project
+    public func save(_ project: Project) throws
+    public func delete(id: UUID) throws
+    public func duplicate(id: UUID) throws -> Project
+}
+
+// MARK: - Error surfacing
+
+public enum AppError: LocalizedError, Sendable {
+    /// Recoverable: photo resolution failed, file format unsupported, trim out
+    /// of bounds. Surfaced as a top-anchored toast; auto-dismiss 2s.
+    case transient(message: String, underlying: String? = nil)
+
+    /// Resumable: export failed, save failed. Surfaced as inline sheet with
+    /// Retry / Cancel.
+    case resumable(message: String, retry: @Sendable () async -> Void)
+
+    /// Catastrophic: project corrupt, can't reach Photos library. Surfaced as
+    /// full alert with Recover / Quit.
+    case catastrophic(message: String)
+}
+
+@MainActor
+public final class ToastCenter: ObservableObject {
+    @Published public private(set) var current: Toast?
+    public func show(_ toast: Toast)
+}
+
+public struct ToastView: View { /* top-anchored, accent-bordered, auto-dismiss */ }
+
+// MARK: - First-run flow
+
+@available(iOS 16, *)
+public struct ProjectListView: View {
+    /// New launch screen. Lists existing projects, surfaces "+ New Project"
+    /// CTA, taps a row → `EditorView` for that project. Auto-saves continuously
+    /// in `EditorView`; no Save button anywhere.
+    public init(library: ProjectLibrary)
+}
+```
+
+### File layout (additions)
+
+- `Sources/ReelsStudio/Persistence/Project+Codable.swift` — sumtype mirrors for `any Clip` / `any Overlay` (kadr's existential types aren't directly Codable; serialize by case)
+- `Sources/ReelsStudio/Persistence/ProjectLibrary.swift` — JSON file IO under `~/Library/Application Support/ReelsStudio/Projects/<uuid>.json`
+- `Sources/ReelsStudio/Persistence/ProjectMutation.swift` — mutation enum + apply implementation
+- `Sources/ReelsStudio/State/ProjectStore.swift` — extended with undo / redo
+- `Sources/ReelsStudio/Errors/AppError.swift` + `Errors/ToastCenter.swift` + `Errors/ToastView.swift`
+- `Sources/ReelsStudio/Screens/ProjectListView.swift` — new launch root
+- `Sources/ReelsStudio/ReelsStudioApp.swift` — root swap from `EditorView` → `NavigationStack { ProjectListView }`
+
+### Tier breakdown
+
+- **Tier 0** *(this PR)* — RFC only. No code.
+- **Tier 1** — Codable `Project` + `ProjectLibrary` + JSON IO + sumtype mirrors for `any Clip` / `any Overlay`. ~400 LOC + 25 tests. Migrating the existing in-memory store to read / write through the library happens here.
+- **Tier 2** — Project list launch screen + auto-save in `EditorView` + new-project flow. ~250 LOC + 10 tests.
+- **Tier 3** — Error toast / alert infra + replace the four `print()` sites + integrate into existing flows (export, photo picker, file imports). ~200 LOC + 8 tests.
+- **Tier 4** — Undo / redo via `UndoManager` + `ProjectMutation` apply path + top-toolbar arrows. ~300 LOC + 15 tests.
+- **Tier 5** — Release prep + ship as **v0.2.0**.
+
+### Test strategy
+
+- **Codable round-trip** — every `ProjectMutation` case → encode → decode → verify equality. Stress test with sample projects covering clips / overlays / audio / captions.
+- **Library IO** — save, load, list, delete, duplicate. Disk fixtures under a temp directory; cleanup in tearDown.
+- **ProjectMutation apply** — pure-function tests for every case; property-based test that `apply(m).undo() == identity` for every mutation kind.
+- **Toast / error surfacing** — view-state assertions (current toast non-nil after show, auto-dismiss timer). UI-level testing manual.
+- **Project list** — body smoke + new-project / delete-project flows.
+
+Target test count: ~60 new tests across the cycle. Suite floor ~30 → ~90.
+
+### Compatibility
+
+- **Source-breaking at the consumer (the app).** v0.1's hardcoded `EditorView(store:)` becomes `ProjectListView(library:)`. The store internals reshape too — `apply(_:)` replaces direct property writes.
+- **No upstream library changes.** Stays on kadr ≥ 0.9.2 / kadr-ui ≥ 0.6.0. v0.3 will bump kadr-ui to 0.8.x for the new editor surfaces.
+- **Storage format versioned.** `Project.schemaVersion: Int` field carried in JSON; migration path stays open for v0.3 / future cycles.
+
+### Open questions (track in PRs, not blocking RFC)
+
+- **iCloud sync.** Defer. App Support directory is local-only in v0.2; iCloud Documents container is a v1.x add if community demand surfaces.
+- **Export queue.** Currently single export at a time, modal. v0.2 keeps that; queueing is post-v1.0.
+- **Project versioning UI.** No "history" view of project versions in v0.2. Standard undo/redo only — checkpointed history is desktop-think.
+- **Sumtype mirrors vs. type-erased Codable.** Going with sumtypes for explicit migration safety. Type-erased polymorphic Codable is tempting but fragile across kadr version bumps.
+
+---
+
+## v0.3 — Production polish (Wire-up)
+
+**Status:** Sketch. Detailed RFC after v0.2 ships.
+
+Closes the "kadr-ui v0.7 / v0.8 surfaces unused" gap.
+
+- Wire `KeyframeEditor` callbacks to real `Animation<T>` mutations (`ProjectMutation.addKeyframe` / `removeKeyframe` / `retimeKeyframe`).
+- Surface `SpeedCurveEditor` behind a per-clip "Speed curve…" inspector row.
+- Replace `AddCaptionsSheet` (ingest-only) with `CaptionEditor` driving editable cues.
+- Route overlay selection → `OverlayInspectorPanel` + `OverlayKeyframeEditor`. Add overlay-selection binding to `OverlayHost`.
+- Bind `TimelineZoom` to a project-state field; persist zoom level per project.
+- Multi-track UI: `Track {}` blocks visible, with `onTrackReorder` / `onTrackTrim` wired through `ProjectMutation`.
+- Sticker / image overlay support in `AddOverlaySheet` (closes the v0.1.x deferral).
+
+Bumps kadr-ui floor to **≥ 0.8.0**.
+
+---
+
+## v0.4 → v1.0 — Production polish (UX layer)
+
+**Status:** Sketch.
+
+- **Two-tier bottom toolbar** with selection-driven swap (root verbs ↔ clip-specific actions, animated crossfade).
+- **Fixed-center playhead** during scrub — timeline scrolls under it.
+- **Snap haptics** on pinch-zoom (frame / second / 5s / 30s) + drag-snap-to-adjacent-clip.
+- **Single accent-color thread** linking selected clip → active inspector tab.
+- **Empty / disabled states** — greyed not hidden; tap-and-hold tooltips.
+- **Real designed app icon** family (replaces placeholder).
+- **Accessibility wiring** — `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` on every interactive element.
+- **Spring animation curves** on drawer detents; medium thud on delete; success haptic pattern on export.
+- **Optimistic UI** on trim handles (already partially done by kadr-ui's `liveTrimMetrics`).
+
+v1.0.0 = App Store submission. Final name decided here ("Reels Studio" likely conflicts with Meta — tentative; revisit before submission).
