@@ -78,6 +78,24 @@ struct EditorView: View {
         }
         .navigationTitle(document.name)
         .navigationBarTitleDisplayModeInline()
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    store.undo()
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .accessibilityLabel("Undo")
+                }
+                .disabled(!store.canUndo)
+                Button {
+                    store.redo()
+                } label: {
+                    Image(systemName: "arrow.uturn.forward")
+                        .accessibilityLabel("Redo")
+                }
+                .disabled(!store.canRedo)
+            }
+        }
         .onReceive(
             store.$project
                 .dropFirst()

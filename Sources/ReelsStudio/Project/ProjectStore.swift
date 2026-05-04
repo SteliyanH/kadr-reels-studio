@@ -23,8 +23,28 @@ final class ProjectStore: ObservableObject {
     /// Composition-time playhead. Driven by `TimelineView`'s tap-to-scrub.
     @Published var currentTime: CMTime = .zero
 
+    /// History stack for ``undo()`` / ``redo()``. Snapshots the previous
+    /// `Project` value before every mutation. Selection / playhead aren't
+    /// part of the undo timeline — they're UX state, not document state.
+    let undoManager = UndoManager()
+
+    /// SwiftUI-observable mirror of ``undoManager.canUndo``. Drives the
+    /// disabled state of the toolbar arrows.
+    @Published private(set) var canUndo = false
+
+    /// SwiftUI-observable mirror of ``undoManager.canRedo``.
+    @Published private(set) var canRedo = false
+
     init(project: Project) {
         self.project = project
+        // Disable auto-grouping so each mutation becomes its own undo step.
+        // Without this, every mutation in the same runloop tick coalesces
+        // into one big undo (e.g. three sequential `append(clip:)` calls
+        // would undo together) — wrong UX for an editor where users
+        // expect per-action granularity. Future tier could re-introduce
+        // coalescing for *rapid* slider edits via a debounced
+        // beginUndoGrouping/endUndoGrouping pair.
+        undoManager.groupsByEvent = false
     }
 
     /// Convenience: build a fresh store with the bundled sample clips. Used
@@ -39,52 +59,111 @@ final class ProjectStore: ObservableObject {
         project.makeVideo()
     }
 
+    // MARK: - History (snapshot-based undo / redo)
+
+    /// Apply `mutation` to the project after capturing the previous value
+    /// for undo. Every public mutation routes through here so the history
+    /// stack stays complete. `actionName` shows up in the system "Undo X"
+    /// menu on iPad / Mac (no-op on iPhone where the menu doesn't render).
+    private func applyMutation(_ actionName: String, _ mutation: (inout Project) -> Void) {
+        let previous = project
+        var next = project
+        mutation(&next)
+        project = next
+        undoManager.beginUndoGrouping()
+        undoManager.registerUndo(withTarget: self) { store in
+            store.swapProject(to: previous, redoSnapshot: next, actionName: actionName)
+        }
+        undoManager.setActionName(actionName)
+        undoManager.endUndoGrouping()
+        refreshUndoFlags()
+    }
+
+    /// Undo / redo's apply path. Captures the *current* project so redo
+    /// can roll forward. Used by both `undo()` and the registerUndo
+    /// callback above (which itself registers redo).
+    private func swapProject(to target: Project, redoSnapshot: Project, actionName: String) {
+        let beforeSwap = project
+        project = target
+        undoManager.beginUndoGrouping()
+        undoManager.registerUndo(withTarget: self) { store in
+            store.swapProject(to: redoSnapshot, redoSnapshot: beforeSwap, actionName: actionName)
+        }
+        undoManager.setActionName(actionName)
+        undoManager.endUndoGrouping()
+        refreshUndoFlags()
+    }
+
+    /// Sync the SwiftUI-observable flags with the underlying UndoManager.
+    /// Called after every mutation / undo / redo.
+    private func refreshUndoFlags() {
+        canUndo = undoManager.canUndo
+        canRedo = undoManager.canRedo
+    }
+
+    /// Roll back the most recent mutation. No-op if the history stack is
+    /// empty (``undoManager.canUndo`` is false).
+    func undo() {
+        guard undoManager.canUndo else { return }
+        undoManager.undo()
+        refreshUndoFlags()
+    }
+
+    /// Re-apply a mutation that was just undone.
+    func redo() {
+        guard undoManager.canRedo else { return }
+        undoManager.redo()
+        refreshUndoFlags()
+    }
+
     // MARK: - Mutations
 
     func append(clip: any Clip) {
-        project.clips.append(clip)
+        applyMutation("Add Clip") { $0.clips.append(clip) }
     }
 
     func append(clips newClips: [any Clip]) {
-        project.clips.append(contentsOf: newClips)
+        let label = newClips.count == 1 ? "Add Clip" : "Add Clips"
+        applyMutation(label) { $0.clips.append(contentsOf: newClips) }
     }
 
     func append(overlay: any Overlay) {
-        project.overlays.append(overlay)
+        applyMutation("Add Overlay") { $0.overlays.append(overlay) }
     }
 
     func append(audioTrack: AudioTrack) {
-        project.audioTracks.append(audioTrack)
+        applyMutation("Add Audio") { $0.audioTracks.append(audioTrack) }
     }
 
     func append(captions newCaptions: [Caption]) {
-        project.captions.append(contentsOf: newCaptions)
+        applyMutation("Add Captions") { $0.captions.append(contentsOf: newCaptions) }
     }
 
     func setPreset(_ preset: Preset) {
-        project.preset = preset
+        applyMutation("Change Preset") { $0.preset = preset }
     }
 
     /// Swap two top-level chain clips. The timeline's `onReorder` callback hands us
     /// the new array directly — we just replace.
     func replaceClips(_ newClips: [any Clip]) {
-        project.clips = newClips
+        applyMutation("Reorder Clips") { $0.clips = newClips }
     }
 
     /// Find the chain clip with the given `ClipID` and replace it with the result of
     /// `transform`. No-op if the ID isn't found. Used by the inspector to apply
     /// `Transform` / opacity / filter-intensity edits without rebuilding the
     /// entire clip array.
-    func updateClip(id: ClipID, _ transform: (any Clip) -> any Clip) {
-        project.clips = project.clips.map { clip in
+    func updateClip(id: ClipID, actionName: String = "Edit Clip", _ transform: (any Clip) -> any Clip) {
+        let mapped = project.clips.map { clip in
             clip.clipID == id ? transform(clip) : clip
         }
+        applyMutation(actionName) { $0.clips = mapped }
     }
 
     /// Apply a Transform to the selected clip (across `VideoClip` / `ImageClip` /
     /// `TitleSequence`).
     func applyTransform(id: ClipID, _ t: Transform) {
-        updateClip(id: id) { clip in
+        updateClip(id: id, actionName: "Edit Transform") { clip in
             if let v = clip as? VideoClip { return v.transform(t) }
             if let i = clip as? ImageClip { return i.transform(t) }
             if let title = clip as? TitleSequence { return title.transform(t) }
@@ -94,7 +173,7 @@ final class ProjectStore: ObservableObject {
 
     /// Apply opacity (0...1) to the selected clip.
     func applyOpacity(id: ClipID, _ opacity: Double) {
-        updateClip(id: id) { clip in
+        updateClip(id: id, actionName: "Edit Opacity") { clip in
             if let v = clip as? VideoClip { return v.opacity(opacity) }
             if let i = clip as? ImageClip { return i.opacity(opacity) }
             if let title = clip as? TitleSequence { return title.opacity(opacity) }
@@ -107,7 +186,7 @@ final class ProjectStore: ObservableObject {
     /// out of range. Mirrors kadr's internal `Filter.withScalar(_:)` (which isn't
     /// publicly accessible as of kadr 0.9.2; revisit if it becomes public).
     func applyFilterIntensity(id: ClipID, filterIndex: Int, value: Double) {
-        updateClip(id: id) { clip in
+        updateClip(id: id, actionName: "Edit Filter") { clip in
             guard let video = clip as? VideoClip else { return clip }
             guard filterIndex >= 0, filterIndex < video.filters.count else { return clip }
             var rebuilt = VideoClip(url: video.url)
