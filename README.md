@@ -10,20 +10,18 @@ A real consumer codebase using every kadr + kadr-ui + kadr-captions + kadr-photo
 
 ## Status
 
-**v0.1.0 shipped — end-to-end editor walking skeleton.** Every toolbar button maps to a real flow against kadr v0.9.2 + kadr-ui v0.6 + kadr-captions v0.4 + kadr-photos v0.4.
+**v0.2.0 shipped — production-polish foundation.** App now launches into a real project list, every edit auto-saves to disk, errors surface as toasts / alerts, and undo / redo arrows live in the top-right. Built on the v0.1 walking skeleton against kadr v0.9.2 + kadr-ui v0.6 + kadr-captions v0.4 + kadr-photos v0.4.
 
-| Toolbar | Flow |
+| Layer | What's wired |
 |---|---|
-| `+ Clip` | kadr-photos `PhotoPicker` → `PhotosClipResolver.clips(from:)` → project clips |
-| `+ Overlay` | text overlay editor (TextField + size + weight + ColorPicker + live preview) |
-| `+ Music` | audio file importer + volume slider + auto-duck toggle |
-| `+ SFX` | audio file importer + pin-time slider + volume |
-| `Captions` | caption file importer (`.srt` / `.vtt` / `.itt` / `.ass` / `.ssa`) → `Caption.load(_:)` auto-detect |
-| `Export` | preset picker (Reels/Shorts, TikTok, Square, Cinema) + live progress + share sheet |
+| **Launch** | `ProjectListView` → tap a project to open the editor; `+ New Project` / `Sample` empty-state CTAs; swipe-to-delete |
+| **Persistence** | Codable `ProjectDocument` round-trips every kadr clip / overlay / filter; auto-save on a 0.5s debounce; storage under `~/Library/Application Support/ReelsStudio/Projects/` |
+| **Errors** | three-tier `AppError` model — transient toast / resumable sheet / catastrophic alert; single `.toastHost(_:)` modifier installed at app root |
+| **Undo / Redo** | `UndoManager`-backed snapshot history with action names; per-action granularity via `groupsByEvent = false`; top-bar arrow buttons |
+| **Editor body** | `+ Clip` / `+ Overlay` / `+ Music` / `+ SFX` / `Captions` / `Export` (unchanged from v0.1) — every toolbar button maps to a real flow |
+| **Inspector** | tap a clip → transform / opacity / filter-intensity sliders; keyframe tracks (read-only display in v0.2; full authoring lands in v0.3) |
 
-Tap a clip on the timeline → inspector + keyframe tracks slide in (transform / opacity / filter intensity sliders edit the project; keyframe writes are read-only in v0.1).
-
-See [CHANGELOG.md](CHANGELOG.md) for the full release entry, [ROADMAP.md](ROADMAP.md) for what's next, and [DESIGN.md](DESIGN.md) for the v0.1 RFC.
+See [CHANGELOG.md](CHANGELOG.md) for the full release entry, [ROADMAP.md](ROADMAP.md) for what's next (v0.3 wires kadr-ui v0.7 / v0.8's new editor surfaces), and [DESIGN.md](DESIGN.md) for the v0.1 / v0.2 RFCs.
 
 ## Why this exists
 
