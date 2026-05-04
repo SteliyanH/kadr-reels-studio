@@ -12,12 +12,11 @@ struct EditorView: View {
 
     @StateObject private var store: ProjectStore
     @ObservedObject private var library: ProjectLibrary
+    @EnvironmentObject private var toasts: ToastCenter
 
     /// The document this editor is bound to. Mutated in-place as auto-save
     /// runs so `modifiedAt` / clip counts stay current for the project list.
     @State private var document: ProjectDocument
-
-    @State private var saveError: String?
 
     @State private var showPhotoPicker = false
     @State private var showOverlaySheet = false
@@ -89,30 +88,19 @@ struct EditorView: View {
         ) { _ in
             autoSave()
         }
-        .alert(
-            "Couldn't save",
-            isPresented: Binding(
-                get: { saveError != nil },
-                set: { if !$0 { saveError = nil } }
-            ),
-            presenting: saveError
-        ) { _ in
-            Button("OK", role: .cancel) { saveError = nil }
-        } message: { message in
-            Text(message)
-        }
     }
 
     /// Push the current in-memory project back through the library, preserving
-    /// the document's id / createdAt / name. Failures surface inline; the
-    /// in-memory edit is *not* rolled back — the next debounced cycle retries.
+    /// the document's id / createdAt / name. Failures surface as a transient
+    /// toast; the in-memory edit is *not* rolled back — the next debounced
+    /// cycle retries automatically.
     private func autoSave() {
         let updated = store.project.toDocument(inheriting: document)
         do {
             try library.save(updated)
             document = updated
         } catch {
-            saveError = error.localizedDescription
+            toasts.show(.transient(error, prefix: "Couldn't save"))
         }
     }
 }

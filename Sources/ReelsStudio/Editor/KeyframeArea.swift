@@ -4,11 +4,12 @@ import KadrUI
 
 /// Per-property keyframe tracks below the timeline. Wraps `KadrUI.KeyframeEditor`.
 ///
-/// v0.1 surfaces the read-only view of any keyframes already present on a clip
-/// (driven by kadr's `Animation<T>` storage). The add/remove/retime callbacks log
-/// to console — full keyframe authoring requires building `Animation<T>` mutation
-/// helpers and a comprehensive clip-rebuild path that's out of scope for v0.1.
-/// A v0.1.x patch wires the writes.
+/// **v0.2 — read-only.** The editor renders any keyframes already present on
+/// a clip (driven by kadr's `Animation<T>` storage). The add / remove /
+/// retime callbacks are intentionally `nil` — `KeyframeEditor` falls back to
+/// non-interactive markers in that mode. Full authoring requires building
+/// `Animation<T>` mutation helpers + a comprehensive clip-rebuild path; that
+/// lands in **v0.3 alongside `SpeedCurveEditor` / `OverlayKeyframeEditor`**.
 @available(iOS 16, macOS 13, visionOS 1, *)
 struct KeyframeArea: View {
 
@@ -24,16 +25,8 @@ struct KeyframeArea: View {
             currentTime: Binding(
                 get: { store.currentTime },
                 set: { store.currentTime = $0 }
-            ),
-            onAdd: { id, property, time in
-                print("KeyframeArea: onAdd \(id) \(property) at \(time) — wiring lands in v0.1.x")
-            },
-            onRemove: { id, property, time in
-                print("KeyframeArea: onRemove \(id) \(property) at \(time) — wiring lands in v0.1.x")
-            },
-            onRetime: { id, property, from, to in
-                print("KeyframeArea: onRetime \(id) \(property) \(from) -> \(to) — wiring lands in v0.1.x")
-            }
+            )
+            // onAdd / onRemove / onRetime intentionally omitted — see header.
         )
         .padding(.horizontal)
     }
