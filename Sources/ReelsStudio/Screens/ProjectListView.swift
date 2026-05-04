@@ -76,11 +76,39 @@ struct ProjectListView: View {
                 .foregroundStyle(.secondary)
             Text("No projects yet")
                 .font(.title3.weight(.semibold))
-            Text("Tap + to start your first reel.")
+            Text("Start with a new project, or import the bundled sample to see what the editor can do.")
+                .font(.callout)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            HStack(spacing: 12) {
+                Button { createNewProject() } label: {
+                    Label("New Project", systemImage: "plus.circle.fill")
+                        .font(.body.bold())
+                }
+                .buttonStyle(.borderedProminent)
+                Button { importSample() } label: {
+                    Label("Sample", systemImage: "wand.and.stars")
+                }
+                .buttonStyle(.bordered)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+    }
+
+    private func importSample() {
+        do {
+            // Run the sample project through the persistence bridge so the
+            // user lands on a real on-disk project they can keep editing.
+            let runtime = SampleProject.make()
+            var doc = try library.newProject(name: "Sample")
+            doc = runtime.toDocument(inheriting: doc, name: "Sample")
+            try library.save(doc)
+            path.append(doc.id)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private var projectList: some View {

@@ -51,6 +51,16 @@ extension ProjectDocument {
         if data.isReversed { clip = clip.reversed() }
         if data.isMuted { clip = clip.muted() }
         if data.speedRate != 1.0 { clip = clip.speed(data.speedRate) }
+        for filter in data.filters {
+            // `lut` may fail to reload (file moved / deleted) — in that case
+            // the filter is dropped silently. The rest of the clip survives.
+            if let restored = runtimeFilter(from: filter) {
+                clip = clip.filter(restored)
+            }
+        }
+        if let transform = data.transform {
+            clip = clip.transform(runtimeTransform(from: transform))
+        }
         if let opacity = data.opacity { clip = clip.opacity(opacity) }
         if let id = data.clipID { clip = clip.id(ClipID(id)) }
         return clip
@@ -59,6 +69,9 @@ extension ProjectDocument {
     nonisolated static func runtimeImageClip(from data: ImageClipData) -> ImageClip? {
         guard let image = platformImage(from: data.storage) else { return nil }
         var clip = ImageClip(image, duration: data.durationSeconds)
+        if let transform = data.transform {
+            clip = clip.transform(runtimeTransform(from: transform))
+        }
         if let opacity = data.opacity { clip = clip.opacity(opacity) }
         if let id = data.clipID { clip = clip.id(ClipID(id)) }
         return clip
@@ -76,8 +89,51 @@ extension ProjectDocument {
             duration: CMTime(seconds: data.durationSeconds, preferredTimescale: 600),
             style: style
         )
+        if let transform = data.transform {
+            title = title.transform(runtimeTransform(from: transform))
+        }
         if let id = data.clipID { title = title.id(ClipID(id)) }
         return title
+    }
+
+    // MARK: Filter / Transform reconstruction
+
+    /// Reconstruct a kadr `Filter` from its persisted form. `lut` returns
+    /// `nil` when the source `.cube` file is missing or unreadable — the
+    /// caller drops the filter and continues. Other cases never fail.
+    nonisolated static func runtimeFilter(from data: ProjectFilter) -> Filter? {
+        switch data {
+        case .brightness(let v):    return .brightness(v)
+        case .contrast(let v):      return .contrast(v)
+        case .saturation(let v):    return .saturation(v)
+        case .exposure(let v):      return .exposure(v)
+        case .sepia(let v):         return .sepia(intensity: v)
+        case .gaussianBlur(let v):  return .gaussianBlur(radius: v)
+        case .vignette(let v):      return .vignette(intensity: v)
+        case .sharpen(let v):       return .sharpen(amount: v)
+        case .zoomBlur(let v):      return .zoomBlur(amount: v)
+        case .glow(let v):          return .glow(intensity: v)
+        case .mono:                 return .mono
+        case .lut(let url):
+            guard let lut = try? LUT(url: url) else { return nil }
+            return .lut(lut)
+        case .chromaKey(let r, let g, let b, let threshold):
+            #if canImport(UIKit)
+            let color = PlatformColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1)
+            #else
+            let color = PlatformColor(srgbRed: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1)
+            #endif
+            return .chromaKey(ChromaKey(color: color, threshold: threshold))
+        }
+    }
+
+    nonisolated static func runtimeTransform(from data: ProjectTransform) -> Transform {
+        Transform(
+            center: .normalized(x: data.centerX, y: data.centerY),
+            rotation: data.rotation,
+            scale: data.scale,
+            anchor: anchor(from: data.anchor)
+        )
     }
 
     nonisolated static func runtimeTransition(from data: TransitionData) -> Kadr.Transition {
@@ -212,7 +268,8 @@ extension ProjectDocument {
                 clipID: image.clipID?.rawValue,
                 storage: storage,
                 durationSeconds: CMTimeGetSeconds(image.duration),
-                opacity: image.opacity
+                opacity: image.opacity,
+                transform: image.transform.map(documentTransform(from:))
             ))
         }
         if let title = clip as? TitleSequence {
@@ -221,9 +278,10 @@ extension ProjectDocument {
                 text: title.text,
                 fontSize: title.style.fontSize,
                 fontWeight: documentFontWeight(from: title.style.weight),
-                colorHex: nil, // serialization of TextStyle.color deferred — kadr doesn't expose components portably
+                colorHex: hexString(from: title.style.color),
                 alignment: documentAlignment(from: title.style.alignment),
-                durationSeconds: CMTimeGetSeconds(title.duration)
+                durationSeconds: CMTimeGetSeconds(title.duration),
+                transform: title.transform.map(documentTransform(from:))
             ))
         }
         if let transition = clip as? Kadr.Transition {
@@ -245,7 +303,44 @@ extension ProjectDocument {
             isReversed: clip.isReversed,
             isMuted: clip.isMuted,
             speedRate: clip.speedRate,
-            opacity: clip.opacity
+            opacity: clip.opacity,
+            filters: clip.filters.compactMap(documentFilter(from:)),
+            transform: clip.transform.map(documentTransform(from:))
+        )
+    }
+
+    nonisolated static func documentFilter(from filter: Filter) -> ProjectFilter? {
+        switch filter {
+        case .brightness(let v):    return .brightness(v)
+        case .contrast(let v):      return .contrast(v)
+        case .saturation(let v):    return .saturation(v)
+        case .exposure(let v):      return .exposure(v)
+        case .sepia(let v):         return .sepia(v)
+        case .gaussianBlur(let v):  return .gaussianBlur(v)
+        case .vignette(let v):      return .vignette(v)
+        case .sharpen(let v):       return .sharpen(v)
+        case .zoomBlur(let v):      return .zoomBlur(v)
+        case .glow(let v):          return .glow(v)
+        case .mono:                 return .mono
+        case .lut(let lut):         return .lut(url: lut.url)
+        case .chromaKey(let key):
+            return .chromaKey(
+                r: key.color.r,
+                g: key.color.g,
+                b: key.color.b,
+                threshold: key.threshold
+            )
+        }
+    }
+
+    nonisolated static func documentTransform(from t: Transform) -> ProjectTransform {
+        let xy = positionXY(t.center)
+        return ProjectTransform(
+            centerX: xy.x,
+            centerY: xy.y,
+            rotation: t.rotation,
+            scale: t.scale,
+            anchor: documentAnchor(from: t.anchor)
         )
     }
 
@@ -256,7 +351,7 @@ extension ProjectDocument {
                 text: text.text,
                 fontSize: text.style.fontSize,
                 fontWeight: documentFontWeight(from: text.style.weight),
-                colorHex: nil,
+                colorHex: hexString(from: text.style.color),
                 alignment: documentAlignment(from: text.style.alignment),
                 positionX: positionXY(text.position).x,
                 positionY: positionXY(text.position).y,
@@ -445,6 +540,28 @@ extension ProjectDocument {
         #else
         return nil
         #endif
+    }
+
+    /// Encode a `PlatformColor` as `#RRGGBBAA` hex. Returns `nil` for colors
+    /// whose components can't be extracted (very rare — pattern-based colors,
+    /// or NSColor in a non-RGB color space). Cross-platform via UIKit /
+    /// AppKit branches.
+    nonisolated static func hexString(from color: PlatformColor) -> String? {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        #if canImport(UIKit)
+        guard color.getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
+        #else
+        guard let converted = color.usingColorSpace(.sRGB) else { return nil }
+        converted.getRed(&r, green: &g, blue: &b, alpha: &a)
+        #endif
+        let R = Int((max(0, min(1, r)) * 255).rounded())
+        let G = Int((max(0, min(1, g)) * 255).rounded())
+        let B = Int((max(0, min(1, b)) * 255).rounded())
+        let A = Int((max(0, min(1, a)) * 255).rounded())
+        if A == 255 {
+            return String(format: "#%02X%02X%02X", R, G, B)
+        }
+        return String(format: "#%02X%02X%02X%02X", R, G, B, A)
     }
 
     nonisolated static func platformColor(forHex hex: String?) -> PlatformColor? {
