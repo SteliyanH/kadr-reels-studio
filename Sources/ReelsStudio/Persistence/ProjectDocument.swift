@@ -76,6 +76,13 @@ struct VideoClipData: Codable, Sendable, Equatable {
     public var isMuted: Bool
     public var speedRate: Double
     public var opacity: Double?
+    /// Per-clip filters applied in order. Round-trips every `Filter` case
+    /// `InspectorPanel` exposes a slider for. `mono` / `lut` / `chromaKey`
+    /// require larger surfaces (LUT data, chroma-key parameters); v0.2
+    /// drops them on round-trip with a console warning.
+    public var filters: [ProjectFilter]
+    /// Position / rotation / scale / anchor — round-trips inspector edits.
+    public var transform: ProjectTransform?
 
     public init(
         clipID: String? = nil,
@@ -85,7 +92,9 @@ struct VideoClipData: Codable, Sendable, Equatable {
         isReversed: Bool = false,
         isMuted: Bool = false,
         speedRate: Double = 1.0,
-        opacity: Double? = nil
+        opacity: Double? = nil,
+        filters: [ProjectFilter] = [],
+        transform: ProjectTransform? = nil
     ) {
         self.clipID = clipID
         self.url = url
@@ -95,6 +104,8 @@ struct VideoClipData: Codable, Sendable, Equatable {
         self.isMuted = isMuted
         self.speedRate = speedRate
         self.opacity = opacity
+        self.filters = filters
+        self.transform = transform
     }
 }
 
@@ -105,17 +116,20 @@ struct ImageClipData: Codable, Sendable, Equatable {
     public var storage: ImageStorage
     public var durationSeconds: Double
     public var opacity: Double?
+    public var transform: ProjectTransform?
 
     public init(
         clipID: String? = nil,
         storage: ImageStorage,
         durationSeconds: Double,
-        opacity: Double? = nil
+        opacity: Double? = nil,
+        transform: ProjectTransform? = nil
     ) {
         self.clipID = clipID
         self.storage = storage
         self.durationSeconds = durationSeconds
         self.opacity = opacity
+        self.transform = transform
     }
 }
 
@@ -136,6 +150,7 @@ struct TitleSequenceData: Codable, Sendable, Equatable {
     public var colorHex: String?
     public var alignment: ProjectTextAlignment
     public var durationSeconds: Double
+    public var transform: ProjectTransform?
 
     public init(
         clipID: String? = nil,
@@ -144,7 +159,8 @@ struct TitleSequenceData: Codable, Sendable, Equatable {
         fontWeight: ProjectFontWeight = .regular,
         colorHex: String? = nil,
         alignment: ProjectTextAlignment = .leading,
-        durationSeconds: Double = 2.0
+        durationSeconds: Double = 2.0,
+        transform: ProjectTransform? = nil
     ) {
         self.clipID = clipID
         self.text = text
@@ -153,6 +169,7 @@ struct TitleSequenceData: Codable, Sendable, Equatable {
         self.colorHex = colorHex
         self.alignment = alignment
         self.durationSeconds = durationSeconds
+        self.transform = transform
     }
 }
 
@@ -339,4 +356,50 @@ enum ProjectAnchor: String, Codable, Sendable, Equatable {
     case topLeft, top, topRight
     case left, center, right
     case bottomLeft, bottom, bottomRight
+}
+
+// MARK: - Filter sumtype (v0.2 Tier 1.5)
+
+/// Sumtype mirror of kadr `Filter` cases that ``InspectorPanel`` exposes a
+/// slider for. `mono` / `lut` / `chromaKey` require larger surfaces (no
+/// scalar / LUT data / chroma-key parameters) and are dropped on round-trip
+/// with a console warning until a future tier surfaces them.
+enum ProjectFilter: Codable, Sendable, Equatable {
+    case brightness(Double)
+    case contrast(Double)
+    case saturation(Double)
+    case exposure(Double)
+    case sepia(Double)
+    case gaussianBlur(Double)
+    case vignette(Double)
+    case sharpen(Double)
+    case zoomBlur(Double)
+    case glow(Double)
+}
+
+// MARK: - Transform mirror
+
+/// On-disk shape for kadr's `Transform`. `centerX` / `centerY` are normalized
+/// `0...1` (matches the renderer's coordinate space and what the inspector
+/// emits). Angles in radians.
+struct ProjectTransform: Codable, Sendable, Equatable {
+    public var centerX: Double
+    public var centerY: Double
+    public var rotation: Double
+    public var scale: Double
+    public var anchor: ProjectAnchor
+
+    public init(
+        centerX: Double = 0.5,
+        centerY: Double = 0.5,
+        rotation: Double = 0,
+        scale: Double = 1.0,
+        anchor: ProjectAnchor = .center
+    ) {
+        self.centerX = centerX
+        self.centerY = centerY
+        self.rotation = rotation
+        self.scale = scale
+        self.anchor = anchor
+    }
 }
