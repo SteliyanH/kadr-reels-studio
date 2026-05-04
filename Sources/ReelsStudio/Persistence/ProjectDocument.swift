@@ -360,10 +360,11 @@ enum ProjectAnchor: String, Codable, Sendable, Equatable {
 
 // MARK: - Filter sumtype (v0.2 Tier 1.5)
 
-/// Sumtype mirror of kadr `Filter` cases that ``InspectorPanel`` exposes a
-/// slider for. `mono` / `lut` / `chromaKey` require larger surfaces (no
-/// scalar / LUT data / chroma-key parameters) and are dropped on round-trip
-/// with a console warning until a future tier surfaces them.
+/// Sumtype mirror of every kadr `Filter` case. Fully round-trippable in v0.2:
+/// scalar filters carry their value, `mono` is parameterless, `lut` persists
+/// the source `.cube` URL (re-parsed on load), and `chromaKey` persists the
+/// target color's RGB components + threshold (the GPU-side cube is rebuilt
+/// from those on load via `ChromaKey.init(color:threshold:)`).
 enum ProjectFilter: Codable, Sendable, Equatable {
     case brightness(Double)
     case contrast(Double)
@@ -375,6 +376,14 @@ enum ProjectFilter: Codable, Sendable, Equatable {
     case sharpen(Double)
     case zoomBlur(Double)
     case glow(Double)
+    case mono
+    /// LUT source `.cube` file URL. Reconstruction calls `LUT(url:)`; if the
+    /// file is missing on load, the filter is dropped with a console warning
+    /// rather than failing the whole project.
+    case lut(url: URL)
+    /// Chroma-key target color (RGB in `0...1`) + threshold. Reconstruction
+    /// rebuilds the GPU cube via `ChromaKey.init(color: PlatformColor, threshold:)`.
+    case chromaKey(r: Double, g: Double, b: Double, threshold: Double)
 }
 
 // MARK: - Transform mirror

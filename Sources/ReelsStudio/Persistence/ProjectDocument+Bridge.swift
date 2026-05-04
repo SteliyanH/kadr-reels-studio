@@ -52,7 +52,11 @@ extension ProjectDocument {
         if data.isMuted { clip = clip.muted() }
         if data.speedRate != 1.0 { clip = clip.speed(data.speedRate) }
         for filter in data.filters {
-            clip = clip.filter(runtimeFilter(from: filter))
+            // `lut` may fail to reload (file moved / deleted) — in that case
+            // the filter is dropped silently. The rest of the clip survives.
+            if let restored = runtimeFilter(from: filter) {
+                clip = clip.filter(restored)
+            }
         }
         if let transform = data.transform {
             clip = clip.transform(runtimeTransform(from: transform))
@@ -94,7 +98,10 @@ extension ProjectDocument {
 
     // MARK: Filter / Transform reconstruction
 
-    nonisolated static func runtimeFilter(from data: ProjectFilter) -> Filter {
+    /// Reconstruct a kadr `Filter` from its persisted form. `lut` returns
+    /// `nil` when the source `.cube` file is missing or unreadable — the
+    /// caller drops the filter and continues. Other cases never fail.
+    nonisolated static func runtimeFilter(from data: ProjectFilter) -> Filter? {
         switch data {
         case .brightness(let v):    return .brightness(v)
         case .contrast(let v):      return .contrast(v)
@@ -106,6 +113,17 @@ extension ProjectDocument {
         case .sharpen(let v):       return .sharpen(amount: v)
         case .zoomBlur(let v):      return .zoomBlur(amount: v)
         case .glow(let v):          return .glow(intensity: v)
+        case .mono:                 return .mono
+        case .lut(let url):
+            guard let lut = try? LUT(url: url) else { return nil }
+            return .lut(lut)
+        case .chromaKey(let r, let g, let b, let threshold):
+            #if canImport(UIKit)
+            let color = PlatformColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1)
+            #else
+            let color = PlatformColor(srgbRed: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1)
+            #endif
+            return .chromaKey(ChromaKey(color: color, threshold: threshold))
         }
     }
 
@@ -303,11 +321,15 @@ extension ProjectDocument {
         case .sharpen(let v):       return .sharpen(v)
         case .zoomBlur(let v):      return .zoomBlur(v)
         case .glow(let v):          return .glow(v)
-        case .mono, .lut, .chromaKey:
-            // Larger surfaces (LUT data, chroma-key parameters) — drop with
-            // a warning until a future tier surfaces them. Don't crash the
-            // save.
-            return nil
+        case .mono:                 return .mono
+        case .lut(let lut):         return .lut(url: lut.url)
+        case .chromaKey(let key):
+            return .chromaKey(
+                r: key.color.r,
+                g: key.color.g,
+                b: key.color.b,
+                threshold: key.threshold
+            )
         }
     }
 
