@@ -11,6 +11,7 @@ import Kadr
 /// can extend them later (history / undo, persistence). The derived ``video`` is
 /// recomputed on every read; SwiftUI's body invalidation handles caching at the
 /// view level.
+@MainActor
 final class ProjectStore: ObservableObject {
 
     @Published private(set) var project: Project
@@ -26,7 +27,9 @@ final class ProjectStore: ObservableObject {
         self.project = project
     }
 
-    /// Convenience: build a fresh store with the bundled sample clips.
+    /// Convenience: build a fresh store with the bundled sample clips. Used
+    /// by previews and detached test fixtures — production launches go
+    /// through ``ProjectLibrary`` + ``EditorView(document:library:)``.
     static func sample() -> ProjectStore {
         ProjectStore(project: SampleProject.make())
     }
