@@ -20,6 +20,7 @@ struct AddClipFlow: ViewModifier {
 
     @Binding var isPresented: Bool
     @ObservedObject var store: ProjectStore
+    @EnvironmentObject var toasts: ToastCenter
     @State private var pickedItems: [PhotoPickerResult] = []
     @State private var isResolving = false
 
@@ -55,9 +56,10 @@ struct AddClipFlow: ViewModifier {
             let clips = try await PhotosClipResolver.clips(from: items)
             store.append(clips: clips)
         } catch {
-            // v0.1: log only. Consumers running the app see the failure in console;
-            // a v0.1.x patch wires this through an alert / toast.
-            print("AddClipFlow: failed to resolve clips — \(error)")
+            toasts.show(.transient(
+                error,
+                prefix: "Couldn't import \(items.count == 1 ? "clip" : "clips")"
+            ))
         }
     }
 }

@@ -8,9 +8,17 @@ struct ReelsStudioApp: App {
     /// in-app alert via ``LibraryHostView`` instead.
     @StateObject private var libraryHost = LibraryHost()
 
+    /// App-wide error surfacing. Mounted at the root via ``View/toastHost(_:)``
+    /// so every screen pushed onto the navigation stack inherits the toast
+    /// banner / resumable sheet / catastrophic alert presentation without
+    /// re-installing the modifier.
+    @StateObject private var toastCenter = ToastCenter()
+
     var body: some Scene {
         WindowGroup {
             LibraryHostView(host: libraryHost)
+                .environmentObject(toastCenter)
+                .toastHost(toastCenter)
         }
     }
 }
