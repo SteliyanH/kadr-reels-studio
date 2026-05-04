@@ -256,6 +256,130 @@ final class ProjectDocumentTests: XCTestCase {
         }
     }
 
+    // MARK: - Tier 1.5: filter / transform / color round-trip
+
+    func testVideoClipFiltersRoundTrip() throws {
+        let clip = VideoClipData(
+            url: URL(fileURLWithPath: "/tmp/x.mp4"),
+            filters: [
+                .brightness(0.3),
+                .contrast(1.5),
+                .saturation(0.8),
+                .gaussianBlur(8.0),
+            ]
+        )
+        let doc = ProjectDocument(name: "Filtered", clips: [.video(clip)])
+        let restored = try roundTrip(doc)
+        guard case .video(let v) = restored.clips.first else {
+            return XCTFail("Expected .video")
+        }
+        XCTAssertEqual(v.filters.count, 4)
+        if case .brightness(let val) = v.filters[0] { XCTAssertEqual(val, 0.3) }
+        else { XCTFail("Expected .brightness") }
+        if case .gaussianBlur(let val) = v.filters[3] { XCTAssertEqual(val, 8.0) }
+        else { XCTFail("Expected .gaussianBlur") }
+    }
+
+    func testTransformRoundTrip() throws {
+        let transform = ProjectTransform(
+            centerX: 0.7,
+            centerY: 0.3,
+            rotation: .pi / 4,
+            scale: 1.5,
+            anchor: .topLeft
+        )
+        let clip = VideoClipData(
+            url: URL(fileURLWithPath: "/tmp/x.mp4"),
+            transform: transform
+        )
+        let doc = ProjectDocument(name: "Transformed", clips: [.video(clip)])
+        let restored = try roundTrip(doc)
+        guard case .video(let v) = restored.clips.first,
+              let t = v.transform else {
+            return XCTFail("Expected .video with transform")
+        }
+        XCTAssertEqual(t.centerX, 0.7, accuracy: 0.0001)
+        XCTAssertEqual(t.centerY, 0.3, accuracy: 0.0001)
+        XCTAssertEqual(t.rotation, .pi / 4, accuracy: 0.0001)
+        XCTAssertEqual(t.scale, 1.5, accuracy: 0.0001)
+        XCTAssertEqual(t.anchor, .topLeft)
+    }
+
+    func testTextOverlayColorSurvivesBridgeRoundTrip() {
+        // Build an overlay with a custom color, run it through the runtime
+        // bridge (which includes the PlatformColor extraction path), then
+        // back into a document. Verify the hex matches.
+        let original = TextOverlayData(
+            text: "Hello",
+            colorHex: "#FF8800",
+            opacity: 1.0
+        )
+        let doc = ProjectDocument(name: "Color", overlays: [.text(original)])
+        let runtime = doc.toRuntimeProject()
+        let rebuilt = runtime.toDocument(inheriting: doc, name: doc.name)
+        guard case .text(let restored) = rebuilt.overlays.first else {
+            return XCTFail("Expected .text")
+        }
+        XCTAssertEqual(restored.colorHex, "#FF8800")
+    }
+
+    func testTitleSequenceTransformAndColorSurviveBridge() {
+        let title = TitleSequenceData(
+            text: "Title",
+            colorHex: "#00FF00",
+            durationSeconds: 1.0,
+            transform: ProjectTransform(centerX: 0.25, centerY: 0.75, rotation: 0, scale: 1.0, anchor: .center)
+        )
+        let doc = ProjectDocument(name: "Title", clips: [.title(title)])
+        let runtime = doc.toRuntimeProject()
+        let rebuilt = runtime.toDocument(inheriting: doc, name: doc.name)
+        guard case .title(let restored) = rebuilt.clips.first else {
+            return XCTFail("Expected .title")
+        }
+        XCTAssertEqual(restored.colorHex, "#00FF00")
+        XCTAssertEqual(restored.transform?.centerX ?? 0, 0.25, accuracy: 0.0001)
+        XCTAssertEqual(restored.transform?.centerY ?? 0, 0.75, accuracy: 0.0001)
+    }
+
+    func testVideoFiltersSurviveBridge() {
+        // End-to-end through runtime bridge — verifies kadr Filter cases
+        // round-trip through `runtimeFilter` / `documentFilter`.
+        let clipData = VideoClipData(
+            url: URL(fileURLWithPath: "/tmp/x.mp4"),
+            filters: [.exposure(0.5), .vignette(0.7)]
+        )
+        let doc = ProjectDocument(name: "F", clips: [.video(clipData)])
+        let runtime = doc.toRuntimeProject()
+        let rebuilt = runtime.toDocument(inheriting: doc, name: doc.name)
+        guard case .video(let v) = rebuilt.clips.first else {
+            return XCTFail("Expected .video")
+        }
+        XCTAssertEqual(v.filters.count, 2)
+        if case .exposure(let val) = v.filters[0] {
+            XCTAssertEqual(val, 0.5, accuracy: 0.0001)
+        } else {
+            XCTFail("Expected .exposure")
+        }
+    }
+
+    func testMonoFilterDroppedSilently() {
+        // Larger-surface filters (mono / lut / chromaKey) drop on the way
+        // into the document until a future tier surfaces them. The rest of
+        // the project survives.
+        let clip = VideoClip(url: URL(fileURLWithPath: "/tmp/x.mp4"))
+            .filter(.mono)
+            .filter(.brightness(0.5))
+        let project = Project(clips: [clip])
+        let doc = project.toDocument(name: "Mixed")
+        guard case .video(let v) = doc.clips.first else {
+            return XCTFail("Expected .video")
+        }
+        XCTAssertEqual(v.filters.count, 1)  // mono dropped
+        if case .brightness(let val) = v.filters[0] {
+            XCTAssertEqual(val, 0.5, accuracy: 0.0001)
+        }
+    }
+
     func testRuntimeBridgeDropsCorruptImageClipSilently() {
         // Empty PNG data → platformImage returns nil → runtime drops the clip
         // entirely. The rest of the project stays intact.
