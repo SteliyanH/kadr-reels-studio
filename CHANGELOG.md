@@ -4,6 +4,57 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-05-05
+
+Wire-up cycle. Integrates every kadr-ui v0.7 / v0.8 editor surface that shipped during the v0.2 production-polish cycle but wasn't yet plumbed in: real keyframe authoring, speed-curve editing, caption editing, overlay inspector + overlay keyframe editor, timeline pinch-zoom, multi-track reorder/trim, sticker / image overlay creation. Bumps kadr ≥ **0.10.1** and kadr-ui ≥ **0.8.0**.
+
+### Added — schema v2 + keyframe authoring
+
+- **`ProjectAnimation<Value>`** generic + per-value-type bridges (`Double`, `Transform`); `ProjectClip.track(TrackData)` for `Kadr.Track {}` blocks; `transformAnimation` / `opacityAnimation` / `filterAnimations` / `speedCurve` fields on `VideoClipData`; `transformAnimation` / `opacityAnimation` on `ImageClipData`; `TitleSequenceData.transform`; bumps `currentSchemaVersion` to **2**. Forward-only and additive — every v1 field continues reading; v1 documents on disk load fine.
+- **`ProjectStore.addKeyframe / removeKeyframe / retimeKeyframe`** — replaces v0.2's read-only `KeyframeArea`. `KeyframeEditor`'s tap-to-add / long-press-to-remove / drag-to-retime gestures now produce real edits, routed through `applyMutation` so undo / redo + auto-save inherit.
+
+### Added — speed curve
+
+- **`SpeedCurveSheet`** wrapping `KadrUI.SpeedCurveEditor` — pushed from a per-clip "Speed curve…" inspector row when a `VideoClip` is selected. The log-scaled multiplier axis (0.25× ... 4×) needs vertical room a row can't give.
+- **`ProjectStore.applySpeedCurve(id:_:)`** — `nil` clears via `clip.speed(rate)` (kadr's modifier nils `speedCurve`); non-nil sets via `clip.speed(curve:)`.
+
+### Added — caption editor
+
+- **Tabbed `AddCaptionsSheet`** — Edit (default when cues exist; wraps `KadrUI.CaptionEditor` for live cue authoring) / Import (defaults when empty; existing v0.2 file picker for SRT / VTT / iTT / ASS / SSA).
+- **`ProjectStore.setCaptions(_:)`** — replaces the full caption array. `CaptionEditor` emits the full sorted-by-start list on every commit, so a single replace covers add / remove / retime / text changes uniformly.
+
+### Added — overlay inspector + overlay keyframe editor
+
+- **`OverlayInspectorArea`** and **`OverlayKeyframeArea`** — sibling views to clip-targeted `InspectorArea` / `KeyframeArea`, wrap `KadrUI.OverlayInspectorPanel` / `OverlayKeyframeEditor`. Selection lives on the new `ProjectStore.selectedOverlayID: LayerID?` slot, mutually exclusive with `selectedClipID` via `didSet` observers.
+- **`LayersSheet`** — lists every overlay with type-specific icon + tap-to-select (text / image / sticker). v0.4 will replace this with tap-to-select directly on `OverlayHost`.
+- **Overlay mutation surface** — common (`Position` / `Size` / `Anchor` / `Opacity`) + type-specific (TextOverlay text + animation, StickerOverlay rotation) + overlay keyframe authoring (`addOverlayKeyframe` / `removeOverlayKeyframe` / `retimeOverlayKeyframe` for `.position` / `.size` on Image / Sticker).
+
+### Added — timeline zoom + multi-track
+
+- **`Project.zoom: TimelineZoom?`** + **`ProjectDocument.zoomPixelsPerSecond`** — pinch-zoom persists per project; **does not** push undo (viewport state, not document state). Auto-save still picks it up on the trailing debounce edge.
+- **`onTrackReorder`** routes to existing `replaceClips`. **`onTrackTrim`** routes to new **`ProjectStore.applyTrackTrim`** — walks to the right Track + inner clip and applies trim modifiers per kind. Multi-track projects loaded from disk render and edit correctly today.
+
+### Added — sticker / image overlay creation
+
+- **`AddOverlaySheet`** refactored into three tabs — Text (existing v0.2 editor, factored into a subview) / Image (`Kadr.ImageOverlay`) / Sticker (`Kadr.StickerOverlay`). Image / Sticker share a `PhotoOverlayTab` backed by kadr-photos `PhotoPicker` and `PhotosClipResolver.image` (1024×1024 target size cap).
+
+### Tests
+
+84 new tests across the cycle (`SchemaV2Tests` ×8, `KeyframeAuthoringTests` ×16, `SpeedCurveSheetTests` ×9, `AddCaptionsSheetTests` ×8, `OverlayInspectorTests` ×24, `TimelineZoomAndTracksTests` ×14, `AddOverlaySheetTests` ×5). Suite: 65 → 149.
+
+### Dependencies
+
+- **kadr ≥ 0.10.1** (up from 0.9.2). Brings the animation-clearing modifiers (`transformAnimation(_:)` / `opacityAnimation(_:)` / `filterAnimation(at:_:)` / overlay positionAnimation / sizeAnimation), which let the editor drop the ~120 LOC of `rebuildVideoClip` / `rebuildImageClip` / `rebuildTitleSequence` helpers Tier 1 had to ship.
+- **kadr-ui ≥ 0.8.0** (up from 0.6.0). Brings `SpeedCurveEditor` / `CaptionEditor` / `OverlayInspectorPanel` / `OverlayKeyframeEditor` / `TimelineZoom` / `onTrackReorder` / `onTrackTrim`.
+- kadr-captions / kadr-photos floors unchanged (≥ 0.4.0 / ≥ 0.4.0).
+
+### Notes
+
+- **Tier 1.5-style cleanup baked into Tier 2.** Tier 1 had to ship full-rebuild helpers because kadr's animation modifiers were install-only. The kadr v0.10.1 patch (proposed mid-cycle, shipped before Tier 2) added clearing modifiers; Tier 2 dropped the ~120 LOC of helper code in the same PR as the SpeedCurveEditor wire-up.
+- **Track creation UI deferred to v0.4** — empty Tracks aren't engine-valid; "wrap selection in track" needs a selection model that doesn't exist yet. Multi-track projects loaded from disk render and edit today.
+- **Overlay tap-to-select on `OverlayHost` deferred to v0.4** — v0.3 uses the `LayersSheet` for selection.
+- **Schema migration is forward-only**: v2 documents opened by an old build still reject cleanly via `ProjectLibraryError.unsupportedSchema` — v1 documents on disk continue loading.
+
 ## [0.2.0] - 2026-05-04
 
 Production-polish foundation. Closes the four "feels like a prototype" gaps from a survey of CapCut / VN / iMovie UX: **persistence**, **error surfacing**, **undo / redo**, and a real **first-run flow**.
