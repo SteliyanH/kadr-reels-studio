@@ -262,21 +262,132 @@ Bumps kadr-ui floor to **≥ 0.8.0**.
 
 ---
 
-## v0.4 → v1.0 — Production polish (UX layer)
+## v0.4 — UX polish (foundations)
 
-**Status:** Sketch.
+**Status:** RFC. No code yet.
 
+### Motivation
+
+v0.2 + v0.3 shipped the *plumbing*: persistence, undo / redo, error infra, project list, every kadr-ui v0.7 / v0.8 editor surface wired in. Functionally the app is feature-complete against the kadr ecosystem as it exists today. What's left is the UX layer — the difference between "all the buttons work" and "this feels like an app you'd actually use." A 30-second hands-on with v0.3 surfaces the gaps: the bottom toolbar has the same six verbs whether you have a clip selected or not; the playhead drifts off-screen during scrub instead of staying centered; pinch-zoom has no snap haptic so you can't feel beat alignment; selecting a clip changes nothing chromatically about the inspector; sheet detents pop instead of spring; export completes silently. None of these are missing features — they're missing *feel*.
+
+This cycle closes the foundational half of that gap. Accessibility wiring + empty-state polish + app icon + final name lock + App Store submission live in **v0.5 / v1.0** (separate cycles, sketched at the end of this doc).
+
+### Scope lock — v0.4
+
+In scope:
 - **Two-tier bottom toolbar** with selection-driven swap (root verbs ↔ clip-specific actions, animated crossfade).
 - **Fixed-center playhead** during scrub — timeline scrolls under it.
-- **Snap haptics** on pinch-zoom (frame / second / 5s / 30s) + drag-snap-to-adjacent-clip.
+- **Snap haptics** on pinch-zoom + drag-snap-to-adjacent-clip.
 - **Single accent-color thread** linking selected clip → active inspector tab.
-- **Empty / disabled states** — greyed not hidden; tap-and-hold tooltips.
-- **Real designed app icon** family (replaces placeholder).
-- **Accessibility wiring** — `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` on every interactive element.
 - **Spring animation curves** on drawer detents; medium thud on delete; success haptic pattern on export.
-- **Optimistic UI** on trim handles (already partially done by kadr-ui's `liveTrimMetrics`).
+- **Track creation UI** — "wrap selection in track" (carried over from v0.3 deferral; needs a multi-select model first).
+- **Overlay tap-to-select on `OverlayHost`** — replaces v0.3's `LayersSheet`-only selection (carried over from v0.3 deferral; needs a kadr-ui callback).
 
-v1.0.0 = App Store submission. Final name decided here ("Reels Studio" likely conflicts with Meta — tentative; revisit before submission).
+Out of scope (v0.5 / v1.0 / rejected):
+- **Accessibility sweep** — own cycle (v0.5). `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` on every interactive element is mechanical but exhaustive; bundling it with feel-polish would obscure both.
+- **Empty / disabled state polish** — bundles with v0.5 accessibility (greyed-not-hidden + tap-and-hold tooltips share the same audit pass).
+- **Real designed app icon family** — v1.0 (paired with name lock + App Store submission; designing an icon for a working title that's about to change is wasted work).
+- **Final name lock** — v1.0. "Reels Studio" likely conflicts with Meta trademarks; revisit before submission.
+- **Optimistic UI on trim handles** — partially landed in kadr-ui v0.7 (`liveTrimMetrics`); reels-studio side is wired and feels fine. No further work needed.
+
+### Dependency floors
+
+- **kadr-ui ≥ 0.9.0** (up from 0.8.0). New surface needed:
+  - `TimelineView.fixedCenterPlayhead(_:)` modifier — opt-in playhead-centered scroll mode (current default keeps the playhead anchored to its time position and lets it drift).
+  - `TimelineView.onZoomSnap(_:)` callback — fires when pinch-zoom crosses a snap threshold (frame / second / 5s / 30s). reels-studio uses it to fire haptics; kadr-ui owns the threshold list because it already owns the zoom math.
+  - `OverlayHost.onLayerTap(_:)` callback — fires with `LayerID` on tap of an overlay's hit region. v0.3's `LayersSheet` is a workaround; this is the right surface.
+
+  This is a kadr-ui v0.9 RFC unblocked by — and shipping mid-cycle of — this v0.4 cycle, the same shape as the kadr v0.10.1 patch that landed mid-v0.3. Tier 2 ships against a local-path kadr-ui pin; flips to the released floor before the v0.4 release PR.
+- kadr / kadr-captions / kadr-photos floors unchanged from v0.3 (≥ 0.10.1 / ≥ 0.4.0 / ≥ 0.4.0).
+
+### Tier breakdown
+
+#### Tier 1 — Two-tier bottom toolbar
+
+The bottom toolbar today (`TimelineArea` / `EditorView` toolbar slot) shows the same verbs (`+ Clip`, `+ Overlay`, `+ Music`, `+ SFX`, `Captions`, `Layers`, `Export`) regardless of selection. CapCut / VN swap to a clip-specific row when a clip is selected (split / duplicate / speed / delete); reels-studio lacks this entirely.
+
+**Approach.** Introduce `EditorToolbar` as a state machine over `(selectedClipID, selectedOverlayID)`:
+- **No selection** → root row (existing verbs).
+- **Clip selected** → clip-action row (`Split` / `Duplicate` / `Speed` / `Filters` / `Delete`).
+- **Overlay selected** → overlay-action row (`Duplicate` / `Bring forward` / `Send back` / `Delete`).
+
+`Split` routes to a new `ProjectStore.splitClip(id:at:)` mutation that walks the clip stack, splits the matched `VideoClip` / `ImageClip` at the current `playheadTime`, and replaces the single entry with the two halves. `Speed` pushes the existing `SpeedCurveSheet`. `Filters` pushes a new `FiltersSheet` (selected clip's filter stack — already round-trips through schema, just needs a UI). `Duplicate` / `Delete` route to existing mutations.
+
+Crossfade: `.transition(.opacity.animation(.easeInOut(duration: 0.15)))` keyed by selection-state enum.
+
+Files: `Sources/ReelsStudio/Editor/EditorToolbar.swift` (new), edits to `EditorView.swift` + `TimelineArea.swift`. Tests: state-machine row selection (`EditorToolbarTests`); `splitClip` correctness across clip kinds (`SplitClipTests`).
+
+#### Tier 2 — Fixed-center playhead + kadr-ui v0.9 patch
+
+kadr-ui v0.9 RFC ships first this tier (separate repo, separate PR). `TimelineView.fixedCenterPlayhead(_:)` modifier inverts the scroll model: the timeline scrolls under a screen-anchored playhead instead of the playhead drifting toward the right edge.
+
+reels-studio side: opt-in via a per-project `Project.fixedCenterPlayhead: Bool` (default `true`; off only for users who prefer the legacy mode — toggle lands in v0.5 settings). Persists through `ProjectDocument` schema v3 (additive — `Bool?` field, missing = default).
+
+Files: kadr-ui v0.9 patch (separate PR) + `ProjectDocument` schema v3 bump + `TimelineArea.swift` modifier wire-up. Tests: schema v3 forward / back-compat (`SchemaV3Tests`).
+
+#### Tier 3 — Snap haptics + accent threading
+
+**Snap haptics.** kadr-ui v0.9's `onZoomSnap(_:)` callback fires `UIImpactFeedbackGenerator(style: .light).impactOccurred()` on each threshold cross. Drag-snap-to-adjacent-clip mirrors the same call when `TimelineView.onClipDragSnap` (already in kadr-ui v0.8) fires. Single shared `HapticEngine` actor batches calls to avoid re-prep cost on rapid scrub.
+
+**Accent threading.** Replace the four hardcoded `Color.accentColor` sites in `InspectorArea` / `OverlayInspectorArea` / `KeyframeArea` / `OverlayKeyframeArea` with a single `Project.accentColor: Color` (per-project, persisted, default = system accent). Selecting a clip / overlay tints the active inspector tab + the keyframe editor's playhead line + the timeline's selection ring. macOS / visionOS retain system-accent default; iOS users can pick from a palette in v0.5 settings.
+
+Files: `Sources/ReelsStudio/Haptics/HapticEngine.swift` (new); `Project.accentColor` field; `ProjectDocument` schema v3 carries `accentColorHex: String?`. Tests: `HapticEngineTests` (no-op on macOS, gated by `#if canImport(UIKit)`); `AccentThreadingTests`.
+
+#### Tier 4 — Spring drawer detents + export success haptic + delete thud
+
+Sweep every sheet detent + drawer transition in the app and replace `.easeInOut` / linear with `.interactiveSpring(response: 0.35, dampingFraction: 0.78)` (rule of thumb from CapCut's drawer feel — picked by hand-tuning during this tier). One pattern, applied uniformly: `AddOverlaySheet`, `AddCaptionsSheet`, `SpeedCurveSheet`, `LayersSheet`, `ProjectListView`'s navigation push.
+
+**Export success haptic.** `UINotificationFeedbackGenerator().notificationOccurred(.success)` after `Exporter.run()` resolves; followed by the existing share-sheet present.
+
+**Delete thud.** `UIImpactFeedbackGenerator(style: .medium).impactOccurred()` before each `removeClip` / `removeOverlay` mutation (toolbar Delete + swipe-to-delete in `LayersSheet`).
+
+Files: edits across `Sheets/*.swift` + `Editor/EditorToolbar.swift` + `ProjectListView.swift`. Tests: spring/timing values are visual; we lean on existing smoke tests + manual QA. Haptic call sites get unit tests via `HapticEngine` mock.
+
+#### Tier 5 — Track creation UI
+
+v0.3 carry-over. Empty `Track {}` blocks aren't engine-valid; "wrap selection in track" needs a multi-select model that doesn't exist today.
+
+**Multi-select model.** `ProjectStore.selectedClipIDs: Set<LayerID>` replaces `selectedClipID: LayerID?`. Single-select callers read `selectedClipIDs.first` until they're updated. Long-press a clip on the timeline → multi-select mode (CapCut pattern); tap toggles membership; the bottom toolbar swaps to a multi-select row.
+
+**Wrap-in-track.** New `ProjectStore.wrapInTrack(ids:)` mutation: walks `clips`, removes the matched contiguous range, inserts a `Track { ... }` block in their place. Non-contiguous selections are rejected with a transient toast ("Selection must be contiguous to wrap in a track").
+
+Files: `ProjectStore` selection refactor; `EditorToolbar` multi-select row; `wrapInTrack` mutation. Tests: `MultiSelectTests`, `WrapInTrackTests`.
+
+#### Tier 6 — Overlay tap-to-select on `OverlayHost`
+
+v0.3 carry-over. `OverlayHost.onLayerTap(_:)` (kadr-ui v0.9, already shipped in Tier 2) fires with `LayerID` on tap of an overlay's hit region. reels-studio routes that to `store.selectedOverlayID = id`. `LayersSheet` becomes secondary (still useful for stacked / off-screen overlays); the primary path is direct.
+
+Files: `EditorView.swift` `OverlayHost` modifier wiring. Tests: `OverlayTapToSelectTests` (smoke — verifies the callback writes the selection slot).
+
+#### Tier 7 — Release prep + tag v0.4.0
+
+CHANGELOG / README / ROADMAP / DESIGN updates; develop → main; tag v0.4.0; GH release; reset develop to main.
+
+### Out-of-scope deferrals (recap)
+
+| Deferral | Cycle | Why |
+|---|---|---|
+| Accessibility sweep | v0.5 | Mechanical + exhaustive; would obscure feel-polish if bundled. |
+| Empty / disabled state polish | v0.5 | Same audit pass as accessibility (every interactive element). |
+| iOS accent-color picker | v0.5 | Settings UI doesn't exist yet; v0.5 introduces it alongside the legacy-playhead toggle. |
+| Real designed app icon | v1.0 | Paired with name lock — designing for a working title is wasted work. |
+| Final name lock | v1.0 | "Reels Studio" likely conflicts with Meta. |
+| App Store submission | v1.0 | Pairs with the above two. |
+
+## v0.5 — Accessibility + settings *(planned)*
+
+Sketch:
+- Full a11y wiring sweep — `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` on every interactive element. Driven by an audit pass (Xcode Accessibility Inspector + VoiceOver QA).
+- Empty / disabled state polish — greyed not hidden; tap-and-hold tooltips.
+- Settings screen — accent picker, fixed-center-playhead toggle, haptic-strength toggle.
+
+## v1.0 — App Store *(planned)*
+
+Sketch:
+- Final name lock (revisit "Reels Studio" before submission).
+- Real designed app icon family (replaces SF Symbol placeholder).
+- App Store metadata — screenshots, description, age rating, privacy manifest.
+- Submission alongside kadr v1.0.
 
 ---
 
