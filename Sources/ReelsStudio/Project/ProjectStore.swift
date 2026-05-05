@@ -143,6 +143,28 @@ final class ProjectStore: ObservableObject {
         applyMutation("Change Preset") { $0.preset = preset }
     }
 
+    /// Replace the speed curve on the identified `VideoClip`. Pass `nil` to
+    /// clear the curve (the engine then uses the static `speedRate` instead;
+    /// the user resets the rate via `clip.speed(1.0)` independently). No-op
+    /// for non-VideoClip clip kinds.
+    ///
+    /// Routes through ``SpeedCurveEditor``'s `onUpdate` callback. Persists
+    /// via the schema-v2 `VideoClipData.speedCurve` field, which already
+    /// round-trips through the bridge and survives undo / redo.
+    func applySpeedCurve(id: ClipID, _ curve: Kadr.Animation<Double>?) {
+        updateClip(id: id, actionName: "Speed Curve") { clip in
+            guard let video = clip as? VideoClip else { return clip }
+            if let curve {
+                return video.speed(curve: curve)
+            }
+            // Clear the curve — kadr's `speed(curve:)` doesn't have a nil
+            // overload, so we fall back to setting a flat rate. The user's
+            // existing speedRate (1.0 by default) restores; if they
+            // previously had a non-1.0 rate, it stays.
+            return video.speed(video.speedRate)
+        }
+    }
+
     /// Swap two top-level chain clips. The timeline's `onReorder` callback hands us
     /// the new array directly — we just replace.
     func replaceClips(_ newClips: [any Clip]) {
