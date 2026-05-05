@@ -15,7 +15,7 @@ settings:
 packages:
   Kadr:
     url: https://github.com/SteliyanH/kadr.git
-    from: 0.9.2
+    from: 0.10.1
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
     from: 0.8.0
