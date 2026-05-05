@@ -277,3 +277,139 @@ Bumps kadr-ui floor to **≥ 0.8.0**.
 - **Optimistic UI** on trim handles (already partially done by kadr-ui's `liveTrimMetrics`).
 
 v1.0.0 = App Store submission. Final name decided here ("Reels Studio" likely conflicts with Meta — tentative; revisit before submission).
+
+---
+
+## v0.3 — Wire-up cycle
+
+**Status:** RFC. No code yet.
+
+### Motivation
+
+v0.2 shipped the production foundation (persistence, error infra, undo/redo, project list). v0.7 + v0.8 of kadr-ui shipped four major editor surfaces (`SpeedCurveEditor`, `CaptionEditor`, `OverlayInspectorPanel`, `OverlayKeyframeEditor`) plus `TimelineZoom` + Track-internal editing. **None of those surfaces are wired up in reels-studio yet.** The v0.2 audit confirmed: `KeyframeArea` is read-only (callbacks dropped to nil); `AddCaptionsSheet` is ingest-only (no edit path); overlays have no inspector at all; the timeline doesn't support multi-track or zoom; sticker overlays are deferred.
+
+This cycle integrates everything that's already shipping in the kadr ecosystem — no new kadr / kadr-ui surface required, just wiring against ≥ kadr-ui 0.8.0.
+
+### Dependency floors
+
+- **kadr-ui ≥ 0.8.0** (up from 0.6.0). Brings `SpeedCurveEditor` / `CaptionEditor` / `OverlayInspectorPanel` / `OverlayKeyframeEditor` / `TimelineZoom` / `onTrackReorder` / `onTrackTrim` / sticker overlay support.
+- kadr / kadr-captions / kadr-photos floors unchanged from v0.2 (≥ 0.9.2 / ≥ 0.4.0 / ≥ 0.4.0).
+
+### Persistence extensions (lives in Tier 1 alongside the keyframe path)
+
+The v0.2 `ProjectDocument` doesn't carry per-property animations or speed curves. Tier 1 extends the schema:
+
+```swift
+struct VideoClipData {
+    // ...existing fields
+    var transformAnimation: ProjectAnimation<ProjectTransform>?    // new
+    var opacityAnimation: ProjectAnimation<Double>?                // new
+    var filterAnimations: [ProjectAnimation<Double>?]              // parallel to filters
+    var speedCurve: ProjectAnimation<Double>?                      // new
+}
+
+struct ImageClipData {
+    var transformAnimation: ProjectAnimation<ProjectTransform>?    // new
+    var opacityAnimation: ProjectAnimation<Double>?                // new
+}
+
+struct ProjectAnimation<Value: Codable & Sendable & Equatable>: Codable, Sendable, Equatable {
+    var keyframes: [ProjectKeyframe<Value>]
+    var timing: ProjectTimingFunction
+}
+struct ProjectKeyframe<Value: Codable & Sendable & Equatable>: Codable, Sendable, Equatable {
+    var timeSeconds: Double
+    var value: Value
+}
+enum ProjectTimingFunction: Codable, Sendable, Equatable {
+    case linear, easeIn, easeOut, easeInOut
+    case cubicBezier(p1x: Double, p1y: Double, p2x: Double, p2y: Double)
+}
+```
+
+Schema bump to **`schemaVersion: 2`**. Loaders for v1 documents continue working — the new fields default to `nil` (additive migration; no data loss).
+
+Track support also lands in Tier 1 (or earlier — see Tier breakdown):
+
+```swift
+enum ProjectClip {
+    // ...existing cases
+    case track(TrackData)
+}
+struct TrackData: Codable, Sendable, Equatable {
+    var startTimeSeconds: Double
+    var name: String?
+    var opacityFactor: Double
+    var clips: [ProjectClip]   // recursive — Track inside Track is theoretically allowed but rejected by kadr's runtime
+}
+```
+
+### Tier breakdown
+
+- **Tier 0** *(this PR)* — RFC only. No code.
+
+- **Tier 1 — Persistence schema v2 + keyframe authoring** *(largest)*
+  - Bump `schemaVersion` to 2; add the animation / track / speed-curve fields above.
+  - Add `Animation<T>` ↔ `ProjectAnimation<T>` bridge (kadr's generic `Animation<Value: Animatable>` can't directly conform Codable; bridge per concrete value type — `Transform`, `Double`, `Position`, `Size`).
+  - Replace v0.2's read-only `KeyframeArea` with real authoring: wire `KeyframeEditor.onAdd` / `.onRemove` / `.onRetime` to new `ProjectStore.addKeyframe(...)` / `removeKeyframe(...)` / `retimeKeyframe(...)` mutations.
+  - Mutations use the existing `applyMutation(actionName:)` so undo/redo Just Works.
+  - **~500 LOC + ~30 tests.**
+
+- **Tier 2 — SpeedCurveEditor wiring**
+  - Add a "Speed curve…" row to `InspectorPanel` (or push a sheet) when a `VideoClip` is selected.
+  - `SpeedCurveEditor(clip:onUpdate:)` callback routes through `ProjectStore.applySpeedCurve(id:_:)` — built on top of Tier 1's mutation infrastructure.
+  - **~200 LOC + ~10 tests.**
+
+- **Tier 3 — Caption editor (replaces AddCaptionsSheet)**
+  - Refactor `AddCaptionsSheet` to a two-tab sheet: "Import from file" (existing) and "Edit cues" (new — wraps `CaptionEditor`).
+  - Caption mutations route through `ProjectStore.setCaptions(_:)` (already exists) → undo-tracked.
+  - **~250 LOC + ~10 tests.**
+
+- **Tier 4 — Overlay inspector + overlay keyframe editor**
+  - Add a `selectedOverlayID: Binding<LayerID?>` to `ProjectStore`. `OverlayHost` selection routes here when v0.4+ adds tap-to-select on overlays; for v0.3 selection comes from a thumbnail strip in the editor body or a "Edit overlay" button on a list.
+  - When `selectedOverlayID != nil`, swap `InspectorArea`'s body to `OverlayInspectorPanel`, and `KeyframeArea`'s body to `OverlayKeyframeEditor`.
+  - Mutations: `ProjectStore.applyOverlay(id:transform:)` / `applyOverlayOpacity(...)` / etc.
+  - **~400 LOC + ~20 tests.**
+
+- **Tier 5 — Timeline zoom + multi-track UI**
+  - Add `zoom: TimelineZoom` to `ProjectStore` (persisted in `ProjectDocument` as `zoomPixelsPerSecond: Double?` — defaults to fit-to-width on load).
+  - Pass `zoom: $store.zoom` to `TimelineView`.
+  - Multi-track: `Track {}` blocks already render via kadr-ui's stacked-lane mode; wire `onTrackReorder` / `onTrackTrim` callbacks through `ProjectStore.applyTrackReorder(trackIndex:newClips:)` / `applyTrackTrim(trackIndex:clipIndex:leadingTrim:trailingTrim:)`. Persist Track via `ProjectClip.track` (added in Tier 1).
+  - **~350 LOC + ~15 tests.**
+
+- **Tier 6 — Sticker / image overlay support**
+  - Closes the `AddOverlaySheet` v0.1.x deferral — extend the sheet from text-only to a tabbed Text / Image / Sticker picker.
+  - Image / sticker source: photo picker (`PhotoPicker` from kadr-photos) → resolve to `PlatformImage` → embed via `ProjectOverlay.image` / `.sticker`.
+  - **~250 LOC + ~12 tests.**
+
+- **Tier 7 — Release prep + ship as v0.3.0.**
+
+### UI / UX placement decisions
+
+- **"Speed curve…" entry point**: as a row inside `InspectorPanel`'s VideoClip section. Tap → push a full-screen sheet with `SpeedCurveEditor`. Don't try to inline it (the editor needs vertical space for the log-scale multiplier axis).
+- **Caption editor sheet**: matches the "Music" / "SFX" sheet pattern. Tabbed — Import / Edit. Default to Edit when there are existing cues; Import when empty.
+- **Overlay selection**: v0.3 uses a "Layers" button in the toolbar that pushes a sheet listing every overlay; tap a row → close sheet, set `selectedOverlayID`. Future tier (v0.4 UX) adds tap-to-select directly on `OverlayHost`.
+- **TimelineZoom UI**: pinch on the timeline (kadr-ui v0.7's gesture). No explicit zoom slider — the gesture is the affordance.
+- **Multi-track UI**: timeline stacks horizontally as today; Track {} blocks render as additional lanes per kadr-ui's existing layout. The user creates a Track via "+ Track" toolbar button (new — appears alongside `+ Clip`).
+
+### Test strategy
+
+- **Animation mutations**: round-trip every `addKeyframe` / `removeKeyframe` / `retimeKeyframe` per property kind through undo / redo + persistence.
+- **Schema migration**: v1 documents on disk continue loading after the v2 schema lands.
+- **Bridges**: `Animation<T>` ↔ `ProjectAnimation<T>` per `Value` type (`Transform` / `Double` / `Position` / `Size`).
+- **Body smoke**: every new screen / sheet constructs without crashing under the same patterns as v0.2's tests.
+
+Target: **~100 new tests** across the cycle. Suite floor 65 → ~165.
+
+### Open questions (track in PRs, not blocking RFC merge)
+
+- **`Track` round-trip and the recursive sumtype**: `ProjectClip.track(TrackData)` where `TrackData.clips: [ProjectClip]`. Swift handles indirect enum cases natively; `[ProjectClip]` inside `TrackData` works since enum recursion through arrays doesn't need `indirect`. Verify in Tier 1.
+- **Animation timing function on import**: kadr's `TimingFunction.cubicBezier` carries `CGPoint`s; the persisted form uses `Double` x/y per point. Round-trip exact.
+- **Speed-curve UI entry point persistence**: should the sheet's open state itself persist? No — UX state, not document state. Same rule as `selectedClipID`.
+- **Multi-select on overlays**: deferred to v0.4 (matches kadr-ui v0.8's same scope decision).
+- **Track-lane trim handles** are kadr-ui v0.7.1; included transparently when we wire `onTrackTrim`.
+
+### Compatibility
+
+- **Schema bump** v1 → v2. Forward migration is automatic — v1 fields read; v2-only fields default to `nil` / `[]`. Backward migration *not* supported (a v2 document opened by an old build rejects with `unsupportedSchema`).
+- Every v0.2 user flow continues working unchanged.
