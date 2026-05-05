@@ -208,40 +208,23 @@ extension ProjectStore {
         }
     }
 
-    /// Apply (or clear) the transform animation. Because kadr's `.transform(_:)`
-    /// modifier preserves the existing animation, clearing requires a full
-    /// rebuild from the bare constructor.
+    /// Apply (or clear) the transform animation. Routes through kadr v0.10.1's
+    /// `transformAnimation(_:)` setter modifiers which install or clear the
+    /// animation field while preserving every other clip property. Static
+    /// base value lands via the existing `.transform(_:)` modifier.
     nonisolated static func applyTransformAnimation(
         _ clip: any Clip,
         base: Transform,
         animation: Kadr.Animation<Transform>?
     ) -> any Clip {
         if let v = clip as? VideoClip {
-            return rebuildVideoClip(
-                v,
-                transform: base,
-                transformAnimation: animation,
-                opacity: v.opacity,
-                opacityAnimation: v.opacityAnimation
-            )
+            return v.transform(base).transformAnimation(animation)
         }
         if let i = clip as? ImageClip {
-            return rebuildImageClip(
-                i,
-                transform: base,
-                transformAnimation: animation,
-                opacity: i.opacity,
-                opacityAnimation: i.opacityAnimation
-            )
+            return i.transform(base).transformAnimation(animation)
         }
         if let t = clip as? TitleSequence {
-            return rebuildTitleSequence(
-                t,
-                transform: base,
-                transformAnimation: animation,
-                opacity: t.opacity,
-                opacityAnimation: t.opacityAnimation
-            )
+            return t.transform(base).transformAnimation(animation)
         }
         return clip
     }
@@ -252,181 +235,25 @@ extension ProjectStore {
         animation: Kadr.Animation<Double>?
     ) -> any Clip {
         if let v = clip as? VideoClip {
-            return rebuildVideoClip(
-                v,
-                transform: v.transform,
-                transformAnimation: v.transformAnimation,
-                opacity: base,
-                opacityAnimation: animation
-            )
+            return v.opacity(base).opacityAnimation(animation)
         }
         if let i = clip as? ImageClip {
-            return rebuildImageClip(
-                i,
-                transform: i.transform,
-                transformAnimation: i.transformAnimation,
-                opacity: base,
-                opacityAnimation: animation
-            )
+            return i.opacity(base).opacityAnimation(animation)
         }
         if let t = clip as? TitleSequence {
-            return rebuildTitleSequence(
-                t,
-                transform: t.transform,
-                transformAnimation: t.transformAnimation,
-                opacity: base,
-                opacityAnimation: animation
-            )
+            return t.opacity(base).opacityAnimation(animation)
         }
         return clip
     }
 
-    // MARK: - Full rebuild helpers (every animation field explicit)
-
-    /// Rebuild an `ImageClip` from scratch with the given resolved field
-    /// values. Pass `nil` for an animation to clear it; the modifier chain
-    /// only re-applies non-nil fields, so cleared animations stay cleared.
-    nonisolated static func rebuildImageClip(
-        _ source: ImageClip,
-        transform: Transform?,
-        transformAnimation: Kadr.Animation<Transform>?,
-        opacity: Double?,
-        opacityAnimation: Kadr.Animation<Double>?
-    ) -> ImageClip {
-        var rebuilt = ImageClip(source.image, duration: source.duration)
-        if let t = transform {
-            if let anim = transformAnimation {
-                rebuilt = rebuilt.transform(t, animation: anim)
-            } else {
-                rebuilt = rebuilt.transform(t)
-            }
-        }
-        if let o = opacity {
-            if let anim = opacityAnimation {
-                rebuilt = rebuilt.opacity(o, animation: anim)
-            } else {
-                rebuilt = rebuilt.opacity(o)
-            }
-        }
-        if let id = source.clipID { rebuilt = rebuilt.id(id) }
-        return rebuilt
-    }
-
-    nonisolated static func rebuildVideoClip(
-        _ source: VideoClip,
-        transform: Transform?,
-        transformAnimation: Kadr.Animation<Transform>?,
-        opacity: Double?,
-        opacityAnimation: Kadr.Animation<Double>?
-    ) -> VideoClip {
-        var rebuilt = VideoClip(url: source.url)
-        if let trim = source.trimRange { rebuilt = rebuilt.trimmed(to: trim) }
-        if source.isReversed { rebuilt = rebuilt.reversed() }
-        if source.isMuted { rebuilt = rebuilt.muted() }
-        if let curve = source.speedCurve {
-            rebuilt = rebuilt.speed(curve: curve)
-        } else if source.speedRate != 1.0 {
-            rebuilt = rebuilt.speed(source.speedRate)
-        }
-        for (i, filter) in source.filters.enumerated() {
-            if i < source.filterAnimations.count, let animation = source.filterAnimations[i] {
-                rebuilt = rebuilt.filter(filter, animation: animation)
-            } else {
-                rebuilt = rebuilt.filter(filter)
-            }
-        }
-        if let t = transform {
-            if let anim = transformAnimation {
-                rebuilt = rebuilt.transform(t, animation: anim)
-            } else {
-                rebuilt = rebuilt.transform(t)
-            }
-        }
-        if let o = opacity {
-            if let anim = opacityAnimation {
-                rebuilt = rebuilt.opacity(o, animation: anim)
-            } else {
-                rebuilt = rebuilt.opacity(o)
-            }
-        }
-        if let id = source.clipID { rebuilt = rebuilt.id(id) }
-        return rebuilt
-    }
-
-    nonisolated static func rebuildTitleSequence(
-        _ source: TitleSequence,
-        transform: Transform?,
-        transformAnimation: Kadr.Animation<Transform>?,
-        opacity: Double?,
-        opacityAnimation: Kadr.Animation<Double>?
-    ) -> TitleSequence {
-        var rebuilt = TitleSequence(
-            source.text,
-            duration: source.duration,
-            style: source.style,
-            background: source.backgroundColor
-        )
-        if let t = transform {
-            if let anim = transformAnimation {
-                rebuilt = rebuilt.transform(t, animation: anim)
-            } else {
-                rebuilt = rebuilt.transform(t)
-            }
-        }
-        if let o = opacity {
-            if let anim = opacityAnimation {
-                rebuilt = rebuilt.opacity(o, animation: anim)
-            } else {
-                rebuilt = rebuilt.opacity(o)
-            }
-        }
-        if let id = source.clipID { rebuilt = rebuilt.id(id) }
-        return rebuilt
-    }
-
-    /// Replace `clip.filters[filterIndex]`'s parallel animation entry with
-    /// `animation` and rebuild the clip. Kadr clips are immutable; chain
-    /// modifiers reapply every property.
+    /// Apply (or clear) the animation on `filters[filterIndex]`. Routes
+    /// through kadr v0.10.1's `filterAnimation(at:_:)` setter which
+    /// addresses the indexed slot directly without disturbing siblings.
     nonisolated static func applyFilterAnimation(
         _ video: VideoClip,
         filterIndex: Int,
         animation: Kadr.Animation<Double>?
     ) -> VideoClip {
-        var rebuilt = VideoClip(url: video.url)
-        if let trim = video.trimRange { rebuilt = rebuilt.trimmed(to: trim) }
-        if video.isReversed { rebuilt = rebuilt.reversed() }
-        if video.isMuted { rebuilt = rebuilt.muted() }
-        if let curve = video.speedCurve {
-            rebuilt = rebuilt.speed(curve: curve)
-        } else if video.speedRate != 1.0 {
-            rebuilt = rebuilt.speed(video.speedRate)
-        }
-        for (i, filter) in video.filters.enumerated() {
-            let perFilterAnimation: Kadr.Animation<Double>?
-            if i == filterIndex {
-                perFilterAnimation = animation
-            } else if i < video.filterAnimations.count {
-                perFilterAnimation = video.filterAnimations[i]
-            } else {
-                perFilterAnimation = nil
-            }
-            if let perFilterAnimation {
-                rebuilt = rebuilt.filter(filter, animation: perFilterAnimation)
-            } else {
-                rebuilt = rebuilt.filter(filter)
-            }
-        }
-        if let transformAnim = video.transformAnimation, let transform = video.transform {
-            rebuilt = rebuilt.transform(transform, animation: transformAnim)
-        } else if let transform = video.transform {
-            rebuilt = rebuilt.transform(transform)
-        }
-        if let opacityAnim = video.opacityAnimation, let opacity = video.opacity {
-            rebuilt = rebuilt.opacity(opacity, animation: opacityAnim)
-        } else if let opacity = video.opacity {
-            rebuilt = rebuilt.opacity(opacity)
-        }
-        if let id = video.clipID { rebuilt = rebuilt.id(id) }
-        return rebuilt
+        video.filterAnimation(at: filterIndex, animation)
     }
 }
