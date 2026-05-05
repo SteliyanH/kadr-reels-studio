@@ -17,7 +17,14 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
 
     /// Current persistence schema version. Increment for incompatible changes;
     /// load-side migrations live in ``ProjectLibrary``.
-    public static let currentSchemaVersion: Int = 1
+    ///
+    /// **v2 (this release)** added `transformAnimation` / `opacityAnimation` /
+    /// `filterAnimations` on clips, `speedCurve` on `VideoClipData`,
+    /// `transformAnimation` / `opacityAnimation` on overlays, and
+    /// `ProjectClip.track` for `Kadr.Track {}` blocks. Forward-only and
+    /// additive — every v1 field continues reading; v1 documents on disk
+    /// load fine.
+    public static let currentSchemaVersion: Int = 2
 
     public let id: UUID
     public var name: String
@@ -57,14 +64,15 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
 
 // MARK: - Clip sumtype
 
-/// Sumtype mirror of kadr's `any Clip`. v0.2 covers the four kinds the editor
-/// actually creates (video / image / title / transition); ``Track`` blocks
-/// land in v0.3 alongside the multi-track UI.
+/// Sumtype mirror of kadr's `any Clip`. v0.3 adds `.track` for `Kadr.Track {}`
+/// blocks — the recursive `clips: [ProjectClip]` payload survives Swift's
+/// enum recursion through arrays without needing `indirect`.
 enum ProjectClip: Codable, Sendable, Equatable {
     case video(VideoClipData)
     case image(ImageClipData)
     case title(TitleSequenceData)
     case transition(TransitionData)
+    case track(TrackData)
 }
 
 struct VideoClipData: Codable, Sendable, Equatable {
@@ -76,13 +84,23 @@ struct VideoClipData: Codable, Sendable, Equatable {
     public var isMuted: Bool
     public var speedRate: Double
     public var opacity: Double?
-    /// Per-clip filters applied in order. Round-trips every `Filter` case
-    /// `InspectorPanel` exposes a slider for. `mono` / `lut` / `chromaKey`
-    /// require larger surfaces (LUT data, chroma-key parameters); v0.2
-    /// drops them on round-trip with a console warning.
+    /// Per-clip filters applied in order.
     public var filters: [ProjectFilter]
     /// Position / rotation / scale / anchor — round-trips inspector edits.
     public var transform: ProjectTransform?
+    /// Keyframe animation driving ``transform``. v2.
+    public var transformAnimation: ProjectAnimation<ProjectTransform>?
+    /// Keyframe animation driving ``opacity``. v2.
+    public var opacityAnimation: ProjectAnimation<Double>?
+    /// Optional animation per filter, parallel to ``filters``. Drives the
+    /// scalar of each filter at the same index. Outer optional handles v1
+    /// → v2 migration (missing key → nil); inner optional means a specific
+    /// filter is static. v2.
+    public var filterAnimations: [ProjectAnimation<Double>?]?
+    /// Speed curve (per-clip-time speed multiplier). Mutually exclusive
+    /// with a non-1.0 ``speedRate`` — the engine prefers the curve when
+    /// both are set. v2.
+    public var speedCurve: ProjectAnimation<Double>?
 
     public init(
         clipID: String? = nil,
@@ -94,7 +112,11 @@ struct VideoClipData: Codable, Sendable, Equatable {
         speedRate: Double = 1.0,
         opacity: Double? = nil,
         filters: [ProjectFilter] = [],
-        transform: ProjectTransform? = nil
+        transform: ProjectTransform? = nil,
+        transformAnimation: ProjectAnimation<ProjectTransform>? = nil,
+        opacityAnimation: ProjectAnimation<Double>? = nil,
+        filterAnimations: [ProjectAnimation<Double>?]? = nil,
+        speedCurve: ProjectAnimation<Double>? = nil
     ) {
         self.clipID = clipID
         self.url = url
@@ -106,6 +128,31 @@ struct VideoClipData: Codable, Sendable, Equatable {
         self.opacity = opacity
         self.filters = filters
         self.transform = transform
+        self.transformAnimation = transformAnimation
+        self.opacityAnimation = opacityAnimation
+        self.filterAnimations = filterAnimations
+        self.speedCurve = speedCurve
+    }
+}
+
+struct TrackData: Codable, Sendable, Equatable {
+    /// `Track {}` blocks always have a start time on the composition
+    /// timeline (kadr defaults to `.zero` for the parameter-less init).
+    public var startTimeSeconds: Double
+    public var name: String?
+    public var opacityFactor: Double
+    public var clips: [ProjectClip]
+
+    public init(
+        startTimeSeconds: Double = 0,
+        name: String? = nil,
+        opacityFactor: Double = 1.0,
+        clips: [ProjectClip] = []
+    ) {
+        self.startTimeSeconds = startTimeSeconds
+        self.name = name
+        self.opacityFactor = opacityFactor
+        self.clips = clips
     }
 }
 
@@ -117,19 +164,25 @@ struct ImageClipData: Codable, Sendable, Equatable {
     public var durationSeconds: Double
     public var opacity: Double?
     public var transform: ProjectTransform?
+    public var transformAnimation: ProjectAnimation<ProjectTransform>?
+    public var opacityAnimation: ProjectAnimation<Double>?
 
     public init(
         clipID: String? = nil,
         storage: ImageStorage,
         durationSeconds: Double,
         opacity: Double? = nil,
-        transform: ProjectTransform? = nil
+        transform: ProjectTransform? = nil,
+        transformAnimation: ProjectAnimation<ProjectTransform>? = nil,
+        opacityAnimation: ProjectAnimation<Double>? = nil
     ) {
         self.clipID = clipID
         self.storage = storage
         self.durationSeconds = durationSeconds
         self.opacity = opacity
         self.transform = transform
+        self.transformAnimation = transformAnimation
+        self.opacityAnimation = opacityAnimation
     }
 }
 

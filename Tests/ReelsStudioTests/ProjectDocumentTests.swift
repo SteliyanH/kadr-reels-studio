@@ -31,7 +31,7 @@ final class ProjectDocumentTests: XCTestCase {
         let restored = try roundTrip(original)
         XCTAssertEqual(restored.id, original.id)
         XCTAssertEqual(restored.name, "Empty")
-        XCTAssertEqual(restored.schemaVersion, 1)
+        XCTAssertEqual(restored.schemaVersion, ProjectDocument.currentSchemaVersion)
         XCTAssertTrue(restored.clips.isEmpty)
         XCTAssertTrue(restored.overlays.isEmpty)
     }
