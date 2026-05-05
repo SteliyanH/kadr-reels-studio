@@ -38,22 +38,32 @@ Bumped kadr floor to **≥ 0.10.1** and kadr-ui floor to **≥ 0.8.0**. Wired ev
 
 Suite: 65 → 149 (84 new tests across the cycle).
 
-## v0.4 → v1.0 — UX polish layer *(planned)*
+## v0.4.0 — UX polish (foundations) *(planned)*
 
-- Two-tier bottom toolbar with selection-driven swap (root verbs ↔ clip-specific actions, animated crossfade).
-- Fixed-center playhead during scrub.
-- Snap haptics on pinch + drag-snap-to-adjacent-clip.
-- Single accent-color thread linking selected clip → active inspector tab.
+Bumps kadr-ui floor to **≥ 0.9.0** (mid-cycle patch — `fixedCenterPlayhead` modifier, `onZoomSnap` callback, `OverlayHost.onLayerTap`). Closes the foundational half of the polish layer:
+
+- Two-tier bottom toolbar with selection-driven swap (root verbs ↔ clip-specific actions ↔ overlay-specific ↔ multi-select), animated crossfade.
+- Fixed-center playhead during scrub — timeline scrolls under it (per-project opt-in).
+- Snap haptics on pinch-zoom + drag-snap-to-adjacent-clip; shared `HapticEngine` actor.
+- Single accent-color thread — `Project.accentColor` flows to inspector tabs / keyframe playhead / timeline selection ring.
+- Spring drawer detents (uniform `.interactiveSpring(response: 0.35, dampingFraction: 0.78)`); medium thud on delete; success haptic on export.
+- **Track creation UI** *(v0.3 carry-over)* — multi-select model + `wrapInTrack(ids:)` for contiguous selections.
+- **Overlay tap-to-select on `OverlayHost`** *(v0.3 carry-over)* — replaces `LayersSheet`-only selection.
+
+See [DESIGN.md](DESIGN.md) for the full RFC and tier breakdown.
+
+## v0.5.0 — Accessibility + settings *(planned)*
+
+- Full a11y wiring sweep — `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` on every interactive element (Accessibility Inspector + VoiceOver QA pass).
 - Empty / disabled state polish — greyed not hidden; tap-and-hold tooltips.
-- Real designed app icon + custom icon family (replace SF Symbols).
-- Accessibility wiring — `.accessibilityLabel` / `.accessibilityHint` on every interactive element.
-- Spring animation curves on drawer detents; medium thud on delete; success haptic pattern on export.
-- **Track creation UI** — "wrap selection in track" (carried over from v0.3 deferral; needs a selection model first).
-- **Overlay tap-to-select on `OverlayHost`** — replaces v0.3's `LayersSheet`-only selection.
+- Settings screen — accent-color picker (iOS), fixed-center-playhead toggle, haptic-strength toggle.
 
 ## v1.0.0 — App Store *(planned)*
 
-Submission alongside kadr v1.0. Working title to be locked here ("Reels Studio" likely conflicts with Meta trademarks; rename before submission).
+- Final name lock (revisit "Reels Studio" before submission — likely conflicts with Meta trademarks).
+- Real designed app icon family (replaces SF Symbol placeholder).
+- App Store metadata — screenshots, description, age rating, privacy manifest.
+- Submission alongside kadr v1.0.
 
 ## Out of scope
 
