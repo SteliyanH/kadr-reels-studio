@@ -2,6 +2,7 @@ import Foundation
 import CoreMedia
 import CoreGraphics
 import Kadr
+import KadrUI
 #if canImport(UIKit)
 import UIKit
 #elseif canImport(AppKit)
@@ -24,7 +25,8 @@ extension ProjectDocument {
             overlays: overlays.compactMap(ProjectDocument.runtimeOverlay(from:)),
             audioTracks: audioTracks.map(ProjectDocument.runtimeAudioTrack(from:)),
             captions: captions.map(ProjectDocument.runtimeCaption(from:)),
-            preset: ProjectDocument.runtimePreset(from: preset)
+            preset: ProjectDocument.runtimePreset(from: preset),
+            zoom: zoomPixelsPerSecond.map { TimelineZoom(pixelsPerSecond: $0) }
         )
     }
 
@@ -287,7 +289,8 @@ extension Project {
             overlays: overlays.compactMap(ProjectDocument.documentOverlay(from:)),
             audioTracks: audioTracks.map(ProjectDocument.documentAudioTrack(from:)),
             captions: captions.map(ProjectDocument.documentCaption(from:)),
-            preset: ProjectDocument.documentPreset(from: preset)
+            preset: ProjectDocument.documentPreset(from: preset),
+            zoomPixelsPerSecond: zoom?.pixelsPerSecond
         )
     }
 }

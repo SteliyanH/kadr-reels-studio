@@ -1,6 +1,7 @@
 import Foundation
 import CoreMedia
 import Kadr
+import KadrUI
 
 /// In-memory editor state. Owned by ``ProjectStore``; mutating it through the store's
 /// methods triggers SwiftUI body invalidation and rebuilds the underlying `Video`.
@@ -27,18 +28,26 @@ struct Project {
     /// the export sheet lets the user override.
     var preset: Preset
 
+    /// Timeline pinch-zoom state, persisted per project. `nil` means "use
+    /// kadr-ui's auto fit-to-width" — the editor passes no zoom binding to
+    /// `TimelineView` in that case. The first user pinch initializes a
+    /// non-nil value; subsequent edits update it. v0.3 Tier 5.
+    var zoom: TimelineZoom?
+
     init(
         clips: [any Clip] = [],
         overlays: [any Overlay] = [],
         audioTracks: [AudioTrack] = [],
         captions: [Caption] = [],
-        preset: Preset = .reelsAndShorts
+        preset: Preset = .reelsAndShorts,
+        zoom: TimelineZoom? = nil
     ) {
         self.clips = clips
         self.overlays = overlays
         self.audioTracks = audioTracks
         self.captions = captions
         self.preset = preset
+        self.zoom = zoom
     }
 
     /// Build a kadr `Video` from the current editor state. Called on every SwiftUI
