@@ -12,6 +12,7 @@ struct TimelineArea: View {
     /// present sheets with shared state.
     var onAddClip: () -> Void = {}
     var onAddOverlay: () -> Void = {}
+    var onLayers: () -> Void = {}
     var onAddMusic: () -> Void = {}
     var onAddSFX: () -> Void = {}
     var onAddCaptions: () -> Void = {}
@@ -31,6 +32,7 @@ struct TimelineArea: View {
         HStack(spacing: 12) {
             ToolbarButton(systemImage: "plus.rectangle", label: "Clip", action: onAddClip)
             ToolbarButton(systemImage: "textformat", label: "Overlay", action: onAddOverlay)
+            ToolbarButton(systemImage: "square.stack.3d.up", label: "Layers", action: onLayers)
             ToolbarButton(systemImage: "music.note", label: "Music", action: onAddMusic)
             ToolbarButton(systemImage: "speaker.wave.2", label: "SFX", action: onAddSFX)
             ToolbarButton(systemImage: "captions.bubble", label: "Captions", action: onAddCaptions)
