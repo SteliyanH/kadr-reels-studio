@@ -139,6 +139,14 @@ final class ProjectStore: ObservableObject {
         applyMutation("Add Captions") { $0.captions.append(contentsOf: newCaptions) }
     }
 
+    /// Replace the project's full caption list. Used by the v0.3 caption
+    /// editor's `onUpdate` callback (it always emits the full sorted array,
+    /// not a diff). Routed through `applyMutation` so undo/redo and
+    /// auto-save Just Work.
+    func setCaptions(_ newCaptions: [Caption]) {
+        applyMutation("Edit Captions") { $0.captions = newCaptions }
+    }
+
     func setPreset(_ preset: Preset) {
         applyMutation("Change Preset") { $0.preset = preset }
     }
