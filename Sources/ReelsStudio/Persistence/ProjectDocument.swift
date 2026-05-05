@@ -36,6 +36,9 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
     public var audioTracks: [ProjectAudioTrack]
     public var captions: [ProjectCaption]
     public var preset: ProjectPreset
+    /// Timeline pinch-zoom state, persisted per project. `nil` = use
+    /// auto fit-to-width on load. v0.3 Tier 5.
+    public var zoomPixelsPerSecond: Double?
 
     public init(
         id: UUID = UUID(),
@@ -47,7 +50,8 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
         overlays: [ProjectOverlay] = [],
         audioTracks: [ProjectAudioTrack] = [],
         captions: [ProjectCaption] = [],
-        preset: ProjectPreset = .reelsAndShorts
+        preset: ProjectPreset = .reelsAndShorts,
+        zoomPixelsPerSecond: Double? = nil
     ) {
         self.id = id
         self.name = name
@@ -59,6 +63,7 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
         self.audioTracks = audioTracks
         self.captions = captions
         self.preset = preset
+        self.zoomPixelsPerSecond = zoomPixelsPerSecond
     }
 }
 

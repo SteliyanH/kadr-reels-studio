@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import CoreMedia
 import Kadr
+import KadrUI
 
 /// `ObservableObject` owning the editor's ``Project`` state. Targeting iOS 16 keeps
 /// us on `ObservableObject` rather than the iOS 17+ `@Observable` macro — a v0.2
@@ -167,6 +168,139 @@ final class ProjectStore: ObservableObject {
 
     func setPreset(_ preset: Preset) {
         applyMutation("Change Preset") { $0.preset = preset }
+    }
+
+    /// Update the persisted timeline zoom. **Does not** push an undo entry —
+    /// zoom is viewport state that the user expects to persist across launches
+    /// but not pollute the undo history (every pinch tick would otherwise
+    /// flood the stack). Auto-save still observes `$project` and writes the
+    /// new value to disk on the trailing debounce edge.
+    func updateZoom(_ zoom: TimelineZoom?) {
+        project.zoom = zoom
+    }
+
+    /// Apply a trim delta to a clip inside a `Track {}` block. `KadrUI`'s
+    /// `onTrackTrim` callback hands us deltas, not the resulting clip, so
+    /// we walk to the right inner clip and apply the appropriate trim
+    /// modifier. Routed through `applyMutation` so undo / auto-save inherit.
+    ///
+    /// - Parameters:
+    ///   - trackIndex: 0-based ordinal among Track-typed entries in
+    ///     `project.clips`.
+    ///   - clipIndex: 0-based position within the Track's `clips` array.
+    ///   - leadingTrim / trailingTrim: signed deltas in seconds. Positive
+    ///     trims; negative extends. See `KadrUI.TimelineView.onTrackTrim`'s
+    ///     contract for the precise sign convention.
+    func applyTrackTrim(
+        trackIndex: Int,
+        clipIndex: Int,
+        leadingTrim: CMTime,
+        trailingTrim: CMTime
+    ) {
+        applyMutation("Trim Clip") { project in
+            project.clips = ProjectStore.applyingTrackTrim(
+                clips: project.clips,
+                trackIndex: trackIndex,
+                clipIndex: clipIndex,
+                leadingTrim: leadingTrim,
+                trailingTrim: trailingTrim
+            )
+        }
+    }
+
+    /// Pure helper: produce a new clips array with the trim applied to the
+    /// requested inner clip. Returns the array unchanged for out-of-range
+    /// indices (matches editor-consumer expectations under stale indices).
+    nonisolated static func applyingTrackTrim(
+        clips: [any Clip],
+        trackIndex: Int,
+        clipIndex: Int,
+        leadingTrim: CMTime,
+        trailingTrim: CMTime
+    ) -> [any Clip] {
+        // Find the Track at the given track-only ordinal.
+        var seen = 0
+        var topLevelIndex: Int? = nil
+        for (i, clip) in clips.enumerated() where clip is Track {
+            if seen == trackIndex { topLevelIndex = i; break }
+            seen += 1
+        }
+        guard let topLevelIndex,
+              let track = clips[topLevelIndex] as? Track,
+              clipIndex >= 0, clipIndex < track.clips.count else {
+            return clips
+        }
+        let oldInner = track.clips[clipIndex]
+        guard let newInner = ProjectStore.applyingTrim(
+            to: oldInner,
+            leadingTrim: leadingTrim,
+            trailingTrim: trailingTrim
+        ) else { return clips }
+        var newInners = track.clips
+        newInners[clipIndex] = newInner
+        let rebuiltTrack = ProjectStore.rebuildTrack(track, clips: newInners)
+        var newTopLevel = clips
+        newTopLevel[topLevelIndex] = rebuiltTrack
+        return newTopLevel
+    }
+
+    /// Apply trim deltas to a clip. For VideoClip, shift `trimRange` by the
+    /// deltas; for ImageClip / TitleSequence, adjust `duration` by
+    /// `-(leading + trailing)` (only the back handle moves since they have
+    /// no source-asset front to retrieve). Returns nil for unsupported clip
+    /// kinds.
+    nonisolated static func applyingTrim(
+        to clip: any Clip,
+        leadingTrim: CMTime,
+        trailingTrim: CMTime
+    ) -> (any Clip)? {
+        if let video = clip as? VideoClip {
+            // Engine's trimRange semantics: positive leadingTrim trims the
+            // front; positive trailingTrim trims the back.
+            let oldRange = video.trimRange ?? CMTimeRange(start: .zero, duration: video.duration)
+            let newStart = CMTimeAdd(oldRange.start, leadingTrim)
+            let newEnd = CMTimeSubtract(CMTimeAdd(oldRange.start, oldRange.duration), trailingTrim)
+            let newRange = CMTimeRange(start: newStart, duration: CMTimeSubtract(newEnd, newStart))
+            return video.trimmed(to: newRange)
+        }
+        if let image = clip as? ImageClip {
+            let totalTrim = CMTimeAdd(leadingTrim, trailingTrim)
+            let newDuration = CMTimeSubtract(image.duration, totalTrim)
+            guard CMTimeCompare(newDuration, .zero) > 0 else { return nil }
+            var rebuilt = ImageClip(image.image, duration: newDuration)
+            if let opacity = image.opacity { rebuilt = rebuilt.opacity(opacity) }
+            if let id = image.clipID { rebuilt = rebuilt.id(id) }
+            return rebuilt
+        }
+        if let title = clip as? TitleSequence {
+            let totalTrim = CMTimeAdd(leadingTrim, trailingTrim)
+            let newDuration = CMTimeSubtract(title.duration, totalTrim)
+            guard CMTimeCompare(newDuration, .zero) > 0 else { return nil }
+            var rebuilt = TitleSequence(
+                title.text,
+                duration: newDuration,
+                style: title.style,
+                background: title.backgroundColor
+            )
+            if let opacity = title.opacity { rebuilt = rebuilt.opacity(opacity) }
+            if let id = title.clipID { rebuilt = rebuilt.id(id) }
+            return rebuilt
+        }
+        // Transitions / Tracks aren't trimmed via this path.
+        return nil
+    }
+
+    /// Rebuild a `Track` with new inner clips, preserving `startTime` /
+    /// `name` / `opacityFactor`.
+    nonisolated static func rebuildTrack(_ source: Track, clips: [any Clip]) -> Track {
+        let start = source.startTime ?? .zero
+        var rebuilt = Track(at: start, name: source.name) {
+            for c in clips { c }
+        }
+        if source.opacityFactor != 1.0 {
+            rebuilt = rebuilt.opacity(source.opacityFactor)
+        }
+        return rebuilt
     }
 
     /// Replace the speed curve on the identified `VideoClip`. Pass `nil` to
