@@ -18,7 +18,23 @@ final class ProjectStore: ObservableObject {
 
     /// Currently-selected clip's ``ClipID``, mirrored to the inspector and keyframe
     /// editor. `nil` when nothing's selected.
-    @Published var selectedClipID: ClipID?
+    @Published var selectedClipID: ClipID? {
+        didSet {
+            // Mutual exclusion: selecting a clip clears any overlay selection.
+            // The editor body picks which inspector / keyframe surface to
+            // show based on which slot is non-nil.
+            if selectedClipID != nil { selectedOverlayID = nil }
+        }
+    }
+
+    /// Currently-selected overlay's ``LayerID``. v0.3 surfaces selection
+    /// through the Layers sheet; v0.4 will add tap-to-select on
+    /// ``KadrUI/OverlayHost``. Mutually exclusive with ``selectedClipID``.
+    @Published var selectedOverlayID: LayerID? {
+        didSet {
+            if selectedOverlayID != nil { selectedClipID = nil }
+        }
+    }
 
     /// Composition-time playhead. Driven by `TimelineView`'s tap-to-scrub.
     @Published var currentTime: CMTime = .zero
@@ -65,7 +81,9 @@ final class ProjectStore: ObservableObject {
     /// for undo. Every public mutation routes through here so the history
     /// stack stays complete. `actionName` shows up in the system "Undo X"
     /// menu on iPad / Mac (no-op on iPhone where the menu doesn't render).
-    private func applyMutation(_ actionName: String, _ mutation: (inout Project) -> Void) {
+    /// Internal so extensions in other files (e.g. `ProjectStore+Overlays`)
+    /// can route their mutations through the same undo / save plumbing.
+    func applyMutation(_ actionName: String, _ mutation: (inout Project) -> Void) {
         let previous = project
         var next = project
         mutation(&next)

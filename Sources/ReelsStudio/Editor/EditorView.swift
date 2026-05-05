@@ -20,6 +20,7 @@ struct EditorView: View {
 
     @State private var showPhotoPicker = false
     @State private var showOverlaySheet = false
+    @State private var showLayersSheet = false
     @State private var showMusicSheet = false
     @State private var showSFXSheet = false
     @State private var showCaptionsSheet = false
@@ -46,12 +47,20 @@ struct EditorView: View {
                 store: store,
                 onAddClip: { showPhotoPicker = true },
                 onAddOverlay: { showOverlaySheet = true },
+                onLayers: { showLayersSheet = true },
                 onAddMusic: { showMusicSheet = true },
                 onAddSFX: { showSFXSheet = true },
                 onAddCaptions: { showCaptionsSheet = true },
                 onExport: { showExportSheet = true }
             )
-            if store.selectedClipID != nil {
+            // Inspector / keyframe pair — routes to clip- or overlay-targeted
+            // surfaces based on which selection slot is active. Mutual
+            // exclusion is enforced by ProjectStore's didSet observers.
+            if store.selectedOverlayID != nil {
+                OverlayKeyframeArea(store: store)
+                OverlayInspectorArea(store: store)
+                    .padding(.horizontal)
+            } else if store.selectedClipID != nil {
                 KeyframeArea(store: store)
                 InspectorArea(store: store)
                     .padding(.horizontal)
@@ -63,6 +72,9 @@ struct EditorView: View {
         .addClipFlow(isPresented: $showPhotoPicker, store: store)
         .sheet(isPresented: $showOverlaySheet) {
             AddOverlaySheet(store: store)
+        }
+        .sheet(isPresented: $showLayersSheet) {
+            LayersSheet(store: store)
         }
         .sheet(isPresented: $showMusicSheet) {
             AddMusicSheet(store: store)
