@@ -24,17 +24,19 @@ Closes the four "feels like a prototype" gaps: persistence, error surfacing, und
 4. **Error toast/alert infra + replace prints** — `AppError` / `ToastCenter` / `ToastView` three-tier severity model. All four `print()` sites replaced; `KeyframeArea` print stubs dropped (read-only is correct for v0.2).
 5. **Undo / redo** — `UndoManager`-backed snapshot history; per-action granularity via `groupsByEvent = false`; action-named entries flow to system menu; `@Published canUndo` / `canRedo` flags drive top-bar arrow buttons.
 
-## v0.3.0 — Wire-up *(planned)*
+## v0.3.0 — Wire-up ✓ shipped
 
-Bumps kadr-ui floor to **≥ 0.8.0**. Wires the kadr-ui v0.7 / v0.8 surfaces that ship today but aren't yet integrated:
+Bumped kadr floor to **≥ 0.10.1** and kadr-ui floor to **≥ 0.8.0**. Wired every kadr-ui v0.7 / v0.8 surface that shipped during the v0.2 cycle. Seven tiers (one mid-cycle kadr patch):
 
-- Real keyframe authoring — replace v0.2's read-only `KeyframeArea` with `Animation<T>` mutation helpers + `ProjectMutation.addKeyframe / removeKeyframe / retimeKeyframe`.
-- Surface `SpeedCurveEditor` behind a per-clip "Speed curve…" inspector row.
-- Replace `AddCaptionsSheet` (ingest-only) with `CaptionEditor` for editable cues.
-- Route overlay selection → `OverlayInspectorPanel` + `OverlayKeyframeEditor`. Add overlay-selection binding to `OverlayHost`.
-- Bind `TimelineZoom` to a project-state field; persist zoom level per project.
-- Multi-track UI: `Track {}` blocks visible, with `onTrackReorder` / `onTrackTrim` wired through `ProjectMutation`.
-- Sticker / image overlay support in `AddOverlaySheet` (closes the v0.1.x deferral).
+1. **Schema v2 + keyframe authoring** — `ProjectAnimation<Value>` generic + per-value-type bridges; `transformAnimation` / `opacityAnimation` / `filterAnimations` / `speedCurve` fields on `VideoClipData`; `ProjectStore.addKeyframe / removeKeyframe / retimeKeyframe` route through `applyMutation` for undo + auto-save inheritance.
+2. **kadr v0.10.1 patch + speed curve** *(mid-cycle)* — kadr ships animation-clearing modifiers (`transformAnimation(_:)` / `opacityAnimation(_:)` / `filterAnimation(at:_:)` / overlay variants); editor drops ~120 LOC of rebuild helpers. **`SpeedCurveSheet`** wrapping `KadrUI.SpeedCurveEditor` pushed from a per-clip "Speed curve…" inspector row.
+3. **Caption editor** — tabbed `AddCaptionsSheet` (Edit / Import). `KadrUI.CaptionEditor` for live cue authoring; existing v0.2 file picker for SRT / VTT / iTT / ASS / SSA. Single `setCaptions(_:)` mutation covers add / remove / retime / text changes uniformly.
+4. **Overlay inspector + overlay keyframe editor** — `OverlayInspectorArea` / `OverlayKeyframeArea` siblings to clip-targeted areas. `selectedOverlayID: LayerID?` slot mutually exclusive with `selectedClipID` via `didSet`. `LayersSheet` for selection (overlay-host tap-to-select deferred to v0.4).
+5. **Timeline zoom + multi-track** — `Project.zoom: TimelineZoom?` persists per project but bypasses undo (viewport state, not document). `onTrackReorder` routes to `replaceClips`; `onTrackTrim` walks Track + inner clip and applies trim modifiers per kind.
+6. **Sticker / image overlay creation** — `AddOverlaySheet` refactored into three tabs (Text / Image / Sticker). Image / Sticker share `PhotoOverlayTab` backed by kadr-photos `PhotoPicker` + `PhotosClipResolver.image` (1024×1024 cap).
+7. **Release prep** — README / ROADMAP / CHANGELOG, develop → main, tag v0.3.0.
+
+Suite: 65 → 149 (84 new tests across the cycle).
 
 ## v0.4 → v1.0 — UX polish layer *(planned)*
 
@@ -46,6 +48,8 @@ Bumps kadr-ui floor to **≥ 0.8.0**. Wires the kadr-ui v0.7 / v0.8 surfaces tha
 - Real designed app icon + custom icon family (replace SF Symbols).
 - Accessibility wiring — `.accessibilityLabel` / `.accessibilityHint` on every interactive element.
 - Spring animation curves on drawer detents; medium thud on delete; success haptic pattern on export.
+- **Track creation UI** — "wrap selection in track" (carried over from v0.3 deferral; needs a selection model first).
+- **Overlay tap-to-select on `OverlayHost`** — replaces v0.3's `LayersSheet`-only selection.
 
 ## v1.0.0 — App Store *(planned)*
 
@@ -64,3 +68,4 @@ Submission alongside kadr v1.0. Working title to be locked here ("Reels Studio" 
 |---|---|---|---|---|
 | 0.1.0 | ≥ 0.9.2 | ≥ 0.6.0 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.2.0 | ≥ 0.9.2 | ≥ 0.6.0 | ≥ 0.4.0 | ≥ 0.4.0 |
+| 0.3.0 | ≥ 0.10.1 | ≥ 0.8.0 | ≥ 0.4.0 | ≥ 0.4.0 |
