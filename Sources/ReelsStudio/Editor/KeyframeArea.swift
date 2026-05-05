@@ -4,12 +4,11 @@ import KadrUI
 
 /// Per-property keyframe tracks below the timeline. Wraps `KadrUI.KeyframeEditor`.
 ///
-/// **v0.2 — read-only.** The editor renders any keyframes already present on
-/// a clip (driven by kadr's `Animation<T>` storage). The add / remove /
-/// retime callbacks are intentionally `nil` — `KeyframeEditor` falls back to
-/// non-interactive markers in that mode. Full authoring requires building
-/// `Animation<T>` mutation helpers + a comprehensive clip-rebuild path; that
-/// lands in **v0.3 alongside `SpeedCurveEditor` / `OverlayKeyframeEditor`**.
+/// **v0.3 — full authoring.** `onAdd` / `onRemove` / `onRetime` route through
+/// ``ProjectStore``'s keyframe mutation surface, which builds `Animation<T>`
+/// values and rebuilds the affected clip via the immutable kadr modifier
+/// chain. Every operation runs through ``ProjectStore/applyMutation(actionName:)``
+/// so undo / redo and auto-save Just Work.
 @available(iOS 16, macOS 13, visionOS 1, *)
 struct KeyframeArea: View {
 
@@ -25,8 +24,16 @@ struct KeyframeArea: View {
             currentTime: Binding(
                 get: { store.currentTime },
                 set: { store.currentTime = $0 }
-            )
-            // onAdd / onRemove / onRetime intentionally omitted — see header.
+            ),
+            onAdd: { id, property, time in
+                store.addKeyframe(clipID: id, property: property, time: time)
+            },
+            onRemove: { id, property, time in
+                store.removeKeyframe(clipID: id, property: property, time: time)
+            },
+            onRetime: { id, property, from, to in
+                store.retimeKeyframe(clipID: id, property: property, from: from, to: to)
+            }
         )
         .padding(.horizontal)
     }

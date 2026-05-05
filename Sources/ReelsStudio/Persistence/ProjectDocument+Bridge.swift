@@ -36,7 +36,20 @@ extension ProjectDocument {
         case .image(let i):    return runtimeImageClip(from: i)
         case .title(let t):    return runtimeTitleSequence(from: t)
         case .transition(let t): return runtimeTransition(from: t)
+        case .track(let t):    return runtimeTrack(from: t)
         }
+    }
+
+    nonisolated static func runtimeTrack(from data: TrackData) -> Track {
+        let inner = data.clips.compactMap(runtimeClip(from:))
+        let start = CMTime(seconds: data.startTimeSeconds, preferredTimescale: 600)
+        var track = Track(at: start, name: data.name) {
+            for c in inner { c }
+        }
+        if data.opacityFactor != 1.0 {
+            track = track.opacity(data.opacityFactor)
+        }
+        return track
     }
 
     nonisolated static func runtimeVideoClip(from data: VideoClipData) -> VideoClip {
@@ -50,18 +63,35 @@ extension ProjectDocument {
         }
         if data.isReversed { clip = clip.reversed() }
         if data.isMuted { clip = clip.muted() }
-        if data.speedRate != 1.0 { clip = clip.speed(data.speedRate) }
-        for filter in data.filters {
+        // Speed curve takes precedence over flat speedRate (matches kadr's
+        // engine behavior). When both persist, prefer the curve.
+        if let curve = data.speedCurve {
+            clip = clip.speed(curve: runtimeDoubleAnimation(from: curve))
+        } else if data.speedRate != 1.0 {
+            clip = clip.speed(data.speedRate)
+        }
+        for (index, filter) in data.filters.enumerated() {
             // `lut` may fail to reload (file moved / deleted) — in that case
             // the filter is dropped silently. The rest of the clip survives.
-            if let restored = runtimeFilter(from: filter) {
+            guard let restored = runtimeFilter(from: filter) else { continue }
+            if let animations = data.filterAnimations,
+               index < animations.count,
+               let animation = animations[index] {
+                clip = clip.filter(restored, animation: runtimeDoubleAnimation(from: animation))
+            } else {
                 clip = clip.filter(restored)
             }
         }
-        if let transform = data.transform {
+        if let transformAnim = data.transformAnimation, let transform = data.transform {
+            clip = clip.transform(runtimeTransform(from: transform), animation: runtimeTransformAnimation(from: transformAnim))
+        } else if let transform = data.transform {
             clip = clip.transform(runtimeTransform(from: transform))
         }
-        if let opacity = data.opacity { clip = clip.opacity(opacity) }
+        if let opacityAnim = data.opacityAnimation, let opacity = data.opacity {
+            clip = clip.opacity(opacity, animation: runtimeDoubleAnimation(from: opacityAnim))
+        } else if let opacity = data.opacity {
+            clip = clip.opacity(opacity)
+        }
         if let id = data.clipID { clip = clip.id(ClipID(id)) }
         return clip
     }
@@ -69,10 +99,16 @@ extension ProjectDocument {
     nonisolated static func runtimeImageClip(from data: ImageClipData) -> ImageClip? {
         guard let image = platformImage(from: data.storage) else { return nil }
         var clip = ImageClip(image, duration: data.durationSeconds)
-        if let transform = data.transform {
+        if let transformAnim = data.transformAnimation, let transform = data.transform {
+            clip = clip.transform(runtimeTransform(from: transform), animation: runtimeTransformAnimation(from: transformAnim))
+        } else if let transform = data.transform {
             clip = clip.transform(runtimeTransform(from: transform))
         }
-        if let opacity = data.opacity { clip = clip.opacity(opacity) }
+        if let opacityAnim = data.opacityAnimation, let opacity = data.opacity {
+            clip = clip.opacity(opacity, animation: runtimeDoubleAnimation(from: opacityAnim))
+        } else if let opacity = data.opacity {
+            clip = clip.opacity(opacity)
+        }
         if let id = data.clipID { clip = clip.id(ClipID(id)) }
         return clip
     }
@@ -269,7 +305,9 @@ extension ProjectDocument {
                 storage: storage,
                 durationSeconds: CMTimeGetSeconds(image.duration),
                 opacity: image.opacity,
-                transform: image.transform.map(documentTransform(from:))
+                transform: image.transform.map(documentTransform(from:)),
+                transformAnimation: image.transformAnimation.map(documentTransformAnimation(from:)),
+                opacityAnimation: image.opacityAnimation.map(documentDoubleAnimation(from:))
             ))
         }
         if let title = clip as? TitleSequence {
@@ -290,7 +328,14 @@ extension ProjectDocument {
                 durationSeconds: CMTimeGetSeconds(transition.duration)
             ))
         }
-        // Track {}, future kadr clip types — not yet round-tripped. v0.3.
+        if let track = clip as? Track {
+            return .track(TrackData(
+                startTimeSeconds: track.startTime.map(CMTimeGetSeconds) ?? 0,
+                name: track.name,
+                opacityFactor: track.opacityFactor,
+                clips: track.clips.compactMap(documentClip(from:))
+            ))
+        }
         return nil
     }
 
@@ -305,8 +350,22 @@ extension ProjectDocument {
             speedRate: clip.speedRate,
             opacity: clip.opacity,
             filters: clip.filters.compactMap(documentFilter(from:)),
-            transform: clip.transform.map(documentTransform(from:))
+            transform: clip.transform.map(documentTransform(from:)),
+            transformAnimation: clip.transformAnimation.map(documentTransformAnimation(from:)),
+            opacityAnimation: clip.opacityAnimation.map(documentDoubleAnimation(from:)),
+            filterAnimations: documentFilterAnimations(from: clip.filterAnimations),
+            speedCurve: clip.speedCurve.map(documentDoubleAnimation(from:))
         )
+    }
+
+    /// Map kadr's parallel filter-animation array to its persisted form,
+    /// preserving index alignment with `filters`.
+    nonisolated static func documentFilterAnimations(
+        from animations: [Kadr.Animation<Double>?]
+    ) -> [ProjectAnimation<Double>?]? {
+        guard !animations.isEmpty,
+              animations.contains(where: { $0 != nil }) else { return nil }
+        return animations.map { $0.map(documentDoubleAnimation(from:)) }
     }
 
     nonisolated static func documentFilter(from filter: Filter) -> ProjectFilter? {
