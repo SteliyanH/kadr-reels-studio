@@ -119,6 +119,9 @@ struct ExportSheet: View {
             }
             resultURL = outputURL
             stage = .completed
+            // v0.4 Tier 4 — long-running task completion fires the success
+            // haptic before the share sheet presents.
+            HapticEngine.shared.success()
         } catch is CancellationError {
             stage = .idle
         } catch {

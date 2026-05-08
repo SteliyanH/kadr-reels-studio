@@ -49,7 +49,7 @@ struct EditorToolbar: View {
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.15), value: mode)
+        .animation(.interactiveSpring(response: 0.35, dampingFraction: 0.78), value: mode)
         .padding(.horizontal)
     }
 
@@ -91,6 +91,7 @@ struct EditorToolbar: View {
             }
             Spacer()
             ToolbarButton(systemImage: "trash", label: "Delete", role: .destructive) {
+                HapticEngine.shared.thud()
                 store.removeClip(id: id)
             }
         }
@@ -112,6 +113,7 @@ struct EditorToolbar: View {
             }
             Spacer()
             ToolbarButton(systemImage: "trash", label: "Delete", role: .destructive) {
+                HapticEngine.shared.thud()
                 store.removeOverlay(id: id)
             }
         }
