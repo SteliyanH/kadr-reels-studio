@@ -50,6 +50,13 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
     /// loading. v0.4 Tier 2.
     public var fixedCenterPlayhead: Bool?
 
+    /// Per-project accent color, encoded as `#RRGGBB(AA)` hex. `nil` =
+    /// follow the system tint. Additive on schema v3 (no version bump
+    /// needed — fold into the current schema like `zoomPixelsPerSecond`
+    /// did under v2); v1 / v2 / v3-without-the-field documents decode nil
+    /// and the runtime renders with the system accent. v0.4 Tier 3.
+    public var accentColorHex: String?
+
     public init(
         id: UUID = UUID(),
         name: String,
@@ -62,7 +69,8 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
         captions: [ProjectCaption] = [],
         preset: ProjectPreset = .reelsAndShorts,
         zoomPixelsPerSecond: Double? = nil,
-        fixedCenterPlayhead: Bool? = nil
+        fixedCenterPlayhead: Bool? = nil,
+        accentColorHex: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -76,6 +84,7 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
         self.preset = preset
         self.zoomPixelsPerSecond = zoomPixelsPerSecond
         self.fixedCenterPlayhead = fixedCenterPlayhead
+        self.accentColorHex = accentColorHex
     }
 }
 
