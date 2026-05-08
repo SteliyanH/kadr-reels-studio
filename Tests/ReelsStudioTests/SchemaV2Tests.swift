@@ -49,9 +49,9 @@ final class SchemaV2Tests: XCTestCase {
 
     // MARK: - Schema version
 
-    func testNewDocumentReportsV2() {
+    func testNewDocumentReportsCurrentSchema() {
         let doc = ProjectDocument(name: "x")
-        XCTAssertEqual(doc.schemaVersion, 2)
+        XCTAssertEqual(doc.schemaVersion, ProjectDocument.currentSchemaVersion)
     }
 
     // MARK: - V1 documents migrate forward (additive — missing v2 fields default)
