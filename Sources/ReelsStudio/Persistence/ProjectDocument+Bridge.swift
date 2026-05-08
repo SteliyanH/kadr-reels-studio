@@ -26,7 +26,11 @@ extension ProjectDocument {
             audioTracks: audioTracks.map(ProjectDocument.runtimeAudioTrack(from:)),
             captions: captions.map(ProjectDocument.runtimeCaption(from:)),
             preset: ProjectDocument.runtimePreset(from: preset),
-            zoom: zoomPixelsPerSecond.map { TimelineZoom(pixelsPerSecond: $0) }
+            zoom: zoomPixelsPerSecond.map { TimelineZoom(pixelsPerSecond: $0) },
+            // v1 / v2 documents have no field on disk; the runtime default
+            // (true) is the v0.4 behavior every existing project should
+            // adopt unchanged. v3 documents round-trip the explicit value.
+            fixedCenterPlayhead: fixedCenterPlayhead ?? true
         )
     }
 
@@ -290,7 +294,8 @@ extension Project {
             audioTracks: audioTracks.map(ProjectDocument.documentAudioTrack(from:)),
             captions: captions.map(ProjectDocument.documentCaption(from:)),
             preset: ProjectDocument.documentPreset(from: preset),
-            zoomPixelsPerSecond: zoom?.pixelsPerSecond
+            zoomPixelsPerSecond: zoom?.pixelsPerSecond,
+            fixedCenterPlayhead: fixedCenterPlayhead
         )
     }
 }

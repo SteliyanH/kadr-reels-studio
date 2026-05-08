@@ -76,6 +76,7 @@ struct TimelineArea: View {
                 )
             }
         )
+        .fixedCenterPlayhead(store.project.fixedCenterPlayhead)
         .frame(height: 96)
         .padding(.horizontal)
     }
