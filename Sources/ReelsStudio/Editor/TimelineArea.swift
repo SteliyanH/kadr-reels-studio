@@ -2,14 +2,13 @@ import SwiftUI
 import Kadr
 import KadrUI
 
-/// Bottom half of the editor — `TimelineView` with the editor's standard toolbar
-/// row above it (+ Clip / + Overlay / + Music / Export buttons; their sheets
-/// arrive in Tiers 2 / 3 / 6).
+/// Bottom half of the editor — `TimelineView` with the two-tier
+/// `EditorToolbar` above it (root verbs ↔ clip-action ↔ overlay-action,
+/// selection-driven swap).
 struct TimelineArea: View {
 
     @ObservedObject var store: ProjectStore
-    /// Tap callbacks for each toolbar button — owned by the parent so it can
-    /// present sheets with shared state.
+    /// Root-row sheet triggers — owned by the parent so it can present them.
     var onAddClip: () -> Void = {}
     var onAddOverlay: () -> Void = {}
     var onLayers: () -> Void = {}
@@ -17,29 +16,24 @@ struct TimelineArea: View {
     var onAddSFX: () -> Void = {}
     var onAddCaptions: () -> Void = {}
     var onExport: () -> Void = {}
+    /// Clip-action: pushes `SpeedCurveSheet` for the selected clip id.
+    var onSpeedCurve: (Kadr.ClipID) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 8) {
-            toolbar
+            EditorToolbar(
+                store: store,
+                onAddClip: onAddClip,
+                onAddOverlay: onAddOverlay,
+                onLayers: onLayers,
+                onAddMusic: onAddMusic,
+                onAddSFX: onAddSFX,
+                onAddCaptions: onAddCaptions,
+                onExport: onExport,
+                onSpeedCurve: onSpeedCurve
+            )
             timeline
         }
-    }
-
-    // MARK: - Toolbar
-
-    @ViewBuilder
-    private var toolbar: some View {
-        HStack(spacing: 12) {
-            ToolbarButton(systemImage: "plus.rectangle", label: "Clip", action: onAddClip)
-            ToolbarButton(systemImage: "textformat", label: "Overlay", action: onAddOverlay)
-            ToolbarButton(systemImage: "square.stack.3d.up", label: "Layers", action: onLayers)
-            ToolbarButton(systemImage: "music.note", label: "Music", action: onAddMusic)
-            ToolbarButton(systemImage: "speaker.wave.2", label: "SFX", action: onAddSFX)
-            ToolbarButton(systemImage: "captions.bubble", label: "Captions", action: onAddCaptions)
-            Spacer()
-            ToolbarButton(systemImage: "square.and.arrow.up", label: "Export", action: onExport)
-        }
-        .padding(.horizontal)
     }
 
     // MARK: - Timeline
@@ -97,21 +91,3 @@ struct TimelineArea: View {
     }
 }
 
-private struct ToolbarButton: View {
-    let systemImage: String
-    let label: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 2) {
-                Image(systemName: systemImage)
-                    .font(.title3)
-                Text(label)
-                    .font(.caption2)
-            }
-            .frame(minWidth: 56, minHeight: 44)
-        }
-        .buttonStyle(.bordered)
-    }
-}
