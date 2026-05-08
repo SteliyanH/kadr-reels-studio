@@ -34,13 +34,21 @@ struct Project {
     /// non-nil value; subsequent edits update it. v0.3 Tier 5.
     var zoom: TimelineZoom?
 
+    /// Whether to anchor the playhead to the viewport center and scroll the
+    /// timeline content under it (kadr-ui v0.9's
+    /// `TimelineView.fixedCenterPlayhead(_:)`). Defaults to `true` — the
+    /// CapCut / VN / iMovie behavior most users expect. v0.5's settings
+    /// screen will surface a per-project toggle. v0.4 Tier 2.
+    var fixedCenterPlayhead: Bool
+
     init(
         clips: [any Clip] = [],
         overlays: [any Overlay] = [],
         audioTracks: [AudioTrack] = [],
         captions: [Caption] = [],
         preset: Preset = .reelsAndShorts,
-        zoom: TimelineZoom? = nil
+        zoom: TimelineZoom? = nil,
+        fixedCenterPlayhead: Bool = true
     ) {
         self.clips = clips
         self.overlays = overlays
@@ -48,6 +56,7 @@ struct Project {
         self.captions = captions
         self.preset = preset
         self.zoom = zoom
+        self.fixedCenterPlayhead = fixedCenterPlayhead
     }
 
     /// Build a kadr `Video` from the current editor state. Called on every SwiftUI

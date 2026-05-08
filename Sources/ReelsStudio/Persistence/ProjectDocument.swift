@@ -18,13 +18,17 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
     /// Current persistence schema version. Increment for incompatible changes;
     /// load-side migrations live in ``ProjectLibrary``.
     ///
-    /// **v2 (this release)** added `transformAnimation` / `opacityAnimation` /
+    /// **v3 (this release)** adds `fixedCenterPlayhead: Bool?` — per-project
+    /// opt-in for kadr-ui v0.9's `TimelineView.fixedCenterPlayhead(_:)`.
+    /// Forward-only and additive: missing on v1 / v2 documents decodes nil
+    /// (which the runtime treats as "use the default"); v1 / v2 documents on
+    /// disk load fine.
+    ///
+    /// **v2** added `transformAnimation` / `opacityAnimation` /
     /// `filterAnimations` on clips, `speedCurve` on `VideoClipData`,
     /// `transformAnimation` / `opacityAnimation` on overlays, and
-    /// `ProjectClip.track` for `Kadr.Track {}` blocks. Forward-only and
-    /// additive — every v1 field continues reading; v1 documents on disk
-    /// load fine.
-    public static let currentSchemaVersion: Int = 2
+    /// `ProjectClip.track` for `Kadr.Track {}` blocks.
+    public static let currentSchemaVersion: Int = 3
 
     public let id: UUID
     public var name: String
@@ -40,6 +44,12 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
     /// auto fit-to-width on load. v0.3 Tier 5.
     public var zoomPixelsPerSecond: Double?
 
+    /// Per-project opt-in for kadr-ui v0.9's
+    /// `TimelineView.fixedCenterPlayhead(_:)`. `nil` on v1 / v2 documents (no
+    /// migration); the runtime falls back to the v0.4 default (`true`) when
+    /// loading. v0.4 Tier 2.
+    public var fixedCenterPlayhead: Bool?
+
     public init(
         id: UUID = UUID(),
         name: String,
@@ -51,7 +61,8 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
         audioTracks: [ProjectAudioTrack] = [],
         captions: [ProjectCaption] = [],
         preset: ProjectPreset = .reelsAndShorts,
-        zoomPixelsPerSecond: Double? = nil
+        zoomPixelsPerSecond: Double? = nil,
+        fixedCenterPlayhead: Bool? = nil
     ) {
         self.id = id
         self.name = name
@@ -64,6 +75,7 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
         self.captions = captions
         self.preset = preset
         self.zoomPixelsPerSecond = zoomPixelsPerSecond
+        self.fixedCenterPlayhead = fixedCenterPlayhead
     }
 }
 
