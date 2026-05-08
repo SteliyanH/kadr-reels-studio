@@ -40,7 +40,7 @@ Suite: 65 → 149 (84 new tests across the cycle).
 
 ## v0.4.0 — UX polish (foundations) *(planned)*
 
-Bumps kadr-ui floor to **≥ 0.9.0** (mid-cycle patch — `fixedCenterPlayhead` modifier, `onZoomSnap` callback, `OverlayHost.onLayerTap`). Closes the foundational half of the polish layer:
+Bumps kadr-ui floor to **≥ 0.9.0** (mid-cycle patch — `fixedCenterPlayhead` modifier + `onZoomSnap` callback). Closes the foundational half of the polish layer:
 
 - Two-tier bottom toolbar with selection-driven swap (root verbs ↔ clip-specific actions ↔ overlay-specific ↔ multi-select), animated crossfade.
 - Fixed-center playhead during scrub — timeline scrolls under it (per-project opt-in).

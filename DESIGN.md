@@ -292,10 +292,11 @@ Out of scope (v0.5 / v1.0 / rejected):
 
 ### Dependency floors
 
-- **kadr-ui ≥ 0.9.0** (up from 0.8.0). New surface needed:
+- **kadr-ui ≥ 0.9.0** (up from 0.8.0). New surface needed for Tiers 2 + 3 only:
   - `TimelineView.fixedCenterPlayhead(_:)` modifier — opt-in playhead-centered scroll mode (current default keeps the playhead anchored to its time position and lets it drift).
   - `TimelineView.onZoomSnap(_:)` callback — fires when pinch-zoom crosses a snap threshold (frame / second / 5s / 30s). reels-studio uses it to fire haptics; kadr-ui owns the threshold list because it already owns the zoom math.
-  - `OverlayHost.onLayerTap(_:)` callback — fires with `LayerID` on tap of an overlay's hit region. v0.3's `LayersSheet` is a workaround; this is the right surface.
+
+  *Errata (post-RFC):* `OverlayHost.onLayerTap(_:)` was originally listed here for Tier 6, but it already ships in kadr-ui v0.8 — Tier 6 wires against the existing surface and doesn't need v0.9. The kadr-ui v0.9 RFC scope shrinks accordingly.
 
   This is a kadr-ui v0.9 RFC unblocked by — and shipping mid-cycle of — this v0.4 cycle, the same shape as the kadr v0.10.1 patch that landed mid-v0.3. Tier 2 ships against a local-path kadr-ui pin; flips to the released floor before the v0.4 release PR.
 - kadr / kadr-captions / kadr-photos floors unchanged from v0.3 (≥ 0.10.1 / ≥ 0.4.0 / ≥ 0.4.0).
@@ -355,7 +356,9 @@ Files: `ProjectStore` selection refactor; `EditorToolbar` multi-select row; `wra
 
 #### Tier 6 — Overlay tap-to-select on `OverlayHost`
 
-v0.3 carry-over. `OverlayHost.onLayerTap(_:)` (kadr-ui v0.9, already shipped in Tier 2) fires with `LayerID` on tap of an overlay's hit region. reels-studio routes that to `store.selectedOverlayID = id`. `LayersSheet` becomes secondary (still useful for stacked / off-screen overlays); the primary path is direct.
+v0.3 carry-over. `OverlayHost.onLayerTap(_:)` (kadr-ui v0.8, ships today — *errata: not v0.9 as Tier 2's RFC initially claimed*) fires with `LayerID` on tap of an overlay's hit region. reels-studio routes that to `store.selectedOverlayID = id`. `LayersSheet` becomes secondary (still useful for stacked / off-screen overlays); the primary path is direct.
+
+Because this tier doesn't depend on the kadr-ui v0.9 patch, it could land before Tier 2 if scheduling preference flips. The current ordering keeps the RFC's tier flow intact.
 
 Files: `EditorView.swift` `OverlayHost` modifier wiring. Tests: `OverlayTapToSelectTests` (smoke — verifies the callback writes the selection slot).
 
