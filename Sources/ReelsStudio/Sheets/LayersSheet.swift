@@ -57,6 +57,16 @@ struct LayersSheet: View {
                     }
                     .buttonStyle(.plain)
                 }
+                .onDelete { offsets in
+                    HapticEngine.shared.thud()
+                    // Walk highest → lowest so earlier deletes don't shift
+                    // pending indices. Same pattern as `FiltersSheet`.
+                    for index in offsets.sorted(by: >) {
+                        if let id = store.project.overlays[index].layerID {
+                            store.removeOverlay(id: id)
+                        }
+                    }
+                }
             }
             .listStyle(.insetGrouped)
         }

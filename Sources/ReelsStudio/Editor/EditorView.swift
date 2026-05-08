@@ -61,15 +61,31 @@ struct EditorView: View {
             // Inspector / keyframe pair — routes to clip- or overlay-targeted
             // surfaces based on which selection slot is active. Mutual
             // exclusion is enforced by ProjectStore's didSet observers.
-            if store.selectedOverlayID != nil {
-                OverlayKeyframeArea(store: store)
-                OverlayInspectorArea(store: store)
-                    .padding(.horizontal)
-            } else if store.selectedClipID != nil {
-                KeyframeArea(store: store)
-                InspectorArea(store: store)
-                    .padding(.horizontal)
+            // v0.4 Tier 4: reveal / dismiss with the editor-wide spring detent.
+            Group {
+                if store.selectedOverlayID != nil {
+                    VStack(spacing: 16) {
+                        OverlayKeyframeArea(store: store)
+                        OverlayInspectorArea(store: store)
+                            .padding(.horizontal)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if store.selectedClipID != nil {
+                    VStack(spacing: 16) {
+                        KeyframeArea(store: store)
+                        InspectorArea(store: store)
+                            .padding(.horizontal)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
+            .animation(
+                .interactiveSpring(response: 0.35, dampingFraction: 0.78),
+                value: EditorView.inspectorPresentationKey(
+                    clip: store.selectedClipID,
+                    overlay: store.selectedOverlayID
+                )
+            )
             Spacer(minLength: 16)
         }
         .padding(.top)
@@ -147,6 +163,16 @@ struct EditorView: View {
         ) { _ in
             autoSave()
         }
+    }
+
+    /// Identity for the inspector-reveal animation. We can't use
+    /// `selectedClipID` or `selectedOverlayID` directly as the `.animation`
+    /// value because their types don't unify; collapse to a string the
+    /// `.animation(value:)` modifier can compare. Pure for testability.
+    static func inspectorPresentationKey(clip: ClipID?, overlay: LayerID?) -> String {
+        if let overlay { return "overlay:\(overlay.rawValue)" }
+        if let clip { return "clip:\(clip.rawValue)" }
+        return "none"
     }
 
     /// Push the current in-memory project back through the library, preserving
