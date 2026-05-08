@@ -74,6 +74,10 @@ struct EditorView: View {
         }
         .padding(.top)
         .background(Color(.systemGray6).ignoresSafeArea())
+        // v0.4 Tier 3: per-project accent threads through every `.tint`-aware
+        // surface (inspector tabs, keyframe playhead, timeline selection
+        // ring). nil = follow the system tint, which is the v0.4 default.
+        .tint(store.project.accentColor ?? .accentColor)
         .addClipFlow(isPresented: $showPhotoPicker, store: store)
         .sheet(isPresented: $showOverlaySheet) {
             AddOverlaySheet(store: store)

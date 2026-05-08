@@ -1,5 +1,6 @@
 import Foundation
 import CoreMedia
+import SwiftUI
 import Kadr
 import KadrUI
 
@@ -41,6 +42,13 @@ struct Project {
     /// screen will surface a per-project toggle. v0.4 Tier 2.
     var fixedCenterPlayhead: Bool
 
+    /// Per-project accent color. `nil` = follow the system tint (the v0.4
+    /// default). Non-nil tints inspector tabs, keyframe playhead, timeline
+    /// selection ring, and any other `.tint`-aware surface inside the
+    /// editor via the editor-root `.tint(_:)` modifier in `EditorView`.
+    /// v0.5's settings screen will add an iOS palette picker. v0.4 Tier 3.
+    var accentColor: Color?
+
     init(
         clips: [any Clip] = [],
         overlays: [any Overlay] = [],
@@ -48,7 +56,8 @@ struct Project {
         captions: [Caption] = [],
         preset: Preset = .reelsAndShorts,
         zoom: TimelineZoom? = nil,
-        fixedCenterPlayhead: Bool = true
+        fixedCenterPlayhead: Bool = true,
+        accentColor: Color? = nil
     ) {
         self.clips = clips
         self.overlays = overlays
@@ -57,6 +66,7 @@ struct Project {
         self.preset = preset
         self.zoom = zoom
         self.fixedCenterPlayhead = fixedCenterPlayhead
+        self.accentColor = accentColor
     }
 
     /// Build a kadr `Video` from the current editor state. Called on every SwiftUI
