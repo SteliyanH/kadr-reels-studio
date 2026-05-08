@@ -27,6 +27,7 @@ struct EditorView: View {
     @State private var showCaptionsSheet = false
     @State private var showExportSheet = false
     @State private var speedCurveClipID: ClipID?
+    @State private var filtersClipID: ClipID?
 
     /// Debounce window for auto-save. Half a second swallows rapid edits
     /// (slider drags, inspector typing) while still feeling near-instant.
@@ -54,7 +55,8 @@ struct EditorView: View {
                 onAddSFX: { showSFXSheet = true },
                 onAddCaptions: { showCaptionsSheet = true },
                 onExport: { showExportSheet = true },
-                onSpeedCurve: { speedCurveClipID = $0 }
+                onSpeedCurve: { speedCurveClipID = $0 },
+                onFilters: { filtersClipID = $0 }
             )
             // Inspector / keyframe pair — routes to clip- or overlay-targeted
             // surfaces based on which selection slot is active. Mutual
@@ -99,6 +101,16 @@ struct EditorView: View {
         ) {
             if let id = speedCurveClipID {
                 SpeedCurveSheet(store: store, clipID: id)
+            }
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { filtersClipID != nil },
+                set: { if !$0 { filtersClipID = nil } }
+            )
+        ) {
+            if let id = filtersClipID {
+                FiltersSheet(store: store, clipID: id)
             }
         }
         .navigationTitle(document.name)

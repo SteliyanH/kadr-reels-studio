@@ -12,6 +12,7 @@ import Kadr
 struct EditorToolbar: View {
 
     @ObservedObject var store: ProjectStore
+    @EnvironmentObject private var toasts: ToastCenter
 
     // Root-row callbacks — owned by `EditorView` so it can present sheets.
     var onAddClip: () -> Void
@@ -24,6 +25,7 @@ struct EditorToolbar: View {
 
     // Clip-row callbacks that need a sheet — also owned by the editor.
     var onSpeedCurve: (ClipID) -> Void
+    var onFilters: (ClipID) -> Void = { _ in }
 
     private enum Mode: Equatable { case root, clip(ClipID), overlay(LayerID) }
 
@@ -72,18 +74,21 @@ struct EditorToolbar: View {
     @ViewBuilder
     private func clipRow(id: ClipID) -> some View {
         HStack(spacing: 12) {
-            // Split + Filters land in Tier 1b — disabled placeholders preserve
-            // layout so the toolbar doesn't shift width when the tier ships.
-            ToolbarButton(systemImage: "scissors", label: "Split", action: {})
-                .disabled(true)
+            ToolbarButton(systemImage: "scissors", label: "Split") {
+                let result = store.splitClip(id: id, at: store.currentTime)
+                if result != .ok {
+                    toasts.show(.transient(message: "Can't split", detail: EditorToolbar.splitFailureDetail(result)))
+                }
+            }
             ToolbarButton(systemImage: "doc.on.doc", label: "Duplicate") {
                 store.duplicateClip(id: id)
             }
             ToolbarButton(systemImage: "speedometer", label: "Speed") {
                 onSpeedCurve(id)
             }
-            ToolbarButton(systemImage: "camera.filters", label: "Filters", action: {})
-                .disabled(true)
+            ToolbarButton(systemImage: "camera.filters", label: "Filters") {
+                onFilters(id)
+            }
             Spacer()
             ToolbarButton(systemImage: "trash", label: "Delete", role: .destructive) {
                 store.removeClip(id: id)
@@ -109,6 +114,19 @@ struct EditorToolbar: View {
             ToolbarButton(systemImage: "trash", label: "Delete", role: .destructive) {
                 store.removeOverlay(id: id)
             }
+        }
+    }
+}
+
+extension EditorToolbar {
+    /// User-facing detail for each `splitClip` failure mode.
+    static func splitFailureDetail(_ result: ProjectStore.SplitResult) -> String {
+        switch result {
+        case .ok: return ""
+        case .clipNotFound: return "The selected clip is no longer in the project."
+        case .clipInsideTrack: return "Clips inside a track aren't splittable yet."
+        case .offsetOutOfRange: return "Move the playhead inside the clip and try again."
+        case .unsupportedSpeedRate: return "Clear the speed rate before splitting."
         }
     }
 }
