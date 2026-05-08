@@ -77,6 +77,8 @@ struct TimelineArea: View {
             }
         )
         .fixedCenterPlayhead(store.project.fixedCenterPlayhead)
+        .onZoomSnap { _ in HapticEngine.shared.snap() }
+        .onClipDragSnap { HapticEngine.shared.snap() }
         .frame(height: 96)
         .padding(.horizontal)
     }

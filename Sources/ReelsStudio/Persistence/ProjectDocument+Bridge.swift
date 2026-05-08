@@ -1,6 +1,7 @@
 import Foundation
 import CoreMedia
 import CoreGraphics
+import SwiftUI
 import Kadr
 import KadrUI
 #if canImport(UIKit)
@@ -30,7 +31,9 @@ extension ProjectDocument {
             // v1 / v2 documents have no field on disk; the runtime default
             // (true) is the v0.4 behavior every existing project should
             // adopt unchanged. v3 documents round-trip the explicit value.
-            fixedCenterPlayhead: fixedCenterPlayhead ?? true
+            fixedCenterPlayhead: fixedCenterPlayhead ?? true,
+            accentColor: ProjectDocument.platformColor(forHex: accentColorHex)
+                .map(ProjectDocument.color(from:))
         )
     }
 
@@ -295,7 +298,10 @@ extension Project {
             captions: captions.map(ProjectDocument.documentCaption(from:)),
             preset: ProjectDocument.documentPreset(from: preset),
             zoomPixelsPerSecond: zoom?.pixelsPerSecond,
-            fixedCenterPlayhead: fixedCenterPlayhead
+            fixedCenterPlayhead: fixedCenterPlayhead,
+            accentColorHex: accentColor.flatMap { color in
+                ProjectDocument.hexString(from: PlatformColor(color))
+            }
         )
     }
 }
@@ -629,6 +635,17 @@ extension ProjectDocument {
             return String(format: "#%02X%02X%02X", R, G, B)
         }
         return String(format: "#%02X%02X%02X%02X", R, G, B, A)
+    }
+
+    /// Cross-platform `PlatformColor` → SwiftUI `Color` adapter. Used by
+    /// the `accentColorHex` round-trip; declared here so the persistence
+    /// bridge owns its own platform shims.
+    nonisolated static func color(from platformColor: PlatformColor) -> Color {
+        #if canImport(UIKit)
+        return Color(uiColor: platformColor)
+        #else
+        return Color(nsColor: platformColor)
+        #endif
     }
 
     nonisolated static func platformColor(forHex hex: String?) -> PlatformColor? {
