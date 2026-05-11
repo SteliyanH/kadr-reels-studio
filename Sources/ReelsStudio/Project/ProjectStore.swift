@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import CoreMedia
+import SwiftUI
 import Kadr
 import KadrUI
 
@@ -194,6 +195,21 @@ final class ProjectStore: ObservableObject {
     /// new value to disk on the trailing debounce edge.
     func updateZoom(_ zoom: TimelineZoom?) {
         project.zoom = zoom
+    }
+
+    /// Set the per-project accent color. Routed through `applyMutation` so
+    /// the user can undo a color choice (color is creative state — unlike
+    /// zoom / fixed-center-playhead which are viewport preferences).
+    /// v0.5 Tier 1.
+    func setAccentColor(_ color: Color?) {
+        applyMutation("Set Accent Color") { $0.accentColor = color }
+    }
+
+    /// Set the per-project fixed-center-playhead preference. Does **not**
+    /// push undo — like `updateZoom`, this is viewport state the user
+    /// expects to persist but not flood the undo stack. v0.5 Tier 1.
+    func setFixedCenterPlayhead(_ enabled: Bool) {
+        project.fixedCenterPlayhead = enabled
     }
 
     /// Apply a trim delta to a clip inside a `Track {}` block. `KadrUI`'s
