@@ -38,19 +38,20 @@ Bumped kadr floor to **≥ 0.10.1** and kadr-ui floor to **≥ 0.8.0**. Wired ev
 
 Suite: 65 → 149 (84 new tests across the cycle).
 
-## v0.4.0 — UX polish (foundations) *(planned)*
+## v0.4.0 — UX polish (foundations) ✓ shipped
 
-Bumps kadr-ui floor to **≥ 0.9.0** (mid-cycle patch — `fixedCenterPlayhead` modifier + `onZoomSnap` callback). Closes the foundational half of the polish layer:
+Bumped kadr-ui floor to **≥ 0.9.2** (three mid-cycle micro-patches: v0.9 `fixedCenterPlayhead` + `onZoomSnap`; v0.9.1 `onClipDragSnap`; v0.9.2 multi-select binding + `onLongPressClip`). Seven tiers (Tier 1 split into 1a + 1b mid-cycle):
 
-- Two-tier bottom toolbar with selection-driven swap (root verbs ↔ clip-specific actions ↔ overlay-specific ↔ multi-select), animated crossfade.
-- Fixed-center playhead during scrub — timeline scrolls under it (per-project opt-in).
-- Snap haptics on pinch-zoom + drag-snap-to-adjacent-clip; shared `HapticEngine` actor.
-- Single accent-color thread — `Project.accentColor` flows to inspector tabs / keyframe playhead / timeline selection ring.
-- Spring drawer detents (uniform `.interactiveSpring(response: 0.35, dampingFraction: 0.78)`); medium thud on delete; success haptic on export.
-- **Track creation UI** *(v0.3 carry-over)* — multi-select model + `wrapInTrack(ids:)` for contiguous selections.
-- **Overlay tap-to-select on `OverlayHost`** *(v0.3 carry-over)* — replaces `LayersSheet`-only selection.
+1. **Two-tier toolbar shell + simple action mutations** *(Tier 1a)* — `EditorToolbar` state machine swaps between root / clip / overlay rows with a spring crossfade. `removeClip` / `duplicateClip` / `removeOverlay` / `duplicateOverlay` / `moveOverlay` mutations.
+2. **splitClip + FiltersSheet** *(Tier 1b)* — `splitClip(id:at:)` bisects at the playhead with structured `SplitResult` failure modes. `FiltersSheet` exposes the eleven scalar filter cases via leading `+` menu + swipe-to-delete.
+3. **Fixed-center playhead + schema v3** — `Project.fixedCenterPlayhead: Bool` (default `true`) wires kadr-ui v0.9's modifier. Schema bumped 2 → 3 additively.
+4. **Snap haptics + accent threading** — `HapticEngine` actor (`snap` / `thud` / `success`); `TimelineArea` wires both pinch-zoom + drag-snap. `Project.accentColor: Color?` persists as additive hex on v3; `.tint(_:)` at editor root.
+5. **Spring detents + delete thud + export success** — uniform `.interactiveSpring(response: 0.35, dampingFraction: 0.78)` on toolbar mode-swap + inspector reveal. Haptics wired into delete + export-complete.
+6. **Track creation UI** *(v0.3 carry-over)* — multi-select state (`isMultiSelecting` + `selectedClipIDs`), long-press to enter, `wrapInTrack(ids:)` with contiguous validation + structured failure modes.
+7. **Overlay tap-to-select on `OverlayHost`** *(v0.3 carry-over)* — wired against kadr-ui v0.8's existing `.onLayerTap` (RFC errata mid-cycle).
+8. **Release prep** — CHANGELOG / README / ROADMAP, develop → main, tag v0.4.0.
 
-See [DESIGN.md](DESIGN.md) for the full RFC and tier breakdown.
+Suite: 149 → 210 (61 new tests across the cycle).
 
 ## v0.5.0 — Accessibility + settings *(planned)*
 
@@ -79,3 +80,4 @@ See [DESIGN.md](DESIGN.md) for the full RFC and tier breakdown.
 | 0.1.0 | ≥ 0.9.2 | ≥ 0.6.0 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.2.0 | ≥ 0.9.2 | ≥ 0.6.0 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.3.0 | ≥ 0.10.1 | ≥ 0.8.0 | ≥ 0.4.0 | ≥ 0.4.0 |
+| 0.4.0 | ≥ 0.10.1 | ≥ 0.9.2 | ≥ 0.4.0 | ≥ 0.4.0 |

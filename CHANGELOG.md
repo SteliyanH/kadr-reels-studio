@@ -4,6 +4,63 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-05-11
+
+UX-polish foundations. Closes the gap between "every button works" (v0.3) and "this feels like an app you'd actually use" — two-tier toolbar with selection-driven swap, fixed-center playhead, snap haptics on pinch-zoom + drag-to-reorder, accent-color threading, spring drawer detents, Track creation UI, and overlay tap-to-select on `OverlayHost`. Bumps kadr-ui ≥ **0.9.2** (three mid-cycle micro-patches shipped during this cycle).
+
+### Added — two-tier toolbar (Tier 1a + 1b)
+
+- **`EditorToolbar`** — state machine over `(selectedClipID, selectedOverlayID, isMultiSelecting)`. Four rows swap with a spring crossfade: root verbs (`+ Clip` / `+ Overlay` / `Layers` / `+ Music` / `+ SFX` / `Captions` / `Export`), clip-action (`Split` / `Duplicate` / `Speed` / `Filters` / `Delete`), overlay-action (`Duplicate` / `Forward` / `Back` / `Delete`), multi-select (`Cancel` / `N selected` / `Wrap`).
+- **`ProjectStore.removeClip / duplicateClip / removeOverlay / duplicateOverlay / moveOverlay`** — simple array-op mutations powering Duplicate / Delete / Bring-forward / Send-back. Concrete-type dispatch through `.id()` modifiers for fresh UUID-backed clip / layer IDs.
+- **`ProjectStore.splitClip(id:at:)`** — bisects the top-level clip at the playhead. `VideoClip` via `trimmed(to:)`; `ImageClip` via `.duration()`; `TitleSequence` rebuilds via the public `CMTime` init. Left half keeps the original `ClipID`; right half gets a fresh id. Returns `SplitResult` for toast surfacing (`.clipNotFound`, `.clipInsideTrack`, `.offsetOutOfRange`, `.unsupportedSpeedRate`).
+- **`FiltersSheet`** — pushed from the Filters clip-action button. Per-filter intensity sliders + swipe-to-delete + leading `+` menu adding any of kadr's eleven scalar filter cases. LUT / chromaKey omitted from the menu pending URL / RGB pickers.
+- **`ProjectStore.addFilter / removeFilter`** — append via `.filter(_:)`; remove via full clip rebuild without the indexed entry.
+
+### Added — fixed-center playhead (Tier 2)
+
+- **`Project.fixedCenterPlayhead: Bool`** — per-project opt-in (default `true`) for kadr-ui v0.9's `TimelineView.fixedCenterPlayhead(_:)` modifier. v0.5's settings screen will surface a toggle.
+- **Schema v3** (additive `Bool?` field; `currentSchemaVersion` bumped 2 → 3). v1 / v2 / v3 all load; v4+ rejects. Re-saving an old document promotes it.
+
+### Added — snap haptics + accent threading (Tier 3)
+
+- **`HapticEngine`** — `@MainActor` singleton wrapping `UIImpactFeedbackGenerator` + `UINotificationFeedbackGenerator` with prep batching. Three entry points: `snap()` (light), `thud()` (medium), `success()` (notification). macOS / visionOS no-op via `canImport(UIKit)` gating.
+- **`TimelineArea` wires `.onZoomSnap` + `.onClipDragSnap`** → `HapticEngine.shared.snap()`. Pinch-zoom crossings (kadr-ui v0.9 `ZoomSnapThreshold.standard`: 1f / 1s / 5s / 30s) and drag-to-reorder boundary crossings (kadr-ui v0.9.1 `onClipDragSnap`) both fire the same light haptic.
+- **`Project.accentColor: Color?`** (nil = system tint) persists as `accentColorHex: String?` (additive on schema v3, no version bump — folds like `zoomPixelsPerSecond` did under v2). `EditorView` applies `.tint(_:)` at the root.
+
+### Added — spring detents + export success + delete thud (Tier 4)
+
+- **Uniform `.interactiveSpring(response: 0.35, dampingFraction: 0.78)`** on the toolbar mode-swap and inspector-pair reveal. `EditorView.inspectorPresentationKey(clip:overlay:)` static helper feeds `.animation(value:)`.
+- **`HapticEngine.shared.thud()`** fires before every `removeClip` / `removeOverlay` (toolbar Delete + new `LayersSheet` swipe-to-delete).
+- **`HapticEngine.shared.success()`** fires after `Exporter.run()` resolves, before the share sheet. Cancel / fail paths stay silent.
+
+### Added — Track creation UI (Tier 5)
+
+- **`ProjectStore.isMultiSelecting: Bool` + `selectedClipIDs: Set<ClipID>`** — transient multi-select mode. `didSet` clears the set on `false`. Drives kadr-ui v0.9.2's `selectedClipIDs:` binding for visible selection rings on every member.
+- **`TimelineArea.onLongPressClip`** — 0.5s long-press enters multi-select + seeds with the long-pressed clip + fires `thud()`. Subsequent single taps route through an intercepted `selectedClipID` setter that toggles set membership.
+- **`ProjectStore.wrapInTrack(ids:)`** — validates contiguous at the top level (transitions in the range travel into the Track because they have no `clipID`); replaces the range with a single `Track {}` block in one `applyMutation`. Returns `WrapInTrackResult` for toolbar toast surfacing.
+
+### Added — overlay tap-to-select (Tier 6)
+
+- **`PreviewArea.OverlayHost.onLayerTap { store.selectedOverlayID = $0 }`** — uses kadr-ui v0.8's already-shipping surface (the v0.4 RFC's claim it was v0.9 was corrected mid-cycle). `LayersSheet` stays as the secondary affordance for stacked / off-screen layers.
+
+### Tests
+
+61 new tests across the cycle. Suite: 149 → 210.
+
+### Dependencies
+
+- **kadr-ui ≥ 0.9.2** (up from 0.8.0). Brings (across three mid-cycle micro-patches):
+  - `TimelineView.fixedCenterPlayhead(_:)` + `onZoomSnap(_:)` + `ZoomSnapThreshold.standard` (v0.9).
+  - `TimelineView.onClipDragSnap(_:)` + `snapTransition(previous:current:)` (v0.9.1).
+  - `TimelineView(... selectedClipIDs:)` additive parameter + `onLongPressClip(_:)` + `clipMatchesSelection(id:single:set:)` (v0.9.2).
+- kadr / kadr-captions / kadr-photos floors unchanged (≥ 0.10.1 / ≥ 0.4.0 / ≥ 0.4.0).
+
+### Notes
+
+- **Three mid-cycle kadr-ui patches.** The v0.4 RFC underestimated the kadr-ui surface area twice (`OverlayHost.onLayerTap` already shipped in v0.8 — errata corrected; `onClipDragSnap` didn't exist; long-press + multi-select binding didn't exist). v0.9 / v0.9.1 / v0.9.2 shipped during the cycle to close each gap. The pattern — downstream cycle drives narrow upstream additions — is the same shape as kadr v0.10.1 mid-v0.3.
+- **iOS accent-color picker** lives in v0.5's settings screen. v0.4 ships the persistence + `.tint` plumbing; the picker UI lands later.
+- **Reorder of multi-selected clips as a group** is out of scope — kadr's `Video` builder doesn't model "swap N clips as one block" yet.
+
 ## [0.3.0] - 2026-05-05
 
 Wire-up cycle. Integrates every kadr-ui v0.7 / v0.8 editor surface that shipped during the v0.2 production-polish cycle but wasn't yet plumbed in: real keyframe authoring, speed-curve editing, caption editing, overlay inspector + overlay keyframe editor, timeline pinch-zoom, multi-track reorder/trim, sticker / image overlay creation. Bumps kadr ≥ **0.10.1** and kadr-ui ≥ **0.8.0**.
