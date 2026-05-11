@@ -161,7 +161,7 @@ struct ProjectListView: View {
 // MARK: - Row
 
 @available(iOS 16, *)
-private struct ProjectRow: View {
+struct ProjectRow: View {
 
     let document: ProjectDocument
 
@@ -178,5 +178,22 @@ private struct ProjectRow: View {
             .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
+        // Collapse the row into a single VoiceOver element so the user
+        // hears name + modified date + clip count as one announcement
+        // instead of three sibling reads.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(ProjectRow.accessibilityDescription(for: document))
+        .accessibilityHint("Opens this project in the editor")
+    }
+
+    /// Composed VoiceOver string for a project row. Pure so it's testable.
+    /// Example: "Reels Demo, modified 2 days ago, 3 clips".
+    nonisolated static func accessibilityDescription(for document: ProjectDocument) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        let relative = formatter.localizedString(for: document.modifiedAt, relativeTo: Date())
+        let clipCount = document.clips.count
+        let clipLabel = clipCount == 1 ? "1 clip" : "\(clipCount) clips"
+        return "\(document.name), modified \(relative), \(clipLabel)"
     }
 }
