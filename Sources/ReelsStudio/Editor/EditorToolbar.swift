@@ -81,23 +81,44 @@ struct EditorToolbar: View {
     @ViewBuilder
     private func clipRow(id: ClipID) -> some View {
         HStack(spacing: 12) {
-            ToolbarButton(systemImage: "scissors", label: "Split") {
+            ToolbarButton(
+                systemImage: "scissors",
+                label: "Split",
+                hint: "Splits the clip at the playhead"
+            ) {
                 let result = store.splitClip(id: id, at: store.currentTime)
                 if result != .ok {
                     toasts.show(.transient(message: "Can't split", detail: EditorToolbar.splitFailureDetail(result)))
                 }
             }
-            ToolbarButton(systemImage: "doc.on.doc", label: "Duplicate") {
+            ToolbarButton(
+                systemImage: "doc.on.doc",
+                label: "Duplicate",
+                hint: "Inserts a copy of this clip after itself"
+            ) {
                 store.duplicateClip(id: id)
             }
-            ToolbarButton(systemImage: "speedometer", label: "Speed") {
+            ToolbarButton(
+                systemImage: "speedometer",
+                label: "Speed",
+                hint: "Opens the speed curve editor"
+            ) {
                 onSpeedCurve(id)
             }
-            ToolbarButton(systemImage: "camera.filters", label: "Filters") {
+            ToolbarButton(
+                systemImage: "camera.filters",
+                label: "Filters",
+                hint: "Opens the filter stack editor"
+            ) {
                 onFilters(id)
             }
             Spacer()
-            ToolbarButton(systemImage: "trash", label: "Delete", role: .destructive) {
+            ToolbarButton(
+                systemImage: "trash",
+                label: "Delete",
+                role: .destructive,
+                hint: "Removes this clip from the project"
+            ) {
                 HapticEngine.shared.thud()
                 store.removeClip(id: id)
             }
@@ -109,17 +130,34 @@ struct EditorToolbar: View {
     @ViewBuilder
     private func overlayRow(id: LayerID) -> some View {
         HStack(spacing: 12) {
-            ToolbarButton(systemImage: "doc.on.doc", label: "Duplicate") {
+            ToolbarButton(
+                systemImage: "doc.on.doc",
+                label: "Duplicate",
+                hint: "Inserts a copy of this overlay one z-step above"
+            ) {
                 store.duplicateOverlay(id: id)
             }
-            ToolbarButton(systemImage: "square.3.stack.3d.top.fill", label: "Forward") {
+            ToolbarButton(
+                systemImage: "square.3.stack.3d.top.fill",
+                label: "Forward",
+                hint: "Brings this overlay one step toward the front"
+            ) {
                 store.moveOverlay(id: id, by: 1)
             }
-            ToolbarButton(systemImage: "square.3.stack.3d.bottom.fill", label: "Back") {
+            ToolbarButton(
+                systemImage: "square.3.stack.3d.bottom.fill",
+                label: "Back",
+                hint: "Sends this overlay one step toward the back"
+            ) {
                 store.moveOverlay(id: id, by: -1)
             }
             Spacer()
-            ToolbarButton(systemImage: "trash", label: "Delete", role: .destructive) {
+            ToolbarButton(
+                systemImage: "trash",
+                label: "Delete",
+                role: .destructive,
+                hint: "Removes this overlay from the project"
+            ) {
                 HapticEngine.shared.thud()
                 store.removeOverlay(id: id)
             }
@@ -131,15 +169,25 @@ struct EditorToolbar: View {
     @ViewBuilder
     private var multiSelectRow: some View {
         HStack(spacing: 12) {
-            ToolbarButton(systemImage: "xmark", label: "Cancel") {
+            ToolbarButton(
+                systemImage: "xmark",
+                label: "Cancel",
+                hint: "Exits multi-select mode without wrapping"
+            ) {
                 store.isMultiSelecting = false
             }
             Text("\(store.selectedClipIDs.count) selected")
                 .font(.caption.bold())
                 .foregroundStyle(.secondary)
                 .padding(.leading, 4)
+                .accessibilityLabel("Selection")
+                .accessibilityValue("\(store.selectedClipIDs.count) clips selected")
             Spacer()
-            ToolbarButton(systemImage: "rectangle.stack", label: "Wrap") {
+            ToolbarButton(
+                systemImage: "rectangle.stack",
+                label: "Wrap",
+                hint: "Wraps the selected clips in a track"
+            ) {
                 let result = store.wrapInTrack(ids: store.selectedClipIDs)
                 if result != .ok {
                     toasts.show(
@@ -182,6 +230,11 @@ private struct ToolbarButton: View {
     let systemImage: String
     let label: String
     var role: ButtonRole? = nil
+    /// Optional VoiceOver hint for non-obvious actions. The label alone is
+    /// enough for `+ Clip` or `Export`; non-trivial verbs like `Split` or
+    /// `Wrap` ride with a hint so VoiceOver users get the effect, not just
+    /// the icon's name. v0.5 Tier 2.
+    var hint: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -195,5 +248,10 @@ private struct ToolbarButton: View {
             .frame(minWidth: 56, minHeight: 44)
         }
         .buttonStyle(.bordered)
+        // Default VoiceOver output combines the image's localized name and
+        // the text — verbose ("plus rectangle Clip"). Replace it with just
+        // the user-facing label so the audio matches the visible text.
+        .accessibilityLabel(label)
+        .accessibilityHint(hint ?? "")
     }
 }

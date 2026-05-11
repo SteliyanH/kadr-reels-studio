@@ -112,6 +112,14 @@ struct TimelineArea: View {
         }
         .frame(height: 96)
         .padding(.horizontal)
+        // The inner TimelineView's gesture surface is rich (tap to scrub,
+        // pinch to zoom, drag to reorder, long-press to multi-select) and
+        // not easily VoiceOver-introspectable. Label the wrapper so a
+        // VoiceOver user at least gets oriented; per-clip a11y is gated on
+        // a future kadr-ui surface. v0.5 Tier 2.
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Timeline")
+        .accessibilityHint("\(store.project.clips.count) clip\(store.project.clips.count == 1 ? "" : "s"). Long-press a clip to start a multi-selection.")
     }
 
     /// Binding to ``Project/zoom`` that initializes a non-nil value on first

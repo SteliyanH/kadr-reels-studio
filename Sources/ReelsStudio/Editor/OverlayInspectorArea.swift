@@ -43,5 +43,7 @@ struct OverlayInspectorArea: View {
         )
         .frame(maxHeight: 320)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Overlay inspector")
     }
 }

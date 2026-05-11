@@ -36,5 +36,8 @@ struct KeyframeArea: View {
             }
         )
         .padding(.horizontal)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Keyframe editor")
+        .accessibilityHint("Tap below a property to add a keyframe at the playhead. Long-press a marker to remove. Drag to retime.")
     }
 }
