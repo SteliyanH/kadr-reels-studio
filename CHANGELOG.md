@@ -4,6 +4,50 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-05-11
+
+Accessibility + settings. Closes the two remaining shipping-blocker gaps for v1.0: no UI to change v0.4's preferences (accent color, fixed-center playhead, haptics) and no VoiceOver wiring. Reels-studio-only cycle — no kadr-ui / kadr surface changes. Four tiers.
+
+### Added — `AppSettings` + `SettingsView` (Tier 1)
+
+- **`AppSettings`** — `@MainActor ObservableObject`, UserDefaults-backed. Ships with `hapticIntensity: HapticIntensity` (`.off` / `.light` / `.medium`); default `.light` matches v0.4's feel so the upgrade doesn't silently change anyone's experience. `init(defaults:)` accepts a sandboxed `UserDefaults(suiteName:)` for tests; production reaches via `.shared`.
+- **`HapticEngine`** routes every `snap` / `thud` / `success` call through `AppSettings.shared.hapticIntensity`. `.off` returns early; `.light` keeps v0.4 unchanged; `.medium` upgrades `snap` from light → medium impact. `thud` / `success` already sit at medium / system patterns so they stay unchanged.
+- **`SettingsView`** — sheet pushed from a new gear icon in the editor's top-trailing toolbar (after undo / redo). Three `Form` sections:
+  - **Appearance** — System / Custom segmented; Custom reveals a `ColorPicker`. Writes through new `ProjectStore.setAccentColor(_:)` mutation (undoable — color is creative state).
+  - **Playback** — fixed-center playhead toggle. Writes through new `ProjectStore.setFixedCenterPlayhead(_:)` (no undo — viewport state, same shape as `updateZoom`).
+  - **Haptics** — Off / Light / Medium segmented; binds `AppSettings.hapticIntensity` directly.
+- **`ReelsStudioApp`** injects `AppSettings.shared` via `@EnvironmentObject` so any future settings-aware view can reach it.
+
+### Added — accessibility wiring (Tier 2)
+
+- **`EditorToolbar.ToolbarButton`** emits explicit `.accessibilityLabel(label)` + optional `.accessibilityHint(hint)`, replacing SwiftUI's verbose default ("plus rectangle Clip"). Every clip-action / overlay-action / multi-select verb gains a hint (Split / Duplicate / Speed / Filters / Delete / Forward / Back / Cancel / Wrap).
+- **Multi-select counter** gets `.accessibilityValue("N clips selected")` so VoiceOver reads the count distinctly from the static "Selection" label.
+- **`ProjectListView` rows** collapse via `.accessibilityElement(children: .combine)` + composed label from new `ProjectRow.accessibilityDescription(for:)` pure helper (name + relative modified date + clip count, with singular/plural handling).
+- **`TimelineArea`** wraps the kadr-ui `TimelineView` in `.accessibilityElement(children: .contain)` + label "Timeline" + hint announcing clip count + long-press affordance.
+- **Inspector / keyframe areas** — every wrapper gets `.accessibilityElement(children: .contain)` + a surface label ("Clip inspector" / "Overlay inspector" / "Keyframe editor" / "Overlay keyframe editor").
+- **`ToastView`** content collapses to a single VoiceOver element. (`accessibilityLiveRegion` for auto-announce is iOS 17+ only; deferred until the deployment floor moves.)
+
+### Added — empty / disabled state polish (Tier 3)
+
+- **`.help(_:)` tooltips** on every `ToolbarButton` (iPadOS tap-and-hold + macOS / Catalyst pointer-hover); falls back to the visible label when no richer hint is provided.
+- **Export button** disables when `project.clips.isEmpty` (`.disabled` + `.opacity(0.4)` for uniform greyed-not-hidden). Branching tooltip via new pure helper `EditorToolbar.exportTooltip(hasClips:)`: "Add a clip first to enable export" vs. "Opens the export sheet" — VoiceOver and pointer-hover users learn *why* the button is dimmed.
+- **Editor top-toolbar tooltips** on undo / redo / settings with state-aware copy ("Undo last action" vs. "Nothing to undo").
+
+### Tests
+
+18 new tests across the cycle (`AppSettingsTests` ×4, `ProjectStoreSettingsMutationsTests` ×2, `SettingsViewTests` ×2, `ProjectRowAccessibilityTests` ×5, `ExportTooltipTests` ×3, `ExportDisabledStateTests` ×2). Suite: 210 → 228.
+
+### Dependencies
+
+Unchanged. kadr-ui still at ≥ 0.9.2; kadr at ≥ 0.10.1; kadr-captions / kadr-photos at ≥ 0.4.0.
+
+### Notes
+
+- **Reels-studio-only cycle.** No kadr-ui / kadr surface changes — first cycle since v0.2 without an upstream patch. The v0.5 RFC's instinct that "the polish surfaces are downstream-side" held up.
+- **`accessibilityLiveRegion` on toasts** deferred until the iOS 17 deployment floor (transient auto-dismiss is 2s; users discover toasts on focus today).
+- **Per-clip VoiceOver labels on the timeline** — kadr-ui's `TimelineView` doesn't expose internal clip slot views for accessibility hooks. Track if v1.0 prep flags it.
+- **Dynamic Type layout audit** and **Reduce Motion override** are v1.0 prep deferrals per the RFC.
+
 ## [0.4.0] - 2026-05-11
 
 UX-polish foundations. Closes the gap between "every button works" (v0.3) and "this feels like an app you'd actually use" — two-tier toolbar with selection-driven swap, fixed-center playhead, snap haptics on pinch-zoom + drag-to-reorder, accent-color threading, spring drawer detents, Track creation UI, and overlay tap-to-select on `OverlayHost`. Bumps kadr-ui ≥ **0.9.2** (three mid-cycle micro-patches shipped during this cycle).
