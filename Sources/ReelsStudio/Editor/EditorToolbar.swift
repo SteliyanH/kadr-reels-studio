@@ -27,9 +27,13 @@ struct EditorToolbar: View {
     var onSpeedCurve: (ClipID) -> Void
     var onFilters: (ClipID) -> Void = { _ in }
 
-    private enum Mode: Equatable { case root, clip(ClipID), overlay(LayerID) }
+    private enum Mode: Equatable { case root, clip(ClipID), overlay(LayerID), multiSelect }
 
     private var mode: Mode {
+        // Multi-select wins over everything — it's a transient mode the user
+        // explicitly entered via long-press, so we don't fall back to the
+        // single-select rows while it's active.
+        if store.isMultiSelecting { return .multiSelect }
         if let id = store.selectedOverlayID { return .overlay(id) }
         if let id = store.selectedClipID { return .clip(id) }
         return .root
@@ -46,6 +50,9 @@ struct EditorToolbar: View {
                     .transition(.opacity)
             case .overlay(let id):
                 overlayRow(id: id)
+                    .transition(.opacity)
+            case .multiSelect:
+                multiSelectRow
                     .transition(.opacity)
             }
         }
@@ -118,6 +125,34 @@ struct EditorToolbar: View {
             }
         }
     }
+
+    // MARK: - Multi-select row
+
+    @ViewBuilder
+    private var multiSelectRow: some View {
+        HStack(spacing: 12) {
+            ToolbarButton(systemImage: "xmark", label: "Cancel") {
+                store.isMultiSelecting = false
+            }
+            Text("\(store.selectedClipIDs.count) selected")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+            Spacer()
+            ToolbarButton(systemImage: "rectangle.stack", label: "Wrap") {
+                let result = store.wrapInTrack(ids: store.selectedClipIDs)
+                if result != .ok {
+                    toasts.show(
+                        .transient(
+                            message: "Can't wrap",
+                            detail: EditorToolbar.wrapFailureDetail(result)
+                        )
+                    )
+                }
+            }
+            .disabled(store.selectedClipIDs.isEmpty)
+        }
+    }
 }
 
 extension EditorToolbar {
@@ -129,6 +164,16 @@ extension EditorToolbar {
         case .clipInsideTrack: return "Clips inside a track aren't splittable yet."
         case .offsetOutOfRange: return "Move the playhead inside the clip and try again."
         case .unsupportedSpeedRate: return "Clear the speed rate before splitting."
+        }
+    }
+
+    /// User-facing detail for each `wrapInTrack` failure mode.
+    static func wrapFailureDetail(_ result: ProjectStore.WrapInTrackResult) -> String {
+        switch result {
+        case .ok: return ""
+        case .noSelection: return "Long-press a clip to start a selection."
+        case .nonContiguous: return "Selection must be contiguous to wrap in a track."
+        case .clipsNotAtTopLevel: return "Clips already inside a track can't be re-wrapped."
         }
     }
 }
