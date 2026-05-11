@@ -15,6 +15,14 @@ struct PreviewArea: View {
         ZStack {
             VideoPreview(video)
             OverlayHost(video, currentTime: store.currentTime)
+                // v0.4 Tier 6: tap an overlay's hit region to select it.
+                // Routes to the same selection slot the Layers sheet writes,
+                // so the inspector / keyframe pair swaps the moment a layer
+                // is tapped. v0.3's LayersSheet stays as the secondary
+                // affordance (still useful for stacked or off-screen layers).
+                .onLayerTap { id in
+                    store.selectedOverlayID = id
+                }
         }
         .aspectRatio(aspect, contentMode: .fit)
         .background(Color.black)
