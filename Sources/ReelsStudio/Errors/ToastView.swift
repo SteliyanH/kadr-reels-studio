@@ -59,6 +59,14 @@ private struct ToastHostModifier: ViewModifier {
                     }
                     .padding(.top, 8)
                     .zIndex(100)
+                    // Collapse the toast content into one VoiceOver element so
+                    // message + detail read together instead of as siblings.
+                    // `accessibilityLiveRegion` for assertive announcement is
+                    // iOS 17+ only — we sit on the iOS 16 floor and accept
+                    // that VoiceOver users discover the toast on focus
+                    // rather than hear it on appear. Revisit when the
+                    // deployment floor moves. v0.5 Tier 2.
+                    .accessibilityElement(children: .combine)
                 }
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: center.current)

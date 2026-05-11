@@ -37,6 +37,8 @@ struct InspectorArea: View {
         }
         .frame(maxHeight: 320)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Clip inspector")
         .sheet(isPresented: $showSpeedCurveSheet) {
             if let id = store.selectedClipID {
                 SpeedCurveSheet(store: store, clipID: id)
