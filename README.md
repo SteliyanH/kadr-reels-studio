@@ -10,22 +10,25 @@ A real consumer codebase using every kadr + kadr-ui + kadr-captions + kadr-photo
 
 ## Status
 
-**v0.3.0 shipped — wire-up cycle.** Every kadr-ui v0.7 / v0.8 editor surface that landed during the v0.2 polish cycle is now plumbed in: real keyframe authoring, speed-curve editing, caption editing, overlay inspector + overlay keyframe editor, timeline pinch-zoom, multi-track reorder/trim, sticker / image overlay creation. Built on v0.2's persistence + undo / redo + toast infra against kadr ≥ 0.10.1 + kadr-ui ≥ 0.8.0 + kadr-captions ≥ 0.4 + kadr-photos ≥ 0.4.
+**v0.4.0 shipped — UX-polish foundations.** Closes the gap between "every button works" (v0.3) and "this feels like an app you'd actually use" — two-tier toolbar with selection-driven swap, fixed-center playhead, snap haptics on pinch-zoom + drag-to-reorder, accent-color threading, spring drawer detents, Track creation UI, and overlay tap-to-select. Built on v0.2's persistence + undo / redo + toast infra and v0.3's wired-up editor surfaces against kadr ≥ 0.10.1 + kadr-ui ≥ 0.9.2 + kadr-captions ≥ 0.4 + kadr-photos ≥ 0.4.
 
 | Layer | What's wired |
 |---|---|
 | **Launch** | `ProjectListView` → tap a project to open the editor; `+ New Project` / `Sample` empty-state CTAs; swipe-to-delete |
-| **Persistence** | schema v2 Codable `ProjectDocument` — round-trips every kadr clip / overlay / filter + per-property `Animation<T>` keyframes + speed curves + per-project zoom; v1 documents continue loading |
+| **Persistence** | schema v3 Codable `ProjectDocument` — round-trips every kadr clip / overlay / filter + per-property `Animation<T>` keyframes + speed curves + per-project zoom + fixed-center-playhead flag + accent color; v1 / v2 documents continue loading |
 | **Errors** | three-tier `AppError` model — transient toast / resumable sheet / catastrophic alert; single `.toastHost(_:)` modifier installed at app root |
 | **Undo / Redo** | `UndoManager`-backed snapshot history with action names; per-action granularity via `groupsByEvent = false`; top-bar arrow buttons |
-| **Editor body** | `+ Clip` / `+ Overlay` / `+ Music` / `+ SFX` / `Captions` / `Layers` / `Export` — every toolbar button maps to a real flow |
-| **Clip inspector** | tap a clip → transform / opacity / filter-intensity sliders; per-property keyframe authoring (tap-to-add, long-press-to-remove, drag-to-retime); "Speed curve…" row pushes `SpeedCurveSheet` |
-| **Overlay inspector** | tap a layer in `LayersSheet` → `OverlayInspectorPanel` (position / size / anchor / opacity / type-specific) + `OverlayKeyframeEditor` for position / size on Image / Sticker overlays |
+| **Two-tier toolbar** | `EditorToolbar` swaps between root verbs / clip-action / overlay-action / multi-select rows with a uniform spring crossfade; selection-driven; long-press a clip → multi-select mode |
+| **Clip actions** | `Split` (`splitClip(id:at:)` at the playhead), `Duplicate`, `Speed` (pushes `SpeedCurveSheet`), `Filters` (pushes `FiltersSheet` — per-filter sliders + add-menu + swipe-to-delete), `Delete` (with medium-thud haptic) |
+| **Overlay actions** | `Duplicate`, `Forward` / `Back` (z-order shift), `Delete` (with thud). Tap an overlay directly on the preview → `OverlayHost.onLayerTap` routes to selection |
+| **Track creation** | Long-press a clip → multi-select mode → tap to extend → toolbar `Wrap` collapses the contiguous range into a `Track {}` block (transitions ride along). Failure modes surface as transient toasts |
+| **Haptics** | `HapticEngine` actor (`snap` / `thud` / `success`): pinch-zoom + drag-to-reorder fire `snap`; delete fires `thud`; export completion fires `success` |
+| **Timeline** | per-project pinch-zoom (no undo pollution); fixed-center playhead with `ScrollViewReader` + 1×1 anchor; multi-track `Track {}` blocks with reorder / trim wiring |
+| **Accent threading** | `Project.accentColor: Color?` (per-project, persisted, nil = system tint); `.tint(_:)` applied at the editor root threads through every `.tint`-aware surface |
 | **Captions** | tabbed `AddCaptionsSheet` — Edit (`KadrUI.CaptionEditor`) / Import (SRT / VTT / iTT / ASS / SSA) |
-| **Timeline** | pinch-zoom persists per project (no undo pollution); multi-track `Track {}` blocks with `onTrackReorder` / `onTrackTrim` wired through `ProjectStore` |
-| **Add Overlay** | three-tab sheet — Text / Image / Sticker. Image + Sticker share a `PhotoOverlayTab` backed by kadr-photos `PhotoPicker` |
+| **Add Overlay** | three-tab sheet — Text / Image / Sticker, backed by kadr-photos `PhotoPicker` |
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release entry, [ROADMAP.md](ROADMAP.md) for what's next (v0.4 → v1.0 UX polish layer — two-tier toolbar, fixed-center playhead, snap haptics, accent threading, accessibility), and [DESIGN.md](DESIGN.md) for the v0.1 / v0.2 / v0.3 RFCs.
+See [CHANGELOG.md](CHANGELOG.md) for the full release entry, [ROADMAP.md](ROADMAP.md) for what's next (v0.5 accessibility + settings screen, v1.0 App Store submission), and [DESIGN.md](DESIGN.md) for the v0.1 → v0.4 RFCs.
 
 ## Why this exists
 
