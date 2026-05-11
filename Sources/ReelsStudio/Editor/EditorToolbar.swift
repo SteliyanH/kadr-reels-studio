@@ -72,7 +72,14 @@ struct EditorToolbar: View {
             ToolbarButton(systemImage: "speaker.wave.2", label: "SFX", action: onAddSFX)
             ToolbarButton(systemImage: "captions.bubble", label: "Captions", action: onAddCaptions)
             Spacer()
-            ToolbarButton(systemImage: "square.and.arrow.up", label: "Export", action: onExport)
+            ToolbarButton(
+                systemImage: "square.and.arrow.up",
+                label: "Export",
+                hint: EditorToolbar.exportTooltip(hasClips: !store.project.clips.isEmpty),
+                action: onExport
+            )
+            .disabled(store.project.clips.isEmpty)
+            .opacity(store.project.clips.isEmpty ? 0.4 : 1.0)
         }
     }
 
@@ -224,6 +231,14 @@ extension EditorToolbar {
         case .clipsNotAtTopLevel: return "Clips already inside a track can't be re-wrapped."
         }
     }
+
+    /// Tooltip / VoiceOver hint for the Export button. Differs by whether
+    /// the project has clips to export — disabled-state messages tell the
+    /// user *why* the button is dimmed rather than just hiding it. Pure for
+    /// testability; the toolbar inlines the call. v0.5 Tier 3.
+    static func exportTooltip(hasClips: Bool) -> String {
+        hasClips ? "Opens the export sheet" : "Add a clip first to enable export"
+    }
 }
 
 private struct ToolbarButton: View {
@@ -253,5 +268,9 @@ private struct ToolbarButton: View {
         // the user-facing label so the audio matches the visible text.
         .accessibilityLabel(label)
         .accessibilityHint(hint ?? "")
+        // v0.5 Tier 3 — tap-and-hold tooltip on iPadOS / pointer-hover on
+        // macOS / Catalyst. Falls back to the visible label when no richer
+        // hint is provided. iOS phones (no pointer) ignore .help silently.
+        .help(hint ?? label)
     }
 }

@@ -148,6 +148,7 @@ struct EditorView: View {
                         .accessibilityLabel("Undo")
                 }
                 .disabled(!store.canUndo)
+                .help(store.canUndo ? "Undo last action" : "Nothing to undo")
                 Button {
                     store.redo()
                 } label: {
@@ -155,12 +156,14 @@ struct EditorView: View {
                         .accessibilityLabel("Redo")
                 }
                 .disabled(!store.canRedo)
+                .help(store.canRedo ? "Redo last undone action" : "Nothing to redo")
                 Button {
                     showSettings = true
                 } label: {
                     Image(systemName: "gearshape")
                         .accessibilityLabel("Settings")
                 }
+                .help("Open settings")
             }
         }
         .onReceive(
