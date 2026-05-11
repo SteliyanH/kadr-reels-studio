@@ -53,16 +53,16 @@ Bumped kadr-ui floor to **≥ 0.9.2** (three mid-cycle micro-patches: v0.9 `fixe
 
 Suite: 149 → 210 (61 new tests across the cycle).
 
-## v0.5.0 — Accessibility + settings *(planned)*
+## v0.5.0 — Accessibility + settings ✓ shipped
 
-Reels-studio-only cycle — no kadr-ui / kadr surface changes anticipated. Four tiers:
+Reels-studio-only cycle — first since v0.2 with no kadr-ui / kadr surface changes. Four tiers:
 
-1. **`AppSettings` + `SettingsView`** — gear-icon sheet from the editor toolbar. Accent picker (System / Custom segmented), fixed-center-playhead toggle, haptic-strength segmented (off / light / medium). `HapticEngine` routes every fire through the setting.
-2. **Accessibility wiring sweep** — `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` on every interactive site (project list, editor toolbar, inspector areas, keyframe editors, sheets, toasts). Driven by Xcode Accessibility Inspector + VoiceOver QA.
-3. **Empty / disabled state polish** — greyed-not-hidden via `.disabled(...) + .opacity(...)`; tap-and-hold tooltips via `.help(_:)`; empty-state pass on every sheet.
+1. **`AppSettings` + `SettingsView`** — UserDefaults-backed app settings (haptic intensity); per-project prefs (accent / playhead) flow through new `ProjectStore.setAccentColor` (undoable) + `setFixedCenterPlayhead` (no undo) mutations. Gear icon in editor top toolbar.
+2. **Accessibility wiring sweep** — `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` across every interactive surface. `ProjectRow.accessibilityDescription(for:)` pure helper for composed row labels.
+3. **Empty / disabled state polish** — `.help(_:)` tooltips on every `ToolbarButton`; Export disables on empty project with branching `exportTooltip(hasClips:)`.
 4. **Release prep** — CHANGELOG / README / ROADMAP, develop → main, tag v0.5.0.
 
-See [DESIGN.md](DESIGN.md) for the full RFC and tier breakdown.
+Suite: 210 → 228 (18 new tests).
 
 ## v1.0.0 — App Store *(planned)*
 
@@ -86,3 +86,4 @@ See [DESIGN.md](DESIGN.md) for the full RFC and tier breakdown.
 | 0.2.0 | ≥ 0.9.2 | ≥ 0.6.0 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.3.0 | ≥ 0.10.1 | ≥ 0.8.0 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.4.0 | ≥ 0.10.1 | ≥ 0.9.2 | ≥ 0.4.0 | ≥ 0.4.0 |
+| 0.5.0 | ≥ 0.10.1 | ≥ 0.9.2 | ≥ 0.4.0 | ≥ 0.4.0 |

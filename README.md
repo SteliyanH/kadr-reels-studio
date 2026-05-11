@@ -10,7 +10,7 @@ A real consumer codebase using every kadr + kadr-ui + kadr-captions + kadr-photo
 
 ## Status
 
-**v0.4.0 shipped — UX-polish foundations.** Closes the gap between "every button works" (v0.3) and "this feels like an app you'd actually use" — two-tier toolbar with selection-driven swap, fixed-center playhead, snap haptics on pinch-zoom + drag-to-reorder, accent-color threading, spring drawer detents, Track creation UI, and overlay tap-to-select. Built on v0.2's persistence + undo / redo + toast infra and v0.3's wired-up editor surfaces against kadr ≥ 0.10.1 + kadr-ui ≥ 0.9.2 + kadr-captions ≥ 0.4 + kadr-photos ≥ 0.4.
+**v0.5.0 shipped — accessibility + settings.** Closes the two remaining v1.0 blockers: no UI to change v0.4's preferences, and no VoiceOver wiring. Settings sheet from the editor's new gear icon surfaces accent picker (System / Custom), fixed-center playhead toggle, and haptic-strength segmented (Off / Light / Medium). Every interactive site gets accessibility labels / hints / values; tooltips on iPad + Mac via `.help`. Reels-studio-only cycle on top of kadr ≥ 0.10.1 + kadr-ui ≥ 0.9.2 + kadr-captions ≥ 0.4 + kadr-photos ≥ 0.4.
 
 | Layer | What's wired |
 |---|---|
@@ -27,8 +27,10 @@ A real consumer codebase using every kadr + kadr-ui + kadr-captions + kadr-photo
 | **Accent threading** | `Project.accentColor: Color?` (per-project, persisted, nil = system tint); `.tint(_:)` applied at the editor root threads through every `.tint`-aware surface |
 | **Captions** | tabbed `AddCaptionsSheet` — Edit (`KadrUI.CaptionEditor`) / Import (SRT / VTT / iTT / ASS / SSA) |
 | **Add Overlay** | three-tab sheet — Text / Image / Sticker, backed by kadr-photos `PhotoPicker` |
+| **Settings** | gear icon → `SettingsView`: Appearance (System/Custom accent + `ColorPicker`), Playback (fixed-center playhead), Haptics (Off/Light/Medium). `AppSettings` UserDefaults-backed for app-level prefs; per-project prefs live on `Project` and round-trip through schema v3 |
+| **Accessibility** | every interactive site has `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` where applicable. `.help(_:)` tooltips on iPad + Mac. Disabled state (e.g. Export with no clips) greyed-not-hidden with a "why" tooltip |
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release entry, [ROADMAP.md](ROADMAP.md) for what's next (v0.5 accessibility + settings screen, v1.0 App Store submission), and [DESIGN.md](DESIGN.md) for the v0.1 → v0.4 RFCs.
+See [CHANGELOG.md](CHANGELOG.md) for the full release entry, [ROADMAP.md](ROADMAP.md) for what's next (v1.0 App Store submission — name lock, icon, metadata, Dynamic Type / Reduce Motion audit), and [DESIGN.md](DESIGN.md) for the v0.1 → v0.5 RFCs.
 
 ## Why this exists
 
