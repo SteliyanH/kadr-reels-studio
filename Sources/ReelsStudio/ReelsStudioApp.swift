@@ -14,10 +14,17 @@ struct ReelsStudioApp: App {
     /// re-installing the modifier.
     @StateObject private var toastCenter = ToastCenter()
 
+    /// App-wide preferences (haptic strength today; more in v0.5+). Owned
+    /// at the root so every screen can read via `@EnvironmentObject`.
+    /// `HapticEngine` reaches `AppSettings.shared` directly so haptic
+    /// gating works from non-View contexts (gesture handlers).
+    @StateObject private var settings = AppSettings.shared
+
     var body: some Scene {
         WindowGroup {
             LibraryHostView(host: libraryHost)
                 .environmentObject(toastCenter)
+                .environmentObject(settings)
                 .toastHost(toastCenter)
         }
     }

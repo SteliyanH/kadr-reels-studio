@@ -28,6 +28,7 @@ struct EditorView: View {
     @State private var showExportSheet = false
     @State private var speedCurveClipID: ClipID?
     @State private var filtersClipID: ClipID?
+    @State private var showSettings = false
 
     /// Debounce window for auto-save. Half a second swallows rapid edits
     /// (slider drags, inspector typing) while still feeling near-instant.
@@ -133,6 +134,9 @@ struct EditorView: View {
                 FiltersSheet(store: store, clipID: id)
             }
         }
+        .sheet(isPresented: $showSettings) {
+            SettingsView(store: store)
+        }
         .navigationTitle(document.name)
         .navigationBarTitleDisplayModeInline()
         .toolbar {
@@ -151,6 +155,12 @@ struct EditorView: View {
                         .accessibilityLabel("Redo")
                 }
                 .disabled(!store.canRedo)
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                        .accessibilityLabel("Settings")
+                }
             }
         }
         .onReceive(
