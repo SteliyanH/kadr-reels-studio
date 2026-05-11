@@ -377,12 +377,115 @@ CHANGELOG / README / ROADMAP / DESIGN updates; develop → main; tag v0.4.0; GH 
 | Final name lock | v1.0 | "Reels Studio" likely conflicts with Meta. |
 | App Store submission | v1.0 | Pairs with the above two. |
 
-## v0.5 — Accessibility + settings *(planned)*
+## v0.5 — Accessibility + settings
 
-Sketch:
-- Full a11y wiring sweep — `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` on every interactive element. Driven by an audit pass (Xcode Accessibility Inspector + VoiceOver QA).
-- Empty / disabled state polish — greyed not hidden; tap-and-hold tooltips.
-- Settings screen — accent picker, fixed-center-playhead toggle, haptic-strength toggle.
+**Status:** RFC. No code yet.
+
+### Motivation
+
+v0.4 closed the feel-polish gap (haptics, springs, accent threading, fixed-center playhead). The two things keeping reels-studio from feeling like a *shippable* iOS app — and from being App-Store-acceptable — are the missing accessibility wiring and the missing surface for the per-project / per-app preferences v0.4 introduced but never exposed.
+
+- **Accessibility.** Every interactive element ships with the default SF Symbol or text label as its sole VoiceOver hint. Long-press multi-select, swipe-to-delete, tap-to-add-keyframe, drag-to-trim — all invisible to a VoiceOver user. App Store reviewers flag this; even setting that aside, omitting a11y is a v1.0 blocker for the "complete reference consumer of the kadr ecosystem" pitch.
+- **No way to change v0.4 preferences.** `Project.accentColor` defaults to `nil` (system tint) and the only way to set a custom color is editing JSON on disk. `fixedCenterPlayhead` defaults to `true` with no toggle. `HapticEngine` has no off switch (some users hate haptics; some devices can't render them). All three need a UI.
+- **Empty / disabled state polish.** Several places (empty Layers sheet, no-clips export, disabled toolbar buttons) hide rather than grey-out, which makes the editor feel non-deterministic — buttons appear and disappear. Tap-and-hold tooltips help users understand *why* a button is disabled.
+
+This cycle is reels-studio-only — no kadr-ui or kadr surface changes anticipated.
+
+### Scope lock — v0.5
+
+In scope:
+- **`SettingsView`** — single-screen sheet pushed from the editor's top toolbar (gear icon). Houses per-project + app-level preferences with the same visual treatment.
+- **Accent picker (iOS)** — `ColorPicker` writing to `Project.accentColor`. macOS / visionOS retain the system tint (no picker until the platform-specific surface is worth the cost).
+- **Fixed-center-playhead toggle** — bound to `Project.fixedCenterPlayhead`.
+- **Haptic strength** — app-level (`AppSettings.hapticIntensity: HapticIntensity`); reels-studio shouldn't ask the user to toggle haptics per project. `HapticEngine`'s public methods route through the setting (off → no-op, light → light/notification, medium → medium/notification).
+- **Accessibility wiring sweep** — every interactive element gets `.accessibilityLabel`, `.accessibilityHint`, and `.accessibilityValue` (the latter on stateful controls). Driven by an Xcode Accessibility Inspector pass followed by manual VoiceOver QA.
+- **Empty / disabled state polish** — greyed-not-hidden for disabled toolbar buttons + sheet rows; tap-and-hold tooltips on toolbar buttons via `.help(_:)` (iOS 16+ surface).
+
+Out of scope (v1.0 / rejected):
+- **Per-project haptic toggles** — overkill; haptic preference is environmental, not creative.
+- **VoiceOver-only authoring flows** — best-effort scrub / select / inspector navigation. Full alternative gesture set for VoiceOver is a separate cycle if a real consumer surfaces a need.
+- **Dynamic Type / large-text layout audit** — likely needed for v1.0, but its own cycle. v0.5 ships `.accessibilityLabel`s; layout audit lives in v1.0 prep.
+- **Reduce Motion** awareness — spring animations could `respond` to `accessibilityReduceMotion`. Not in v0.5 scope; track if QA flags.
+- **Custom designed app icon** — v1.0 (paired with name lock).
+
+### Persistence
+
+`AppSettings` — UserDefaults-backed, app-wide. Separate from `ProjectDocument` because the preferences are device-environment scoped, not project-scoped:
+
+```swift
+@MainActor
+final class AppSettings: ObservableObject {
+    @Published var hapticIntensity: HapticIntensity   // .off / .light / .medium
+    // future: prefersReducedMotion override, default playhead behavior, etc.
+}
+
+enum HapticIntensity: String, Codable, CaseIterable {
+    case off, light, medium
+}
+```
+
+- One `AppSettings` instance hangs off the app root via `@StateObject`, distributed through `@EnvironmentObject` like `ToastCenter`.
+- `HapticEngine.shared.snap()` etc. read `AppSettings.hapticIntensity` before firing; off → return early.
+- No new schema bump on `ProjectDocument` — the per-project settings already round-trip through the v3 fields added in v0.4 (`accentColorHex`, `fixedCenterPlayhead`).
+
+### Tier breakdown
+
+#### Tier 1 — `AppSettings` + `SettingsView` scaffolding
+
+- `AppSettings` `ObservableObject` (UserDefaults-backed via `@AppStorage` or explicit shims; explicit is simpler given the small surface).
+- `SettingsView` — `Form`-based sheet, three sections (Appearance / Playback / Haptics).
+  - Appearance: per-project accent (`ColorPicker`); "Use system tint" toggle when the user wants to clear an explicit color.
+  - Playback: fixed-center-playhead toggle (per project).
+  - Haptics: segmented control (off / light / medium); app-level.
+- Editor toolbar gets a gear icon (top-left? — top-right is taken by undo / redo) that pushes the sheet.
+- `HapticEngine` routes every fire through `AppSettings.hapticIntensity`. `off` returns early; `light` is unchanged; `medium` upgrades `snap` from light → medium impact and keeps `thud` / `success` as-is.
+
+~250 LOC + ~12 tests (AppSettings persistence round-trip, HapticEngine intensity gating, SettingsView body construction per section).
+
+#### Tier 2 — Accessibility wiring sweep
+
+Audit pass driven by Xcode Accessibility Inspector + manual VoiceOver run. Every interactive site gets at minimum `.accessibilityLabel`; stateful controls get `.accessibilityValue` (e.g. "Opacity, 80%"); buttons with non-obvious action get `.accessibilityHint`.
+
+Targets, in audit order:
+- **`ProjectListView`** — row label includes project name + modified date; swipe-to-delete announces action.
+- **`EditorView` toolbar** — gear / undo / redo / export each get explicit labels.
+- **`EditorToolbar` (all four modes)** — every button gets a value (e.g. disabled state announces "dimmed"; multi-select counter announces "3 selected").
+- **`TimelineArea`** — `TimelineView` itself is kadr-ui's; we add `.accessibilityLabel` on the wrapping container ("Timeline, scrub to seek"); long-press hint exposed.
+- **`InspectorArea` / `OverlayInspectorArea`** — sliders announce label + current value (`accessibilityValue`).
+- **`KeyframeArea` / `OverlayKeyframeArea`** — keyframe markers each announce their property + time.
+- **Sheets** — `AddOverlaySheet`, `AddCaptionsSheet`, `SpeedCurveSheet`, `LayersSheet`, `FiltersSheet`, `SettingsView`. Top-level navigation labels + per-row labels.
+- **Toasts** — `ToastView` announces via `.accessibilityLiveRegion(.assertive)` (transient) / `.polite` (resumable).
+
+~200 LOC of `.accessibility*` modifier calls + ~8 tests (the harness can read `accessibilityLabel` off rendered views; we lock down the labels for high-signal surfaces — toolbar buttons, inspector slider values).
+
+#### Tier 3 — Empty / disabled state polish
+
+- **Greyed-not-hidden.** Sites currently hiding disabled state instead of dimming get a uniform `.disabled(...)` + `.opacity(0.4)` treatment. Audit list: toolbar buttons that depend on selection (export when no clips, share when no clip); Layers sheet "Wrap" button (Tier 5 already does this — confirm).
+- **Tap-and-hold tooltips.** `.help("…")` on every `ToolbarButton` (iOS 16+ shows tooltip on long-press hover; macOS / visionOS show on hover). Tooltips explain *why* a control is disabled when applicable ("Add a clip to enable export").
+- **Empty-state polish** — `ProjectListView` empty state already exists; audit `LayersSheet`, `FiltersSheet` (already shows "No filters"), `AddCaptionsSheet`'s Edit tab when no cues exist. Ensure each empty state has an icon + headline + body + CTA where applicable.
+
+~100 LOC + ~6 tests (empty-state body construction, `.disabled` propagation to the inner control).
+
+#### Tier 4 — Release prep + tag v0.5.0
+
+CHANGELOG / README / ROADMAP / DESIGN updates; develop → main; tag v0.5.0; GH release; reset develop.
+
+### Out-of-scope deferrals (recap)
+
+| Item | Cycle | Why |
+|---|---|---|
+| Real designed app icon | v1.0 | Pairs with name lock. |
+| Final name lock | v1.0 | "Reels Studio" likely conflicts with Meta. |
+| App Store submission | v1.0 | Pairs with the above. |
+| Dynamic Type layout audit | v1.0 prep | Layout review is its own cycle. |
+| Reduce Motion override | v1.0 prep | Audit-time decision. |
+| VoiceOver-only authoring flows | post-v1.0 | Real-but-niche; track if requested. |
+
+### Open questions
+
+- **Where does the gear icon live?** Top-left navigation slot in the editor? Inside the project list's top toolbar? Both? RFC defaults to "editor toolbar, top-left" for fastest access during editing; revisit if QA flags as discoverable.
+- **Accent picker semantics on iOS.** SwiftUI's `ColorPicker` always returns a non-nil `Color`; "use system tint" needs a separate clear button or a "Custom / System" two-state toggle. RFC ships the latter — segmented control between System (nil) and Custom (picker reveal).
+- **Haptic strength gating on iPad / Mac.** iPad has a haptic engine on some models; Mac doesn't. RFC keeps the setting visible everywhere but `HapticEngine` already no-ops on non-iOS — the toggle on Mac does nothing observable. Worth a polite "iPhone-only" label, or leave as-is? Lean toward leaving as-is — the no-op is consistent.
 
 ## v1.0 — App Store *(planned)*
 

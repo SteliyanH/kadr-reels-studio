@@ -55,9 +55,14 @@ Suite: 149 → 210 (61 new tests across the cycle).
 
 ## v0.5.0 — Accessibility + settings *(planned)*
 
-- Full a11y wiring sweep — `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` on every interactive element (Accessibility Inspector + VoiceOver QA pass).
-- Empty / disabled state polish — greyed not hidden; tap-and-hold tooltips.
-- Settings screen — accent-color picker (iOS), fixed-center-playhead toggle, haptic-strength toggle.
+Reels-studio-only cycle — no kadr-ui / kadr surface changes anticipated. Four tiers:
+
+1. **`AppSettings` + `SettingsView`** — gear-icon sheet from the editor toolbar. Accent picker (System / Custom segmented), fixed-center-playhead toggle, haptic-strength segmented (off / light / medium). `HapticEngine` routes every fire through the setting.
+2. **Accessibility wiring sweep** — `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` on every interactive site (project list, editor toolbar, inspector areas, keyframe editors, sheets, toasts). Driven by Xcode Accessibility Inspector + VoiceOver QA.
+3. **Empty / disabled state polish** — greyed-not-hidden via `.disabled(...) + .opacity(...)`; tap-and-hold tooltips via `.help(_:)`; empty-state pass on every sheet.
+4. **Release prep** — CHANGELOG / README / ROADMAP, develop → main, tag v0.5.0.
+
+See [DESIGN.md](DESIGN.md) for the full RFC and tier breakdown.
 
 ## v1.0.0 — App Store *(planned)*
 
