@@ -40,6 +40,23 @@ final class ProjectStore: ObservableObject {
     /// Composition-time playhead. Driven by `TimelineView`'s tap-to-scrub.
     @Published var currentTime: CMTime = .zero
 
+    /// Multi-select mode flag — when `true`, taps on timeline clips toggle
+    /// set membership (`selectedClipIDs`) instead of writing single-select
+    /// (`selectedClipID`). Entered via long-press on a clip (kadr-ui v0.9.2's
+    /// `onLongPressClip`); exited via the multi-select toolbar's Cancel or
+    /// by completing a `wrapInTrack`. Clearing the flag clears the set.
+    /// v0.4 Tier 5.
+    @Published var isMultiSelecting: Bool = false {
+        didSet {
+            if !isMultiSelecting { selectedClipIDs.removeAll() }
+        }
+    }
+
+    /// The set of clip ids currently multi-selected. Drives kadr-ui v0.9.2's
+    /// `selectedClipIDs:` binding (every member of the set renders a
+    /// selection ring). Empty when not in multi-select mode. v0.4 Tier 5.
+    @Published var selectedClipIDs: Set<ClipID> = []
+
     /// History stack for ``undo()`` / ``redo()``. Snapshots the previous
     /// `Project` value before every mutation. Selection / playhead aren't
     /// part of the undo timeline — they're UX state, not document state.

@@ -51,7 +51,28 @@ struct TimelineArea: View {
             ),
             selectedClipID: Binding(
                 get: { store.selectedClipID },
-                set: { store.selectedClipID = $0 }
+                set: { newValue in
+                    // v0.4 Tier 5: in multi-select mode, kadr-ui's tap-to-
+                    // select still writes here. We intercept and route the
+                    // tapped id into the set toggle instead of replacing
+                    // the single-select slot. Outside the mode the binding
+                    // behaves normally.
+                    if store.isMultiSelecting {
+                        if let id = newValue {
+                            if store.selectedClipIDs.contains(id) {
+                                store.selectedClipIDs.remove(id)
+                            } else {
+                                store.selectedClipIDs.insert(id)
+                            }
+                        }
+                    } else {
+                        store.selectedClipID = newValue
+                    }
+                }
+            ),
+            selectedClipIDs: Binding(
+                get: { store.selectedClipIDs },
+                set: { store.selectedClipIDs = $0 }
             ),
             zoom: zoomBinding,
             laneHeight: 56,
@@ -79,6 +100,16 @@ struct TimelineArea: View {
         .fixedCenterPlayhead(store.project.fixedCenterPlayhead)
         .onZoomSnap { _ in HapticEngine.shared.snap() }
         .onClipDragSnap { HapticEngine.shared.snap() }
+        .onLongPressClip { id in
+            // Enter multi-select mode + seed the set with the long-pressed
+            // clip. Subsequent single taps toggle membership via the
+            // intercepted selectedClipID binding above.
+            HapticEngine.shared.thud()
+            store.selectedClipID = nil  // clear single-select so the spring
+                                        // doesn't transition through the clip row
+            store.isMultiSelecting = true
+            store.selectedClipIDs = [id]
+        }
         .frame(height: 96)
         .padding(.horizontal)
     }
