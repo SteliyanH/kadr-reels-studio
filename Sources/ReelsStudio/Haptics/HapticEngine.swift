@@ -45,27 +45,44 @@ final class HapticEngine {
 
     /// Light tap. Wired to `TimelineView.onZoomSnap` (pinch-zoom threshold
     /// crossing) and `onClipDragSnap` (drag-to-reorder boundary crossing) in
-    /// `TimelineArea`.
+    /// `TimelineArea`. v0.5 routes the fire through ``AppSettings/shared``'s
+    /// `hapticIntensity`: `off` returns early; `light` keeps the v0.4 feel;
+    /// `medium` upgrades the impact style so power users who like a stronger
+    /// snap can opt in without us redefining what "snap" means call-side.
     func snap() {
         #if canImport(UIKit)
-        lightImpact.impactOccurred()
-        lightImpact.prepare()  // re-arm for the next fire (steady-state pinch fires several per second)
+        switch AppSettings.shared.hapticIntensity {
+        case .off:
+            return
+        case .light:
+            lightImpact.impactOccurred()
+            lightImpact.prepare()
+        case .medium:
+            mediumImpact.impactOccurred()
+            mediumImpact.prepare()
+        }
         #endif
     }
 
     /// Medium thud. Reserved for delete actions (toolbar trash button, swipe-
-    /// to-delete in `LayersSheet`); v0.4 Tier 4 wires the call sites.
+    /// to-delete in `LayersSheet`); v0.4 Tier 4 wires the call sites. v0.5
+    /// gates on `hapticIntensity == .off`; otherwise unchanged (a "medium"
+    /// upgrade has nowhere to go from medium without a heavy style).
     func thud() {
         #if canImport(UIKit)
+        guard AppSettings.shared.hapticIntensity != .off else { return }
         mediumImpact.impactOccurred()
         mediumImpact.prepare()
         #endif
     }
 
     /// Success notification. Reserved for export completion; v0.4 Tier 4
-    /// wires the call site after `Exporter.run()` resolves.
+    /// wires the call site after `Exporter.run()` resolves. Off intensity
+    /// silences; everything else fires the system success pattern unchanged
+    /// (a three-tap "ta-da" is its own feel; light/medium don't apply).
     func success() {
         #if canImport(UIKit)
+        guard AppSettings.shared.hapticIntensity != .off else { return }
         notification.notificationOccurred(.success)
         notification.prepare()
         #endif
