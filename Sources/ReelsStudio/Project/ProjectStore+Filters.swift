@@ -18,23 +18,19 @@ extension ProjectStore {
     }
 
     /// Remove the filter at `filterIndex` from the selected `VideoClip`. No-op
-    /// when the clip isn't a `VideoClip` or the index is out of range. Rebuilds
-    /// the clip with the new filter list — kadr's modifier surface doesn't
-    /// expose a remove-filter modifier, so we walk the existing filters and
-    /// drop the indexed one.
+    /// when the clip isn't a `VideoClip` or the index is out of range.
+    ///
+    /// v0.6 — migrated to kadr v0.11's keyed `removeFilter(for:)` API.
+    /// Pre-v0.6 we walked filters + re-added each via `.filter(_:)`, which
+    /// re-issued every `FilterID` and orphaned any bound animation. The
+    /// keyed surface drops the slot and its animation atomically while
+    /// leaving neighbors' identities untouched.
     func removeFilter(id: ClipID, filterIndex: Int) {
         updateClip(id: id, actionName: "Remove Filter") { clip in
             guard let video = clip as? VideoClip else { return clip }
-            guard filterIndex >= 0, filterIndex < video.filters.count else { return clip }
-            var rebuilt = VideoClip(url: video.url)
-            if let trim = video.trimRange { rebuilt = rebuilt.trimmed(to: trim) }
-            for (i, filter) in video.filters.enumerated() where i != filterIndex {
-                rebuilt = rebuilt.filter(filter)
-            }
-            if let cid = video.clipID { rebuilt = rebuilt.id(cid) }
-            if let t = video.transform { rebuilt = rebuilt.transform(t) }
-            if let o = video.opacity { rebuilt = rebuilt.opacity(o) }
-            return rebuilt
+            guard filterIndex >= 0, filterIndex < video.filterIDs.count else { return clip }
+            let filterID = video.filterIDs[filterIndex]
+            return video.removeFilter(for: filterID)
         }
     }
 }
