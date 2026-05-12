@@ -487,6 +487,157 @@ CHANGELOG / README / ROADMAP / DESIGN updates; develop → main; tag v0.5.0; GH 
 - **Accent picker semantics on iOS.** SwiftUI's `ColorPicker` always returns a non-nil `Color`; "use system tint" needs a separate clear button or a "Custom / System" two-state toggle. RFC ships the latter — segmented control between System (nil) and Custom (picker reveal).
 - **Haptic strength gating on iPad / Mac.** iPad has a haptic engine on some models; Mac doesn't. RFC keeps the setting visible everywhere but `HapticEngine` already no-ops on non-iOS — the toggle on Mac does nothing observable. Worth a polite "iPhone-only" label, or leave as-is? Lean toward leaving as-is — the no-op is consistent.
 
+## v0.6 — Robustness + release engineering
+
+**Status:** RFC. No code yet.
+
+### Motivation
+
+A cross-package audit before the v1.0 stability commitment surfaced a cluster of robustness gaps the app has been carrying since v0.2 — none of them are user-visible in the happy path, all of them surface as App Store reviewer complaints, lost-work bug reports, or "first launch crashes on locale es-MX" issues. v0.6 is the cycle that closes them.
+
+Pairs with two upstream cycles that have to land first:
+- **kadr v0.11** — `CancellationToken` atomicity + `Speed` enum + `FilterID` keyed animations. Schema v3 → v4 migration needed downstream for the filter-id surface.
+- **kadr-ui v0.10.0** — callback payload structs + overlay multi-select. Breaking; consumed call sites in `TimelineArea` migrate.
+- **kadr-ui v0.10.1** — snapshot + gesture test infrastructure. Reels-studio v0.6 Tier 5 builds on the same harness.
+
+This is the largest reels-studio cycle yet (9 tiers). v0.7 (UX catch-up) and v0.8 (on-device AI) follow.
+
+### Scope lock — v0.6
+
+In scope:
+- **Floor bump** to kadr 0.11 + kadr-ui 0.10.1. Migrate every consumer call site to the new event-struct callbacks; pass `Speed` cases through `applySpeedCurve`; key filter animations by `FilterID`.
+- **Schema v4 + forward-migration shim.** Adds `filterID: String?` per filter (lazy id generation for v3 docs). Reject only v5+ documents with `ProjectLibraryError.unsupportedSchema`; surface as a "Project too new" inline error instead of silent-skip on `ProjectListView`.
+- **Project library recovery screen.** Today: a corrupt JSON file is silently skipped from the list. Tier 2 adds a "Skipped projects" affordance in `ProjectListView` listing corrupt / unsupported files with options to discard, view raw JSON, or attempt re-encode.
+- **`@SceneStorage` of editor state.** Last-opened project id, playhead time, selected clip / overlay id; restored on app cold-launch into the same context. Force-flush auto-save on `scenePhase: .background`.
+- **Integration / E2E test suite via XCUITest.** 5–10 flows covering: add clip → trim → split → add overlay → export → share; permission denial paths; corrupt-document recovery; multi-select wrap-in-track.
+- **Snapshot tests** on `ProjectListView`, `EditorView`, `EditorToolbar` (all four modes), `SettingsView` via kadr-ui v0.10.1's harness.
+- **Error-string sanitization.** No file URLs in transient toasts (Photos export temp paths, App Support paths, ...).
+- **Photos permission pre-check** in `AddClipFlow`: detect denied / `.limited` access up front and route to a "Grant access" CTA that opens Settings.app instead of failing silently mid-resolution.
+- **Localization extraction.** Every user-facing string → `Localizable.strings`. Initial bundle ships en-US only; structure is ready for follow-up locales.
+- **Release engineering.** `PrivacyInfo.xcprivacy` manifest; fastlane + match + gym + TestFlight pipeline; Crashlytics integration (or equivalent — Sentry SDK is a one-liner).
+
+Out of scope:
+- **Editor UX gaps** (audio waveform editing, transitions picker UI, text effects, chroma key UI, project thumbnails). All v0.7.
+- **On-device AI** (auto-captions via SpeechAnalyzer, person cutout via Vision). v0.8.
+- **iOS 17 floor / `@Observable` migration.** v0.8 when the kadr-ui floor moves.
+- **Multi-device sync / iCloud Documents.** Architecture leaves a door (overridable `ProjectLibrary` directory); no actual sync.
+
+### Tier breakdown
+
+#### Tier 1 — Floor bump
+
+kadr 0.10.1 → 0.11.0. kadr-ui 0.9.2 → 0.10.1 (Tier 1 = 0.10.0 callback structs; gets bumped again at Tier 5 once 0.10.1 ships).
+
+- Migrate `TimelineArea` callbacks to event structs.
+- Migrate `applySpeedCurve` to take `Kadr.Speed` cases.
+- Migrate `ProjectStore+Filters.swift` to keyed-animation API.
+
+~150 LOC + ~8 tests covering the migration shape.
+
+#### Tier 2 — Schema v4 migration shim + recovery screen
+
+- `ProjectDocument` schema v4 — adds `filterID` per filter; on-load fallback generates a deterministic id from `(clipID, arrayIndex)` for v3 docs so existing projects open cleanly.
+- `ProjectLibrary.loadAll()` retains the silent-skip path but **records skipped files** with a reason (`.corruptJSON` / `.unsupportedSchema(version: Int)`).
+- New "Skipped projects" inline section in `ProjectListView` with discard / view / re-encode actions.
+- "Project too new" UI when v5+ documents are encountered.
+
+~250 LOC + ~12 tests covering v3 → v4 round-trip, corrupt-file detection, recovery actions.
+
+#### Tier 3 — `@SceneStorage` + `scenePhase` flush
+
+- `@SceneStorage("editorProjectID") var lastEditorProjectID: String?` in `LibraryHostView`; on cold launch with a non-nil id, route into the editor.
+- Per-project session state — playhead time, selectedClipID, selectedOverlayID — persisted via `@SceneStorage` keyed by project UUID. (Document state already auto-saves; this is *session* state.)
+- `scenePhase` observer in `EditorView`: on transition to `.background`, force-flush auto-save bypassing the 0.5s debounce.
+- Background task identifier for in-flight export to give iOS more grace before suspension.
+
+~180 LOC + ~10 tests covering state-restoration round-trip, background flush bypassing debounce.
+
+#### Tier 4 — Error sanitization + Photos permission pre-check
+
+- Audit every `toasts.show(.transient(...))` call site — replace any error that may carry a file URL with a sanitized message.
+- `AppError.transient(_:prefix:)` factory grows a `redactingPaths: Bool` option (default true).
+- `AddClipFlow` checks `PHPhotoLibrary.authorizationStatus(for: .readWrite)` before presenting the picker. `.denied` / `.restricted` → CTA sheet routing to `UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)`. `.limited` → toast + picker (matches current behavior, but now intentional).
+
+~120 LOC + ~8 tests.
+
+#### Tier 5 — Snapshot + gesture-driver tests
+
+- Floor bump to kadr-ui 0.10.1 (gestures + snapshot harness).
+- Snapshot baselines for: `ProjectListView` (empty / populated), `EditorView` (no selection / clip selected / overlay selected / multi-selecting), `EditorToolbar` (all four modes), `SettingsView` (Custom accent + System accent + every haptic intensity), `LayersSheet` (empty / populated), `FiltersSheet` (empty / populated).
+- Gesture-driver tests via kadr-ui's new harness: long-press → multi-select toggle; pinch-zoom → haptic; export-completion → success haptic.
+
+~300 LOC of snapshot fixtures + ~15 gesture tests.
+
+#### Tier 6 — Integration / E2E suite (XCUITest)
+
+- New test target: `ReelsStudioUITests`.
+- 5–10 flow tests:
+  1. Sample project → trim first clip → split second clip → export → share-sheet appears.
+  2. Empty project → add 3 clips from Photos → multi-select 2 → wrap in track → undo.
+  3. Photos permission denied → CTA → routes to Settings.
+  4. Corrupt project file in library directory → "Skipped projects" surfaces → discard.
+  5. Background app mid-edit → relaunch → editor restores playhead + selection.
+  6. Generate captions (placeholder — wires Tier 8's localization but real path is v0.8).
+  7. Toggle haptics off → pinch-zoom → no haptic fires (verify via `HapticEngine` test mode).
+  8. Force-kill app during export → recovery state surfaces on relaunch.
+
+~400 LOC of XCUITest. Runs in CI on a single iOS simulator config.
+
+#### Tier 7 — Localization extraction
+
+- Audit every user-facing `String` literal across the source tree.
+- Move to `Localizable.strings`; wrap call sites with `String(localized:)`.
+- Initial bundle: en-US only.
+- Strategy doc for adding en-GB, es-ES, es-MX, fr-FR, de-DE, ja-JP, pt-BR, zh-Hans as follow-ups.
+
+~600 LOC of string extraction across ~39 source files. Mechanical but tedious; no behavior change.
+
+#### Tier 8 — Release engineering
+
+- `PrivacyInfo.xcprivacy` manifest enumerating Photos / Camera / Microphone / File-system access; required-reason API declarations.
+- `fastlane init` + `fastlane match` (for signing) + `fastlane gym` (build) + `fastlane pilot` (TestFlight upload).
+- CI workflow (`.github/workflows/release.yml`) tied to `release/*` branches.
+- Crash analytics: Sentry SDK (lighter than Firebase Crashlytics; no GCP dependency). Captures crashes + breadcrumbs; opt-out toggle in `SettingsView`.
+
+~200 LOC of config + manifest. New CI dependencies.
+
+#### Tier 9 — Release prep + tag v0.6.0
+
+CHANGELOG / README / ROADMAP / DESIGN updates; develop → main; tag v0.6.0; GH release; reset develop.
+
+### Compatibility
+
+- **Floor bumps:** kadr ≥ 0.11.0; kadr-ui ≥ 0.10.1.
+- **Schema:** v4 documents written by v0.6+; v1 / v2 / v3 still load (additive migration).
+- **`Localizable.strings`:** en-US bundle; no behavior change for en-US users.
+- **Privacy manifest:** required for App Store submission post-2024; ships now so v0.7+ doesn't have to scramble.
+
+### Open questions
+
+- **Sentry vs. Crashlytics vs. neither.** Sentry is simpler to drop in and doesn't bind to Firebase / GCP; Crashlytics is free + Apple-friendly but pulls in the Firebase SDK. RFC defaults to Sentry. If the user prefers Crashlytics, swap.
+- **Multi-device sync architecture today vs. defer.** RFC defers — overridable `ProjectLibrary` directory is the only hook; no real CloudKit / iCloud Documents work. Multi-device is a v0.7+ decision.
+- **iOS 17 floor move now or in v0.8.** v0.6 stays on iOS 16+. Moving to iOS 17 unlocks `@Observable` + `accessibilityLiveRegion` on toasts; the cost is dropping the small iOS 16 install base. Decide at v0.8.
+
+## v0.7 — Editor UX catch-up *(planned, sketch)*
+
+CapCut-baseline parity. Six tiers:
+
+1. **Audio waveform editing** — trim handles + scrub on audio tracks (likely needs a kadr-ui v0.10.2 mid-cycle patch exposing the surface).
+2. **Transitions picker UI** — grid sheet + duration slider; pushed from a clip-action toolbar button.
+3. **Text effects inspector** — stroke / shadow / outline / animated text properties surfaced in `OverlayInspectorArea`.
+4. **Chroma key UI** — color swatch / picker in `FiltersSheet`'s add-menu; "select from preview" gesture.
+5. **Project thumbnails** — first-frame swatch in `ProjectListView` rows; cached in App Support.
+6. Release prep + tag v0.7.0.
+
+## v0.8 — On-device AI *(planned, sketch)*
+
+Apple-platform-commodity AI features:
+
+1. **iOS 17 floor bump** + `@Observable` migration of `ProjectStore`, `ToastCenter`, `AppSettings`, `LibraryHost`, `ProjectLibrary`.
+2. **Auto-captions** via kadr-captions v0.7's `AutoCaptionGenerator` (SpeechAnalyzer-backed). "Generate from audio" button in `AddCaptionsSheet`.
+3. **Person cutout** via Vision framework `PersonSegmentation`. New `Filter.mask(.person)` case (requires kadr engine update — track as kadr v0.13.x).
+4. Release prep + tag v0.8.0.
+
 ## v1.0 — App Store *(planned)*
 
 Sketch:
