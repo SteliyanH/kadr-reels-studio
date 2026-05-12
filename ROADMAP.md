@@ -64,6 +64,30 @@ Reels-studio-only cycle — first since v0.2 with no kadr-ui / kadr surface chan
 
 Suite: 210 → 228 (18 new tests).
 
+## v0.6.0 — Robustness + release engineering *(planned)*
+
+Cross-package-audit response cycle. Closes the cluster of robustness gaps the app has carried since v0.2 — none user-visible in the happy path, all visible to App Store reviewers and to users hitting non-English locales / corrupt files / force-quit scenarios. Nine tiers:
+
+1. **Floor bump** to kadr 0.11.0 + kadr-ui 0.10.0. Migrate `TimelineArea` callbacks to new event structs; `applySpeedCurve` to take `Speed` cases; `ProjectStore+Filters` to keyed-animation API.
+2. **Schema v4 migration shim + recovery screen** — additive `filterID` field; "Skipped projects" surface in `ProjectListView` for corrupt / future-schema docs.
+3. **`@SceneStorage` + `scenePhase` flush** — restore last-opened project + playhead + selection on cold launch; force-flush auto-save on `.background`.
+4. **Error sanitization + Photos permission pre-check** — no file URLs in toasts; route `.denied`/`.restricted` Photos access to Settings.app.
+5. **Snapshot + gesture-driver tests** — kadr-ui 0.10.1 harness for every screen + gesture path.
+6. **Integration / E2E tests** — XCUITest target with 5–10 critical flows.
+7. **Localization extraction** — every user-facing string → `Localizable.strings`; en-US bundle.
+8. **Release engineering** — `PrivacyInfo.xcprivacy`, fastlane + match + gym + TestFlight, Sentry / Crashlytics.
+9. Release prep + tag v0.6.0.
+
+Pairs with **kadr v0.11** + **kadr-ui v0.10.0 + v0.10.1** which must merge first.
+
+## v0.7.0 — Editor UX catch-up *(planned)*
+
+CapCut-baseline parity. Six tiers: audio waveform editing, transitions picker UI, text effects inspector, chroma key UI, project thumbnails, release prep. May need a kadr-ui mid-cycle patch for the waveform-editing surface.
+
+## v0.8.0 — On-device AI *(planned)*
+
+iOS 17 floor bump + `@Observable` migration. Auto-captions via kadr-captions v0.7's `SpeechAnalyzer`-backed generator. Person cutout via Vision framework (requires kadr v0.13.x). Four tiers.
+
 ## v1.0.0 — App Store *(planned)*
 
 - Final name lock (revisit "Reels Studio" before submission — likely conflicts with Meta trademarks).
