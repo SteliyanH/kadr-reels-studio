@@ -75,9 +75,9 @@ extension ProjectDocument {
         // Speed curve takes precedence over flat speedRate (matches kadr's
         // engine behavior). When both persist, prefer the curve.
         if let curve = data.speedCurve {
-            clip = clip.speed(curve: runtimeDoubleAnimation(from: curve))
+            clip = clip.speed(.curved(runtimeDoubleAnimation(from: curve)))
         } else if data.speedRate != 1.0 {
-            clip = clip.speed(data.speedRate)
+            clip = clip.speed(.flat(data.speedRate))
         }
         for (index, filter) in data.filters.enumerated() {
             // `lut` may fail to reload (file moved / deleted) — in that case
@@ -364,12 +364,22 @@ extension ProjectDocument {
             speedRate: clip.speedRate,
             opacity: clip.opacity,
             filters: clip.filters.compactMap(documentFilter(from:)),
+            filterIDs: documentFilterIDs(from: clip.filterIDs),
             transform: clip.transform.map(documentTransform(from:)),
             transformAnimation: clip.transformAnimation.map(documentTransformAnimation(from:)),
             opacityAnimation: clip.opacityAnimation.map(documentDoubleAnimation(from:)),
             filterAnimations: documentFilterAnimations(from: clip.filterAnimations),
             speedCurve: clip.speedCurve.map(documentDoubleAnimation(from:))
         )
+    }
+
+    /// Persist kadr's `filterIDs` parallel array, or `nil` when the clip has
+    /// no filters. v4. Until kadr exposes a public seam to inject these on
+    /// construction, the on-load bridge falls back to auto-generated ids —
+    /// these write but don't yet re-bind across cold launches.
+    nonisolated static func documentFilterIDs(from ids: [FilterID]) -> [String]? {
+        guard !ids.isEmpty else { return nil }
+        return ids.map(\.rawValue)
     }
 
     /// Map kadr's parallel filter-animation array to its persisted form,

@@ -12,6 +12,13 @@ final class ProjectLibrary: ObservableObject {
 
     @Published public private(set) var documents: [ProjectDocument]
 
+    /// Project files in the library directory that failed to load. Populated
+    /// by ``loadAll(in:fileManager:)`` (v0.6 Tier 2) — drives the "Skipped
+    /// projects" recovery section in `ProjectListView`. Mutations are
+    /// ``discardSkipped(_:)`` to delete the file off disk and remove it
+    /// from this list.
+    @Published public private(set) var skippedProjects: [SkippedProject]
+
     private let directoryURL: URL
     private let fileManager: FileManager
 
@@ -21,7 +28,9 @@ final class ProjectLibrary: ObservableObject {
     public init() throws {
         self.fileManager = .default
         self.directoryURL = try Self.defaultDirectoryURL(fileManager: fileManager)
-        self.documents = try Self.loadAll(in: directoryURL, fileManager: fileManager)
+        let result = try Self.loadAll(in: directoryURL, fileManager: fileManager)
+        self.documents = result.documents
+        self.skippedProjects = result.skipped
     }
 
     /// Test-friendly init accepting an explicit directory.
@@ -29,7 +38,9 @@ final class ProjectLibrary: ObservableObject {
         self.directoryURL = directoryURL
         self.fileManager = fileManager
         try Self.ensureDirectory(at: directoryURL, fileManager: fileManager)
-        self.documents = try Self.loadAll(in: directoryURL, fileManager: fileManager)
+        let result = try Self.loadAll(in: directoryURL, fileManager: fileManager)
+        self.documents = result.documents
+        self.skippedProjects = result.skipped
     }
 
     // MARK: - CRUD
@@ -142,13 +153,18 @@ final class ProjectLibrary: ObservableObject {
     // MARK: - Load / read / write
 
     /// Walk the directory, decode every `*.json` file, return the list sorted
-    /// by `modifiedAt` descending. Files that fail to decode are skipped — a
-    /// corrupt project shouldn't take the whole library down.
+    /// by `modifiedAt` descending plus a parallel list of files that failed
+    /// to load. v0.6 Tier 2 — prior to this the failures were swallowed via
+    /// `try?`, which left corrupt or future-schema projects invisible. The
+    /// caller surfaces ``LoadResult/skipped`` through the
+    /// "Skipped projects" recovery section in `ProjectListView`.
     nonisolated internal static func loadAll(
         in directoryURL: URL,
         fileManager: FileManager
-    ) throws -> [ProjectDocument] {
-        guard fileManager.fileExists(atPath: directoryURL.path) else { return [] }
+    ) throws -> LoadResult {
+        guard fileManager.fileExists(atPath: directoryURL.path) else {
+            return LoadResult(documents: [], skipped: [])
+        }
         let entries: [URL]
         do {
             entries = try fileManager.contentsOfDirectory(
@@ -160,12 +176,40 @@ final class ProjectLibrary: ObservableObject {
             throw ProjectLibraryError.directorySetup(error.localizedDescription)
         }
         var docs: [ProjectDocument] = []
+        var skipped: [SkippedProject] = []
         for entry in entries where entry.pathExtension == "json" {
-            if let doc = try? read(at: entry) {
-                docs.append(doc)
+            do {
+                docs.append(try read(at: entry))
+            } catch let error as ProjectLibraryError {
+                skipped.append(SkippedProject(fileURL: entry, reason: .init(from: error)))
+            } catch {
+                skipped.append(SkippedProject(fileURL: entry, reason: .corruptJSON(error.localizedDescription)))
             }
         }
-        return docs.sorted { $0.modifiedAt > $1.modifiedAt }
+        return LoadResult(
+            documents: docs.sorted { $0.modifiedAt > $1.modifiedAt },
+            skipped: skipped.sorted { $0.fileURL.lastPathComponent < $1.fileURL.lastPathComponent }
+        )
+    }
+
+    /// Pair returned by ``loadAll(in:fileManager:)`` — successful documents
+    /// plus the files that couldn't be loaded.
+    internal struct LoadResult: Sendable {
+        let documents: [ProjectDocument]
+        let skipped: [SkippedProject]
+    }
+
+    /// Permanently delete a skipped file off disk and drop it from
+    /// ``skippedProjects``. Used by the recovery UI's "Discard" action.
+    public func discardSkipped(_ skipped: SkippedProject) throws {
+        if fileManager.fileExists(atPath: skipped.fileURL.path) {
+            do {
+                try fileManager.removeItem(at: skipped.fileURL)
+            } catch {
+                throw ProjectLibraryError.write(error.localizedDescription)
+            }
+        }
+        skippedProjects.removeAll { $0.id == skipped.id }
     }
 
     nonisolated internal static func read(at url: URL) throws -> ProjectDocument {
@@ -206,6 +250,67 @@ final class ProjectLibrary: ObservableObject {
             try data.write(to: url, options: .atomic)
         } catch {
             throw ProjectLibraryError.write(error.localizedDescription)
+        }
+    }
+}
+
+// MARK: - Skipped project (v0.6 Tier 2 recovery surface)
+
+/// A project file that lives in the library directory but couldn't be loaded.
+/// Surfaced through ``ProjectLibrary/skippedProjects`` so users can see what
+/// the editor refused, view raw JSON, or discard the file outright instead of
+/// having corruptions silently disappear.
+public struct SkippedProject: Identifiable, Hashable, Sendable {
+    public let id: String  // file name — stable per disk path
+    public let fileURL: URL
+    public let reason: Reason
+
+    public init(fileURL: URL, reason: Reason) {
+        self.id = fileURL.lastPathComponent
+        self.fileURL = fileURL
+        self.reason = reason
+    }
+
+    /// Why the file couldn't be loaded. Mapped from `ProjectLibraryError`
+    /// cases that can fire mid-`loadAll`.
+    public enum Reason: Hashable, Sendable {
+        /// JSON parse / shape mismatch / unreadable file. Message is the
+        /// underlying decoder / FileManager description, surfaced as-is in
+        /// the recovery UI's "View details" affordance.
+        case corruptJSON(String)
+        /// Document declares `schemaVersion > currentSchemaVersion` — the
+        /// project was saved by a newer build of the app. We refuse to load
+        /// it (loading would risk silently dropping fields we don't know
+        /// about) but keep it on disk so a future build can pick it up.
+        case unsupportedSchema(version: Int)
+
+        init(from error: ProjectLibraryError) {
+            switch error {
+            case .unsupportedSchema(let v):
+                self = .unsupportedSchema(version: v)
+            case .decode(let s), .notFound(let s):
+                self = .corruptJSON(s)
+            case .encode(let s), .write(let s), .directorySetup(let s):
+                self = .corruptJSON(s)
+            }
+        }
+
+        public var displayLabel: String {
+            switch self {
+            case .corruptJSON:
+                return "Couldn't read file"
+            case .unsupportedSchema(let v):
+                return "Project uses a newer schema (v\(v))"
+            }
+        }
+
+        public var detail: String {
+            switch self {
+            case .corruptJSON(let s):
+                return s
+            case .unsupportedSchema(let v):
+                return "This project was saved by a newer build (schema v\(v)). Update Reels Studio to open it."
+            }
         }
     }
 }

@@ -125,6 +125,35 @@ final class ProjectLibraryTests: XCTestCase {
         XCTAssertEqual(library.documents.first?.id, second.id)
     }
 
+    // MARK: - Skipped project surface (v0.6 Tier 2)
+
+    func testCorruptJSONIsSurfacedAsSkipped() throws {
+        try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+        let url = tempDirectory
+            .appendingPathComponent("\(UUID().uuidString).json")
+        try Data("{ this is not valid JSON }".utf8).write(to: url)
+
+        let library = try ProjectLibrary(directoryURL: tempDirectory)
+        XCTAssertTrue(library.documents.isEmpty)
+        XCTAssertEqual(library.skippedProjects.count, 1)
+        guard case .corruptJSON = library.skippedProjects.first?.reason else {
+            return XCTFail("Expected .corruptJSON reason, got \(String(describing: library.skippedProjects.first?.reason))")
+        }
+    }
+
+    func testDiscardSkippedRemovesFileFromDisk() throws {
+        try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+        let url = tempDirectory.appendingPathComponent("\(UUID().uuidString).json")
+        try Data("not json".utf8).write(to: url)
+
+        let library = try ProjectLibrary(directoryURL: tempDirectory)
+        let skipped = try XCTUnwrap(library.skippedProjects.first)
+        try library.discardSkipped(skipped)
+
+        XCTAssertTrue(library.skippedProjects.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+    }
+
     // MARK: - Schema versioning
 
     func testFutureSchemaVersionIsRejected() throws {
@@ -152,9 +181,15 @@ final class ProjectLibraryTests: XCTestCase {
             .appendingPathExtension("json")
         try json.data(using: .utf8)!.write(to: url)
 
-        // The library skips files that fail to decode rather than crashing —
-        // the malformed-future-schema file is silently dropped.
+        // v0.6 Tier 2: future-schema files are now surfaced via
+        // `skippedProjects` with `.unsupportedSchema(version:)` instead of
+        // being silently swallowed.
         let library = try ProjectLibrary(directoryURL: tempDirectory)
         XCTAssertTrue(library.documents.isEmpty)
+        XCTAssertEqual(library.skippedProjects.count, 1)
+        guard case .unsupportedSchema(let version) = library.skippedProjects.first?.reason else {
+            return XCTFail("Expected .unsupportedSchema, got \(String(describing: library.skippedProjects.first?.reason))")
+        }
+        XCTAssertEqual(version, 999)
     }
 }
