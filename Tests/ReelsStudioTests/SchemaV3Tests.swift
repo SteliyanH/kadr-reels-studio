@@ -4,12 +4,6 @@ import XCTest
 @MainActor
 final class SchemaV3Tests: XCTestCase {
 
-    // MARK: - currentSchemaVersion bumped
-
-    func testCurrentSchemaVersionIsThree() {
-        XCTAssertEqual(ProjectDocument.currentSchemaVersion, 3)
-    }
-
     // MARK: - Round-trip
 
     /// A v3 document that explicitly stores `fixedCenterPlayhead = false`
@@ -87,8 +81,10 @@ final class SchemaV3Tests: XCTestCase {
     // MARK: - Re-saving an old document upgrades it
 
     /// Loading a v2 document and saving it back through the bridge promotes
-    /// it to v3 and writes the explicit `fixedCenterPlayhead` field.
-    func testReSavingOldDocumentPromotesSchemaToV3() throws {
+    /// it to the current schema and writes the explicit `fixedCenterPlayhead`
+    /// field. (Originally a v3 assertion; updated when v4 landed to track
+    /// `ProjectDocument.currentSchemaVersion` instead of pinning the value.)
+    func testReSavingOldDocumentPromotesSchema() throws {
         let original = ProjectDocument(name: "Promoted Project")
         let v2Data = try oldVersionJSON(from: original, targetVersion: 2)
         let loaded = try decodeDocument(v2Data)
@@ -96,7 +92,7 @@ final class SchemaV3Tests: XCTestCase {
         let runtime = loaded.toRuntimeProject()
         let promoted = runtime.toDocument(inheriting: loaded)
 
-        XCTAssertEqual(promoted.schemaVersion, 3)
+        XCTAssertEqual(promoted.schemaVersion, ProjectDocument.currentSchemaVersion)
         XCTAssertEqual(promoted.fixedCenterPlayhead, true)
         XCTAssertEqual(promoted.id, loaded.id)
     }
