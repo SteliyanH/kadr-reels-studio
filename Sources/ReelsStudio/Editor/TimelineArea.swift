@@ -78,22 +78,22 @@ struct TimelineArea: View {
             laneHeight: 56,
             showAudioWaveforms: true,
             showLaneLabels: true,
-            onReorder: { _, _, newClips in
-                store.replaceClips(newClips)
+            onReorder: { event in
+                store.replaceClips(event.newClips)
             },
-            onTrackReorder: { _, _, _, newClips in
+            onTrackReorder: { event in
                 // KadrUI hands us the full new top-level clips array with
                 // the rebuilt Track substituted in place — same shape as
                 // onReorder. Routes through the existing replaceClips
                 // mutation.
-                store.replaceClips(newClips)
+                store.replaceClips(event.newClips)
             },
-            onTrackTrim: { trackIndex, clipIndex, leadingTrim, trailingTrim in
+            onTrackTrim: { event in
                 store.applyTrackTrim(
-                    trackIndex: trackIndex,
-                    clipIndex: clipIndex,
-                    leadingTrim: leadingTrim,
-                    trailingTrim: trailingTrim
+                    trackIndex: event.trackIndex,
+                    clipIndex: event.clipIndex,
+                    leadingTrim: event.leadingTrim,
+                    trailingTrim: event.trailingTrim
                 )
             }
         )

@@ -347,14 +347,14 @@ final class ProjectStore: ObservableObject {
     func applySpeedCurve(id: ClipID, _ curve: Kadr.Animation<Double>?) {
         updateClip(id: id, actionName: "Speed Curve") { clip in
             guard let video = clip as? VideoClip else { return clip }
+            // v0.6 — migrate to kadr v0.11's Speed enum. The enum makes
+            // flat/curved exclusivity structural; falling back to
+            // .flat(speedRate) preserves the v0.5 semantic where clearing
+            // the curve restored the user's prior flat rate.
             if let curve {
-                return video.speed(curve: curve)
+                return video.speed(.curved(curve))
             }
-            // Clear the curve — kadr's `speed(curve:)` doesn't have a nil
-            // overload, so we fall back to setting a flat rate. The user's
-            // existing speedRate (1.0 by default) restores; if they
-            // previously had a non-1.0 rate, it stays.
-            return video.speed(video.speedRate)
+            return video.speed(.flat(video.speedRate))
         }
     }
 
@@ -397,44 +397,27 @@ final class ProjectStore: ObservableObject {
     }
 
     /// Replace the scalar of `VideoClip.filters[index]` and rebuild the clip with
-    /// the new filter list. No-op when the clip isn't a `VideoClip` or the index is
-    /// out of range. Mirrors kadr's internal `Filter.withScalar(_:)` (which isn't
-    /// publicly accessible as of kadr 0.9.2; revisit if it becomes public).
+    /// Update the scalar parameter of `filters[filterIndex]` on the selected
+    /// `VideoClip`. No-op when the clip isn't a `VideoClip` or the index is
+    /// out of range.
+    ///
+    /// v0.6 — migrated to kadr v0.11's `setFilter(for:_:)` keyed API +
+    /// the now-public `Filter.withScalar(_:)`. Pre-v0.6 we rebuilt the clip
+    /// from scratch via `VideoClip(url:)` + walking every filter + re-
+    /// applying every modifier, which re-issued every `FilterID` and
+    /// orphaned any bound animation. The keyed surface preserves the slot's
+    /// id and its bound animation atomically.
     func applyFilterIntensity(id: ClipID, filterIndex: Int, value: Double) {
         updateClip(id: id, actionName: "Edit Filter") { clip in
             guard let video = clip as? VideoClip else { return clip }
-            guard filterIndex >= 0, filterIndex < video.filters.count else { return clip }
-            var rebuilt = VideoClip(url: video.url)
-            if let trim = video.trimRange { rebuilt = rebuilt.trimmed(to: trim) }
-            for (i, filter) in video.filters.enumerated() {
-                let updated = (i == filterIndex)
-                    ? Self.filter(filter, withScalar: value)
-                    : filter
-                rebuilt = rebuilt.filter(updated)
-            }
-            if let id = video.clipID { rebuilt = rebuilt.id(id) }
-            if let t = video.transform { rebuilt = rebuilt.transform(t) }
-            if let o = video.opacity { rebuilt = rebuilt.opacity(o) }
-            return rebuilt
+            guard filterIndex >= 0, filterIndex < video.filterIDs.count else { return clip }
+            let filterID = video.filterIDs[filterIndex]
+            let scaled = video.filters[filterIndex].withScalar(value)
+            return video.setFilter(for: filterID, scaled)
         }
     }
 
-    /// Build a new `Filter` case substituting `scalar` for the primary numeric
-    /// parameter. Mirrors kadr's internal `Filter.withScalar(_:)`. Filters without a
-    /// scalar parameter return unchanged.
-    private static func filter(_ filter: Filter, withScalar scalar: Double) -> Filter {
-        switch filter {
-        case .brightness:   return .brightness(scalar)
-        case .contrast:     return .contrast(scalar)
-        case .saturation:   return .saturation(scalar)
-        case .exposure:     return .exposure(scalar)
-        case .sepia:        return .sepia(intensity: scalar)
-        case .gaussianBlur: return .gaussianBlur(radius: scalar)
-        case .vignette:     return .vignette(intensity: scalar)
-        case .sharpen:      return .sharpen(amount: scalar)
-        case .zoomBlur:     return .zoomBlur(amount: scalar)
-        case .glow:         return .glow(intensity: scalar)
-        case .mono, .lut, .chromaKey: return filter
-        }
-    }
+    // v0.6 — local `filter(_:withScalar:)` mirror dropped. kadr v0.10 made
+    // `Filter.withScalar(_:)` public; we call it directly in
+    // `applyFilterIntensity` above.
 }
