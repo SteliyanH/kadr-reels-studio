@@ -49,9 +49,11 @@ extension AppError {
 
     /// Wrap any `Error` into a transient toast. Pulls
     /// `.localizedDescription` for the message; pass an explicit `prefix`
-    /// to disambiguate when the wrapped error is generic.
+    /// to disambiguate when the wrapped error is generic. v0.6 Tier 4
+    /// routes the detail through ``ErrorSanitizer`` so embedded file URLs /
+    /// sandbox paths never reach the toast.
     static func transient(_ error: Error, prefix: String? = nil) -> AppError {
-        let detail = error.localizedDescription
+        let detail = ErrorSanitizer.sanitize(error)
         if let prefix {
             return .transient(message: prefix, detail: detail)
         }
@@ -60,7 +62,7 @@ extension AppError {
 
     /// Build a catastrophic error for a thrown error.
     static func catastrophic(_ error: Error, prefix: String? = nil) -> AppError {
-        let detail = error.localizedDescription
+        let detail = ErrorSanitizer.sanitize(error)
         if let prefix {
             return .catastrophic(message: prefix, detail: detail)
         }
