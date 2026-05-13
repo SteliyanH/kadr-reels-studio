@@ -43,7 +43,7 @@ final class LibraryHost: ObservableObject {
         do {
             self.library = try ProjectLibrary()
         } catch {
-            self.setupError = error.localizedDescription
+            self.setupError = ErrorSanitizer.sanitize(error)
         }
     }
 }
