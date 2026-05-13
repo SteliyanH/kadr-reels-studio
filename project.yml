@@ -25,9 +25,6 @@ packages:
   KadrPhotos:
     url: https://github.com/SteliyanH/kadr-photos.git
     from: 0.4.0
-  swift-snapshot-testing:
-    url: https://github.com/pointfreeco/swift-snapshot-testing.git
-    from: 1.18.0
   ViewInspector:
     url: https://github.com/nalexn/ViewInspector.git
     from: 0.9.11
@@ -77,8 +74,6 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: ReelsStudio
-      - package: swift-snapshot-testing
-        product: SnapshotTesting
       - package: ViewInspector
 
 schemes:
