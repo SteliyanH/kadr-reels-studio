@@ -25,6 +25,9 @@ packages:
   KadrPhotos:
     url: https://github.com/SteliyanH/kadr-photos.git
     from: 0.4.0
+  ViewInspector:
+    url: https://github.com/nalexn/ViewInspector.git
+    from: 0.9.11
 
 targets:
   ReelsStudio:
@@ -71,6 +74,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: ReelsStudio
+      - package: ViewInspector
 
 schemes:
   ReelsStudio:
