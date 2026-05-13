@@ -122,7 +122,7 @@ struct ProjectListView: View {
             try library.save(doc)
             path.append(doc.id)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorSanitizer.sanitize(error)
         }
     }
 
@@ -193,7 +193,7 @@ struct ProjectListView: View {
         do {
             try library.discardSkipped(skipped)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorSanitizer.sanitize(error)
         }
         pendingDiscard = nil
     }
@@ -217,7 +217,7 @@ struct ProjectListView: View {
             let doc = try library.newProject(name: defaultNewName())
             path.append(doc.id)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorSanitizer.sanitize(error)
         }
     }
 
@@ -227,7 +227,7 @@ struct ProjectListView: View {
             do {
                 try library.delete(id: doc.id)
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = ErrorSanitizer.sanitize(error)
             }
         }
     }

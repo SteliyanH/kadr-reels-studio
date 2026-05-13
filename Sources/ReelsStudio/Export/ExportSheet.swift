@@ -125,7 +125,7 @@ struct ExportSheet: View {
         } catch is CancellationError {
             stage = .idle
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorSanitizer.sanitize(error)
             stage = .failed
         }
     }

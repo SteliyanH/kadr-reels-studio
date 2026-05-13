@@ -43,6 +43,12 @@ struct EditorView: View {
     @State private var filtersClipID: ClipID?
     @State private var showSettings = false
 
+    /// v0.6 Tier 4 — Photos access pre-check. When the user taps "Add clip"
+    /// we resolve `PHPhotoLibrary.authorizationStatus` before showing the
+    /// picker; a denial flips this to true and we show the Settings-redirect
+    /// alert instead of presenting an empty picker.
+    @State private var showPhotosDeniedAlert = false
+
     /// Debounce window for auto-save. Half a second swallows rapid edits
     /// (slider drags, inspector typing) while still feeling near-instant.
     private static let autoSaveDebounce: TimeInterval = 0.5
@@ -62,7 +68,7 @@ struct EditorView: View {
             Spacer(minLength: 8)
             TimelineArea(
                 store: store,
-                onAddClip: { showPhotoPicker = true },
+                onAddClip: { Task { await requestPhotosThenPick() } },
                 onAddOverlay: { showOverlaySheet = true },
                 onLayers: { showLayersSheet = true },
                 onAddMusic: { showMusicSheet = true },
@@ -149,6 +155,15 @@ struct EditorView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(store: store)
+        }
+        .alert(
+            "Photos access needed",
+            isPresented: $showPhotosDeniedAlert
+        ) {
+            Button("Open Settings") { PhotosAuthorizationGate.openSystemSettings() }
+            Button("Not now", role: .cancel) { }
+        } message: {
+            Text("Reels Studio needs access to your photo library to import clips. Turn it on in Settings.")
         }
         .navigationTitle(document.name)
         .navigationBarTitleDisplayModeInline()
@@ -242,6 +257,20 @@ struct EditorView: View {
         if let overlay { return "overlay:\(overlay.rawValue)" }
         if let clip { return "clip:\(clip.rawValue)" }
         return "none"
+    }
+
+    /// v0.6 Tier 4 — gate the Photos picker on the current authorization
+    /// status. Granted (full / limited) shows the picker; denied / restricted
+    /// flips the Settings-redirect alert; not-determined triggers the system
+    /// prompt and then dispatches based on the result.
+    @MainActor
+    private func requestPhotosThenPick() async {
+        switch await PhotosAuthorizationGate.ensureAccess() {
+        case .proceed, .unavailable:
+            showPhotoPicker = true
+        case .openSettings:
+            showPhotosDeniedAlert = true
+        }
     }
 
     /// Push the current in-memory project back through the library, preserving
