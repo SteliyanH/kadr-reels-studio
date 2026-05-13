@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import CoreMedia
 import Kadr
 
 /// Root editor screen. Composes ``PreviewArea`` (top) + ``TimelineArea`` (bottom)
@@ -14,10 +15,22 @@ struct EditorView: View {
     @StateObject private var store: ProjectStore
     @ObservedObject private var library: ProjectLibrary
     @EnvironmentObject private var toasts: ToastCenter
+    @Environment(\.scenePhase) private var scenePhase
 
     /// The document this editor is bound to. Mutated in-place as auto-save
     /// runs so `modifiedAt` / clip counts stay current for the project list.
     @State private var document: ProjectDocument
+
+    /// v0.6 Tier 3: persisted playhead / selection so cold-relaunch puts the
+    /// user back where they left off. `@SceneStorage` is per-scene UserDefaults
+    /// — single-window iOS apps get one slot, so the values track whatever the
+    /// last-opened project was. Restore is gated on the editor's
+    /// `document.id` matching what was last written; switching projects clears
+    /// the slot indirectly because we only seed on appear.
+    @SceneStorage("editor.playheadSeconds") private var savedPlayheadSeconds: Double = 0
+    @SceneStorage("editor.selectedClipID") private var savedSelectedClipID: String = ""
+    @SceneStorage("editor.selectedOverlayID") private var savedSelectedOverlayID: String = ""
+    @SceneStorage("editor.documentID") private var savedDocumentID: String = ""
 
     @State private var showPhotoPicker = false
     @State private var showOverlaySheet = false
@@ -175,6 +188,49 @@ struct EditorView: View {
                 )
         ) { _ in
             autoSave()
+        }
+        .onAppear { restoreSceneStateIfMatching() }
+        .onChange(of: store.currentTime) { newValue in
+            savedPlayheadSeconds = CMTimeGetSeconds(newValue)
+            savedDocumentID = document.id.uuidString
+        }
+        .onChange(of: store.selectedClipID) { newValue in
+            savedSelectedClipID = newValue?.rawValue ?? ""
+        }
+        .onChange(of: store.selectedOverlayID) { newValue in
+            savedSelectedOverlayID = newValue?.rawValue ?? ""
+        }
+        .onChange(of: scenePhase) { phase in
+            // .background fires when the user backgrounds the app (home /
+            // swipe-up / lock). Force-flush any pending autosave so a force-
+            // quit while the debounce timer is in-flight doesn't lose work.
+            if phase == .background {
+                autoSave()
+            }
+        }
+    }
+
+    /// Re-apply scene-stored playhead / selection when re-entering the same
+    /// project (cold launch, app restart). Gated on `savedDocumentID` to
+    /// avoid bleeding state across projects: opening project A then B then
+    /// reopening A should restore A's state, not B's. Selection is best-
+    /// effort — if the clip was deleted while we were away, the binding
+    /// silently drops the id.
+    private func restoreSceneStateIfMatching() {
+        guard savedDocumentID == document.id.uuidString else { return }
+        if savedPlayheadSeconds > 0 {
+            store.currentTime = CMTime(seconds: savedPlayheadSeconds, preferredTimescale: 600)
+        }
+        if !savedSelectedClipID.isEmpty {
+            let id = ClipID(savedSelectedClipID)
+            if store.video.clips.contains(where: { $0.clipID == id }) {
+                store.selectedClipID = id
+            }
+        } else if !savedSelectedOverlayID.isEmpty {
+            let id = LayerID(savedSelectedOverlayID)
+            if store.project.overlays.contains(where: { $0.layerID == id }) {
+                store.selectedOverlayID = id
+            }
         }
     }
 
