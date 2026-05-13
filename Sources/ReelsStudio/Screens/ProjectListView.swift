@@ -17,6 +17,11 @@ struct ProjectListView: View {
     /// "+ New Project" button can both create and navigate in one step.
     @State private var path: [UUID] = []
 
+    /// v0.6 Tier 3: id of the last-opened project, persisted per-scene so a
+    /// cold relaunch puts the user back into the editor for whatever they
+    /// were on. Updated reactively from `path` so backing out clears it.
+    @SceneStorage("library.lastOpenedProjectID") private var lastOpenedProjectID: String = ""
+
     /// Surfaces save / new-project / delete failures inline. Tier 3 will
     /// replace this with the global toast / alert infra; for now a minimal
     /// alert keeps the list robust.
@@ -26,6 +31,10 @@ struct ProjectListView: View {
         NavigationStack(path: $path) {
             content
                 .navigationTitle("Projects")
+                .onAppear { restoreLastOpenedIfPossible() }
+                .onChange(of: path) { newPath in
+                    lastOpenedProjectID = newPath.last?.uuidString ?? ""
+                }
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
@@ -190,6 +199,18 @@ struct ProjectListView: View {
     }
 
     // MARK: - Actions
+
+    /// v0.6 Tier 3: if the last navigation pushed an editor for project X,
+    /// re-push it on cold launch so the user lands where they left off.
+    /// No-op when the id is missing or no longer maps to a document (the
+    /// user could have deleted it on another scene or via Files).
+    private func restoreLastOpenedIfPossible() {
+        guard path.isEmpty,
+              !lastOpenedProjectID.isEmpty,
+              let uuid = UUID(uuidString: lastOpenedProjectID),
+              library.documents.contains(where: { $0.id == uuid }) else { return }
+        path.append(uuid)
+    }
 
     private func createNewProject() {
         do {
