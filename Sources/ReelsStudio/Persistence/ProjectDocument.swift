@@ -18,17 +18,21 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
     /// Current persistence schema version. Increment for incompatible changes;
     /// load-side migrations live in ``ProjectLibrary``.
     ///
-    /// **v3 (this release)** adds `fixedCenterPlayhead: Bool?` — per-project
-    /// opt-in for kadr-ui v0.9's `TimelineView.fixedCenterPlayhead(_:)`.
-    /// Forward-only and additive: missing on v1 / v2 documents decodes nil
-    /// (which the runtime treats as "use the default"); v1 / v2 documents on
-    /// disk load fine.
+    /// **v4 (this release)** adds `filterIDs: [String]?` on `VideoClipData` —
+    /// a parallel-array mirror of kadr v0.11's `VideoClip.filterIDs`. Lets
+    /// future tooling round-trip stable per-filter identities across saves.
+    /// Missing on v1 / v2 / v3 documents decodes nil and the bridge falls
+    /// back to kadr's auto-generated ids on load — older documents migrate
+    /// silently and re-save into v4.
+    ///
+    /// **v3** added `fixedCenterPlayhead: Bool?` — per-project opt-in for
+    /// kadr-ui v0.9's `TimelineView.fixedCenterPlayhead(_:)`.
     ///
     /// **v2** added `transformAnimation` / `opacityAnimation` /
     /// `filterAnimations` on clips, `speedCurve` on `VideoClipData`,
     /// `transformAnimation` / `opacityAnimation` on overlays, and
     /// `ProjectClip.track` for `Kadr.Track {}` blocks.
-    public static let currentSchemaVersion: Int = 3
+    public static let currentSchemaVersion: Int = 4
 
     public let id: UUID
     public var name: String
@@ -112,6 +116,14 @@ struct VideoClipData: Codable, Sendable, Equatable {
     public var opacity: Double?
     /// Per-clip filters applied in order.
     public var filters: [ProjectFilter]
+    /// Stable per-filter identifiers, parallel to ``filters``. Mirrors
+    /// kadr v0.11's `VideoClip.filterIDs`. Outer optional handles v1 / v2 / v3
+    /// migration (missing key → nil); on load the bridge currently falls
+    /// back to kadr's auto-generated ids (a public seam to inject persisted
+    /// ids on construction is filed as a follow-up against kadr — until then
+    /// these round-trip but don't survive across cold launches as the same
+    /// identifier). v4.
+    public var filterIDs: [String]?
     /// Position / rotation / scale / anchor — round-trips inspector edits.
     public var transform: ProjectTransform?
     /// Keyframe animation driving ``transform``. v2.
@@ -138,6 +150,7 @@ struct VideoClipData: Codable, Sendable, Equatable {
         speedRate: Double = 1.0,
         opacity: Double? = nil,
         filters: [ProjectFilter] = [],
+        filterIDs: [String]? = nil,
         transform: ProjectTransform? = nil,
         transformAnimation: ProjectAnimation<ProjectTransform>? = nil,
         opacityAnimation: ProjectAnimation<Double>? = nil,
@@ -153,6 +166,7 @@ struct VideoClipData: Codable, Sendable, Equatable {
         self.speedRate = speedRate
         self.opacity = opacity
         self.filters = filters
+        self.filterIDs = filterIDs
         self.transform = transform
         self.transformAnimation = transformAnimation
         self.opacityAnimation = opacityAnimation

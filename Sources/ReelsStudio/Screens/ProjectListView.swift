@@ -60,9 +60,15 @@ struct ProjectListView: View {
         }
     }
 
+    /// Skipped-project file selected for the JSON detail sheet.
+    @State private var inspectingSkipped: SkippedProject?
+
+    /// Skipped-project file pending discard confirmation.
+    @State private var pendingDiscard: SkippedProject?
+
     @ViewBuilder
     private var content: some View {
-        if library.documents.isEmpty {
+        if library.documents.isEmpty && library.skippedProjects.isEmpty {
             emptyState
         } else {
             projectList
@@ -113,14 +119,74 @@ struct ProjectListView: View {
 
     private var projectList: some View {
         List {
-            ForEach(library.documents) { doc in
-                NavigationLink(value: doc.id) {
-                    ProjectRow(document: doc)
+            Section {
+                ForEach(library.documents) { doc in
+                    NavigationLink(value: doc.id) {
+                        ProjectRow(document: doc)
+                    }
                 }
+                .onDelete(perform: deleteProjects)
             }
-            .onDelete(perform: deleteProjects)
+            if !library.skippedProjects.isEmpty {
+                skippedSection
+            }
         }
         .listStyle(.insetGrouped)
+        .sheet(item: $inspectingSkipped) { skipped in
+            SkippedProjectDetailSheet(skipped: skipped)
+        }
+        .confirmationDialog(
+            "Discard this project file?",
+            isPresented: Binding(
+                get: { pendingDiscard != nil },
+                set: { if !$0 { pendingDiscard = nil } }
+            ),
+            presenting: pendingDiscard
+        ) { skipped in
+            Button("Discard", role: .destructive) {
+                discard(skipped)
+            }
+            Button("Cancel", role: .cancel) { pendingDiscard = nil }
+        } message: { skipped in
+            Text("\(skipped.id) will be permanently removed from the library.")
+        }
+    }
+
+    @ViewBuilder
+    private var skippedSection: some View {
+        Section {
+            ForEach(library.skippedProjects) { skipped in
+                SkippedProjectRow(skipped: skipped)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            pendingDiscard = skipped
+                        } label: {
+                            Label("Discard", systemImage: "trash")
+                        }
+                        Button {
+                            inspectingSkipped = skipped
+                        } label: {
+                            Label("Details", systemImage: "doc.text.magnifyingglass")
+                        }
+                        .tint(.blue)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { inspectingSkipped = skipped }
+            }
+        } header: {
+            Text("Skipped projects")
+        } footer: {
+            Text("These files couldn't be loaded. Tap one to see details, or swipe to discard.")
+        }
+    }
+
+    private func discard(_ skipped: SkippedProject) {
+        do {
+            try library.discardSkipped(skipped)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        pendingDiscard = nil
     }
 
     // MARK: - Actions
@@ -195,5 +261,88 @@ struct ProjectRow: View {
         let clipCount = document.clips.count
         let clipLabel = clipCount == 1 ? "1 clip" : "\(clipCount) clips"
         return "\(document.name), modified \(relative), \(clipLabel)"
+    }
+}
+
+// MARK: - Skipped recovery views
+
+@available(iOS 16, *)
+struct SkippedProjectRow: View {
+
+    let skipped: SkippedProject
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: iconName)
+                .foregroundStyle(.orange)
+                .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(skipped.id)
+                    .font(.body.weight(.semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(skipped.reason.displayLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(skipped.id), \(skipped.reason.displayLabel)")
+        .accessibilityHint("Shows file details. Swipe for discard.")
+    }
+
+    private var iconName: String {
+        switch skipped.reason {
+        case .unsupportedSchema: return "arrow.up.circle"
+        case .corruptJSON:       return "exclamationmark.triangle"
+        }
+    }
+}
+
+@available(iOS 16, *)
+struct SkippedProjectDetailSheet: View {
+
+    let skipped: SkippedProject
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    label("File", value: skipped.id)
+                    label("Reason", value: skipped.reason.displayLabel)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Details")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(skipped.reason.detail)
+                            .font(.callout)
+                            .textSelection(.enabled)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+            }
+            .navigationTitle("Skipped project")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func label(_ title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.callout)
+                .textSelection(.enabled)
+        }
     }
 }
