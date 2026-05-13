@@ -40,6 +40,15 @@ final class LibraryHost: ObservableObject {
     @Published var setupError: String?
 
     init() {
+        // v0.6 Tier 6 — XCUITests pass `--ui-test-reset` so each run starts
+        // from an empty library. Guard via DEBUG so a release build can't
+        // accidentally wipe a real user's projects even if the flag were
+        // somehow forwarded.
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-reset") {
+            try? ProjectLibrary.wipeDefaultDirectory()
+        }
+        #endif
         do {
             self.library = try ProjectLibrary()
         } catch {
