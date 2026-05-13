@@ -76,17 +76,31 @@ targets:
       - target: ReelsStudio
       - package: ViewInspector
 
+  ReelsStudioUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/ReelsStudioUITests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: ReelsStudio
+    dependencies:
+      - target: ReelsStudio
+
 schemes:
   ReelsStudio:
     build:
       targets:
         ReelsStudio: all
         ReelsStudioTests: [test]
+        ReelsStudioUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
         - ReelsStudioTests
+        - ReelsStudioUITests
     archive:
       config: Release

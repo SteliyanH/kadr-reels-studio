@@ -132,6 +132,19 @@ final class ProjectLibrary: ObservableObject {
         }
     }
 
+    /// v0.6 Tier 6 — XCUITest helper. Recursively deletes the default
+    /// `~/Library/Application Support/ReelsStudio/Projects/` directory if it
+    /// exists. Called from `ReelsStudioApp.LibraryHost.init` when launched
+    /// with `--ui-test-reset` so each UI-test run starts from an empty
+    /// library state. No-op when the directory doesn't exist or fails to
+    /// resolve (we'd rather a UI test see stale state than crash).
+    nonisolated public static func wipeDefaultDirectory() throws {
+        let fm = FileManager.default
+        let url = try defaultDirectoryURL(fileManager: fm)
+        guard fm.fileExists(atPath: url.path) else { return }
+        try fm.removeItem(at: url)
+    }
+
     nonisolated internal static func ensureDirectory(
         at url: URL,
         fileManager: FileManager
