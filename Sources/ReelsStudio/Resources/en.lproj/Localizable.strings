@@ -1,0 +1,236 @@
+/* v0.6 Tier 7 — en-US bundle for SwiftUI's LocalizedStringKey auto-resolution.
+ *
+ * SwiftUI's `Text("Foo")`, `Label("Foo", ...)`, `Button("Foo") { ... }` etc.
+ * use the `LocalizedStringKey` overload when given a string literal, which
+ * looks up the literal as a key in this file at render time. Keys here
+ * mirror the literal English strings used at the call site one-for-one.
+ *
+ * Adding a translation = adding a new `<locale>.lproj/Localizable.strings`
+ * next to this one with matching keys and translated values. The keys here
+ * are the source of truth — keep them in sync with `Text("…")` literals in
+ * the Sources tree.
+ *
+ * Strings that need runtime parameterization (counts, percentages, file
+ * names) use `%@` / `%lld` / `%.2f` format specifiers and are looked up via
+ * `String(localized:defaultValue:)` or `String(format: NSLocalizedString(…))`
+ * at the call site — see ProjectListView, TimelineArea, AddSFXSheet.
+ */
+
+// MARK: - App-wide errors
+
+"Couldn't open project library" = "Couldn't open project library";
+"Something went wrong" = "Something went wrong";
+"OK" = "OK";
+"Cancel" = "Cancel";
+"Done" = "Done";
+"Close" = "Close";
+"Retry" = "Retry";
+"Not now" = "Not now";
+
+// MARK: - Project list
+
+"Projects" = "Projects";
+"New Project" = "New Project";
+"Sample" = "Sample";
+"Project not found" = "Project not found";
+"No projects yet" = "No projects yet";
+"Start with a new project, or import the bundled sample to see what the editor can do." = "Start with a new project, or import the bundled sample to see what the editor can do.";
+"Opens this project in the editor" = "Opens this project in the editor";
+
+// MARK: - Skipped-project recovery
+
+"Skipped projects" = "Skipped projects";
+"These files couldn't be loaded. Tap one to see details, or swipe to discard." = "These files couldn't be loaded. Tap one to see details, or swipe to discard.";
+"Skipped project" = "Skipped project";
+"Discard this project file?" = "Discard this project file?";
+"Discard" = "Discard";
+"Details" = "Details";
+"Shows file details. Swipe for discard." = "Shows file details. Swipe for discard.";
+
+// MARK: - Editor: toolbar + chrome
+
+"Clip" = "Clip";
+"Overlay" = "Overlay";
+"Layers" = "Layers";
+"Music" = "Music";
+"SFX" = "SFX";
+"Captions" = "Captions";
+"Selection" = "Selection";
+"Splits the clip at the playhead" = "Splits the clip at the playhead";
+"Inserts a copy of this clip after itself" = "Inserts a copy of this clip after itself";
+"Opens the speed curve editor" = "Opens the speed curve editor";
+"Opens the filter stack editor" = "Opens the filter stack editor";
+"Removes this clip from the project" = "Removes this clip from the project";
+"Inserts a copy of this overlay one z-step above" = "Inserts a copy of this overlay one z-step above";
+"Brings this overlay one step toward the front" = "Brings this overlay one step toward the front";
+"Sends this overlay one step toward the back" = "Sends this overlay one step toward the back";
+"Removes this overlay from the project" = "Removes this overlay from the project";
+"Exits multi-select mode without wrapping" = "Exits multi-select mode without wrapping";
+"Wraps the selected clips in a track" = "Wraps the selected clips in a track";
+
+"Undo" = "Undo";
+"Undo last action" = "Undo last action";
+"Nothing to undo" = "Nothing to undo";
+"Redo" = "Redo";
+"Redo last undone action" = "Redo last undone action";
+"Nothing to redo" = "Nothing to redo";
+"Settings" = "Settings";
+"Open settings" = "Open settings";
+
+// MARK: - Editor: inspector + keyframe + timeline a11y
+
+"Clip inspector" = "Clip inspector";
+"Overlay inspector" = "Overlay inspector";
+"Keyframe editor" = "Keyframe editor";
+"Overlay keyframe editor" = "Overlay keyframe editor";
+"Tap below a property to add a keyframe at the playhead. Long-press a marker to remove. Drag to retime." = "Tap below a property to add a keyframe at the playhead. Long-press a marker to remove. Drag to retime.";
+"Speed curve…" = "Speed curve…";
+"Custom" = "Custom";
+"Timeline" = "Timeline";
+
+// MARK: - Editor: Photos permission alert
+
+"Photos access needed" = "Photos access needed";
+"Reels Studio needs access to your photo library to import clips. Turn it on in Settings." = "Reels Studio needs access to your photo library to import clips. Turn it on in Settings.";
+"Open Settings" = "Open Settings";
+
+// MARK: - Settings sheet
+
+"Appearance" = "Appearance";
+"Accent" = "Accent";
+"System" = "System";
+"Color" = "Color";
+"Playback" = "Playback";
+"Fixed-center playhead" = "Fixed-center playhead";
+"Haptics" = "Haptics";
+"Strength" = "Strength";
+
+// MARK: - Add Music sheet
+
+"Audio" = "Audio";
+"Pick audio file" = "Pick audio file";
+"Mix" = "Mix";
+"Volume" = "Volume";
+"Auto-duck during clip audio" = "Auto-duck during clip audio";
+"Music auto-fades in over 0.5s and out over 1.0s. Auto-ducking lowers music to 30% while clip audio plays." = "Music auto-fades in over 0.5s and out over 1.0s. Auto-ducking lowers music to 30%% while clip audio plays.";
+"Add Music" = "Add Music";
+"Add" = "Add";
+
+// MARK: - Add SFX sheet
+
+"Sound" = "Sound";
+"Timing" = "Timing";
+"Pin at" = "Pin at";
+"Add SFX" = "Add SFX";
+"sfx.composition.footer" = "SFX play once at the pinned time and don't loop. Total composition is %.1fs.";
+
+// MARK: - Add Overlay sheet
+
+"Kind" = "Kind";
+"Text" = "Text";
+"Image" = "Image";
+"Sticker" = "Sticker";
+"Image Overlay" = "Image Overlay";
+"Add Overlay" = "Add Overlay";
+"Style" = "Style";
+"Size" = "Size";
+"Weight" = "Weight";
+"Preview" = "Preview";
+"New text" = "New text";
+"Add Text Overlay" = "Add Text Overlay";
+"Source" = "Source";
+"Pick image…" = "Pick image…";
+"Picked" = "Picked";
+"Opacity" = "Opacity";
+"overlay.add.kind" = "Add %@";
+
+// MARK: - Filters sheet
+
+"Filters" = "Filters";
+"Clip not available" = "Clip not available";
+"No filters" = "No filters";
+"Add a filter from the menu above." = "Add a filter from the menu above.";
+"Brightness" = "Brightness";
+"Contrast" = "Contrast";
+"Saturation" = "Saturation";
+"Exposure" = "Exposure";
+"Sepia" = "Sepia";
+"Mono" = "Mono";
+"Gaussian Blur" = "Gaussian Blur";
+"Vignette" = "Vignette";
+"Sharpen" = "Sharpen";
+"Zoom Blur" = "Zoom Blur";
+"Glow" = "Glow";
+
+// MARK: - Captions sheet
+
+"Mode" = "Mode";
+"Edit" = "Edit";
+"Import" = "Import";
+"Caption file" = "Caption file";
+"Pick caption file" = "Pick caption file";
+"Imported" = "Imported";
+"Switch to Edit" = "Switch to Edit";
+"Supported formats: SRT, VTT, iTT, ASS, SSA. Cues append to the project's caption list — switch to Edit to retime / rename / delete." = "Supported formats: SRT, VTT, iTT, ASS, SSA. Cues append to the project's caption list — switch to Edit to retime / rename / delete.";
+
+// MARK: - Layers sheet
+
+"No overlays yet" = "No overlays yet";
+"Tap **+ Overlay** in the toolbar to add text or stickers." = "Tap **+ Overlay** in the toolbar to add text or stickers.";
+
+// MARK: - Speed curve sheet
+
+"Speed Curve" = "Speed Curve";
+"This clip is no longer in the project. Close this sheet and reselect." = "This clip is no longer in the project. Close this sheet and reselect.";
+"Drag points vertically to change the speed multiplier; horizontally to retime. Long-press to remove." = "Drag points vertically to change the speed multiplier; horizontally to retime. Long-press to remove.";
+"Tap inside the editor to add a keyframe at the playhead. Default speed is 1×." = "Tap inside the editor to add a keyframe at the playhead. Default speed is 1×.";
+
+// MARK: - Export sheet
+
+"Format" = "Format";
+"Status" = "Status";
+"Share" = "Share";
+"Export" = "Export";
+"Ready" = "Ready";
+"Export complete" = "Export complete";
+"Export failed" = "Export failed";
+
+// MARK: - Parameterized strings (looked up via NSLocalizedString at call site)
+
+"project.row.clipCount" = "%lld clip(s)";
+"project.row.singleClip" = "1 clip";
+"project.row.manyClips" = "%lld clips";
+"timeline.a11y.hint" = "%@. Long-press a clip to start a multi-selection.";
+"timeline.a11y.zeroClips" = "No clips";
+"timeline.a11y.oneClip" = "1 clip";
+"timeline.a11y.manyClips" = "%lld clips";
+"discard.dialog.message" = "%@ will be permanently removed from the library.";
+"selection.count" = "%lld selected";
+"selection.a11y.value" = "%lld clips selected";
+"captions.imported.singular" = "1 cue appended";
+"captions.imported.plural" = "%lld cues appended";
+"skipped.row.a11y" = "%1$@, %2$@";
+
+// MARK: - Undo / redo action names (surface in the Edit menu)
+
+"Speed Curve" = "Speed Curve";
+"Edit Transform" = "Edit Transform";
+"Edit Opacity" = "Edit Opacity";
+"Edit Filter" = "Edit Filter";
+"Add Filter" = "Add Filter";
+"Remove Filter" = "Remove Filter";
+"Add Keyframe" = "Add Keyframe";
+"Remove Keyframe" = "Remove Keyframe";
+"Move Keyframe" = "Move Keyframe";
+"Edit Position" = "Edit Position";
+"Edit Size" = "Edit Size";
+"Edit Anchor" = "Edit Anchor";
+"Edit Text" = "Edit Text";
+"Edit Text Animation" = "Edit Text Animation";
+"Edit Rotation" = "Edit Rotation";
+
+// MARK: - Skipped-project reason copy
+
+"Couldn't read file" = "Couldn't read file";
+"skipped.reason.unsupportedSchema" = "Project uses a newer schema (v%lld)";
+"skipped.reason.unsupportedSchemaDetail" = "This project was saved by a newer build (schema v%lld). Update Reels Studio to open it.";
