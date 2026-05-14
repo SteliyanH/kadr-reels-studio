@@ -4,6 +4,70 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-05-14
+
+Robustness + release engineering. Cross-package-audit response cycle — closes the cluster of robustness gaps the app has carried since v0.2 (none user-visible in the happy path, all visible to App Store reviewers and to users hitting non-English locales / corrupt files / force-quit scenarios). Bumped kadr floor to **≥ 0.11.0** and kadr-ui floor to **≥ 0.10.1**. Eight delivery tiers + release prep.
+
+### Bumped — floors + consumer migrations (Tier 1)
+
+- **kadr ≥ 0.11.0** — atomic `CancellationToken`, `Speed` enum collapse (`.flat` / `.curved` cases make exclusivity type-level), `FilterID` + keyed filter operations.
+- **kadr-ui ≥ 0.10.1** — `Sendable` callback event structs (`ClipReorderEvent` / `ClipTrimEvent` / `TrackReorderEvent` / `TrackTrimEvent`) replace tuple parameters; `OverlayHost` multi-select + selection ring; snapshot + gesture-driver test harness.
+- **`TimelineArea`** migrates to event-struct callbacks (`onReorder` / `onTrackReorder` / `onTrackTrim` now take typed structs).
+- **`ProjectStore.applySpeedCurve`** routes through `.curved(animation)` / `.flat(rate)`; **`ProjectStore.applyFilterIntensity`** + **`ProjectStore+Filters.removeFilter`** migrate to kadr v0.11's keyed `setFilter(for:)` / `removeFilter(for:)` API so binding animations to filters survives reorder + delete.
+
+### Added — schema v4 + library recovery (Tier 2)
+
+- **Schema v4** — additive `filterIDs: [String]?` on `VideoClipData` mirrors kadr v0.11's parallel-array `VideoClip.filterIDs`. v1 / v2 / v3 docs decode with the field nil; bridge falls back to kadr-generated ids; next save promotes the doc to v4 with live ids written. Forward-only and additive — older builds keep loading.
+- **`ProjectLibrary.loadAll`** returns successful documents *and* a list of files that failed to load (corrupt JSON or future-schema). Pre-Tier 2 these were swallowed by a `try?`; now they surface via `@Published var skippedProjects: [SkippedProject]`. `discardSkipped(_:)` deletes the file off disk.
+- **`ProjectListView`** gains a "Skipped projects" section under the project list with swipe actions for Details (modal sheet showing raw reason + filename) and Discard (confirmation dialog). A "Project too new" subtype handles the schema-version-too-high case distinctly.
+
+### Added — scene-storage cold-launch restore + scenePhase flush (Tier 3)
+
+- **`ProjectListView`** persists `lastOpenedProjectID` via `@SceneStorage`; on appear it re-pushes the editor for that id if the document still exists. Switching projects clears the slot indirectly because the appear hook only seeds on entry.
+- **`EditorView`** mirrors the pattern for in-project state: playhead seconds, single-clip selection, single-overlay selection, all gated on a stored `documentID` matching the editor's own. Switching A → B → A restores A's state on the third hop, not B's.
+- **Background flush.** `EditorView` watches `@Environment(\.scenePhase)` and force-flushes `autoSave()` on `.background`. Pre-Tier 3 a force-quit while the 0.5s debounce timer was in-flight could lose the last edit.
+
+### Added — error sanitization + Photos permission pre-check (Tier 4)
+
+- **`ErrorSanitizer.sanitize(_:)`** strips `file://` URLs and absolute sandbox paths (`/Users/…`, `/private/var/mobile/Containers/…`, `/var/mobile/Containers/…`) from error messages before they reach the UI, replacing each match with `[file]`. Plain messages and generic paths (`/dev/null`) pass through unchanged.
+- **`AppError.transient(_:prefix:)`** / **`.catastrophic(_:prefix:)`** factories route through it. The four bare `error.localizedDescription` UI sites (`ProjectListView.errorMessage`, `ExportSheet.errorMessage`, `ReelsStudioApp.LibraryHost.setupError`) are migrated too.
+- **`PhotosAuthorizationGate.ensureAccess()`** pre-checks `PHPhotoLibrary.authorizationStatus(for: .readWrite)` before `EditorView` presents the picker. `.denied` / `.restricted` (and a denial outcome from `.notDetermined`) routes to a Settings-redirect alert with `UIApplication.openSettingsURLString`; pre-Tier 4 a denied user got an empty picker with no way out.
+
+### Added — gesture-driver tests (Tier 5)
+
+- **`GestureWiringTests`** — ViewInspector smokes for modifier-tree attachments ViewInspector can verify without a runtime host: `ProjectListView` constructs with the env-object stack, `SkippedProjectRow` / `SkippedProjectDetailSheet` render against both reason cases, `AppError.transient` sanitizes detail through `ErrorSanitizer`, `EditorView.inspectorPresentationKey` distinguishes selection slots.
+- Snapshot tests were trialed and removed mid-cycle — `swift-snapshot-testing` UIImage baselines drift between contributor laptops and `macos-15` + `latest-stable` CI runners; deferred until a pinned-Xcode re-record job lands.
+
+### Added — XCUITest integration / E2E suite (Tier 6)
+
+- **`ReelsStudioUITests`** target (bundle.ui-testing) with five critical flows: cold launch → empty state, + New Project → editor, Sample import → editor, gear → Settings sheet, editor → back → project list.
+- **`--ui-test-reset`** launch arg gated by `#if DEBUG`: when present, `ReelsStudioApp.LibraryHost.init` calls a new `ProjectLibrary.wipeDefaultDirectory()` so each UI-test run starts from an empty library state independent of stray simulator state.
+- Photos-picker flows deliberately omitted — system picker isn't reliably automatable, and `.notDetermined` would hang the simulator the same way it hung PR #48's CI for 35 minutes.
+
+### Added — localization extraction (Tier 7)
+
+- **`Sources/ReelsStudio/Resources/en.lproj/Localizable.strings`** — ~150 keys catalogueing every user-facing string in the app: project list, editor toolbar / inspector / keyframe / timeline a11y, every overlay / music / SFX / filters / captions / speed-curve / export / settings sheet, the Photos-permission alert, the v0.6 Tier 2 recovery surface, and the undo `actionName` strings that surface in the system Edit menu.
+- SwiftUI's `Text("foo")` / `Label("foo", …)` / `Button("foo") { … }` use the `LocalizedStringKey` overload when given a string literal — they look up the literal as a key in this file at render time. No call-site changes were needed for the literal majority. Parameterized keys (counts, percentages, file names) carry `%lld` / `%@` / `%.1f` format specifiers intended for `String(format: NSLocalizedString(…))` at the call site as future migrations land.
+
+### Added — release engineering (Tier 8)
+
+- **`PrivacyInfo.xcprivacy`** — declares the privacy posture App Store Connect requires since May 2024. No tracking, no tracking domains, Photos as the only collected data type (linked: false, tracking: false), three required-reason API categories: FileTimestamp (project list sort by `modifiedAt`), UserDefaults (`AppSettings` + `@SceneStorage`), DiskSpace (FileManager directory walks).
+- **fastlane scaffolding** — `Gemfile` (~2.225), `Appfile` + `Matchfile` sourcing every credential from env vars, `Fastfile` with `beta` (TestFlight) / `release` (App Store, manual review gate) / `refresh_match` lanes. Each invocation regenerates the Xcode project via xcodegen first so the lane is reproducible against a fresh checkout. `fastlane/README.md` walks through one-time setup.
+- **Sentry** — `CrashReporter.startIfConfigured()` boots from a DSN supplied via Info.plist (production pipeline) or env var (local dev). No DSN configured = no telemetry traffic — open-source contributors / fresh checkouts stay silent. 100% crash capture, 10% trace sampling (override via `SENTRY_TRACES_SAMPLE_RATE`).
+
+### Tests
+
+Suite: 228 → 252 unit + 5 UI tests (29 unit + 5 UI new across the cycle). Highlights: `SchemaV4Tests`, `SceneStorageRestoreTests`, `ErrorSanitizerTests`, `PhotosAuthorizationGateTests`, `GestureWiringTests`, `LocalizationTests`, `ReelsStudioUITests`.
+
+### Dependencies
+
+- **kadr ≥ 0.11.0** (up from 0.10.1). Atomic `CancellationToken`, `Speed` enum, `FilterID` + keyed filter operations.
+- **kadr-ui ≥ 0.10.1** (up from 0.9.2). Sendable event-struct callbacks, OverlayHost multi-select + selection ring, snapshot + gesture-driver test harness.
+- **Sentry ~> 8.36** (new). Opt-in via DSN; no-op without one.
+- **ViewInspector ~> 0.9.11** (new, test-only). Modifier-tree introspection.
+- **fastlane ~> 2.225** (new, ruby dev dependency).
+- kadr-captions ≥ 0.4.0, kadr-photos ≥ 0.4.0 unchanged.
+
 ## [0.5.0] - 2026-05-11
 
 Accessibility + settings. Closes the two remaining shipping-blocker gaps for v1.0: no UI to change v0.4's preferences (accent color, fixed-center playhead, haptics) and no VoiceOver wiring. Reels-studio-only cycle — no kadr-ui / kadr surface changes. Four tiers.

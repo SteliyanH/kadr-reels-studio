@@ -10,12 +10,12 @@ A real consumer codebase using every kadr + kadr-ui + kadr-captions + kadr-photo
 
 ## Status
 
-**v0.5.0 shipped — accessibility + settings.** Closes the two remaining v1.0 blockers: no UI to change v0.4's preferences, and no VoiceOver wiring. Settings sheet from the editor's new gear icon surfaces accent picker (System / Custom), fixed-center playhead toggle, and haptic-strength segmented (Off / Light / Medium). Every interactive site gets accessibility labels / hints / values; tooltips on iPad + Mac via `.help`. Reels-studio-only cycle on top of kadr ≥ 0.10.1 + kadr-ui ≥ 0.9.2 + kadr-captions ≥ 0.4 + kadr-photos ≥ 0.4.
+**v0.6.0 shipped — robustness + release engineering.** Cross-package-audit response cycle. Closes the corrupt-doc / future-schema silent-drop, lost-on-force-quit, raw-path-in-toast, missing-PrivacyInfo, no-XCUITest, no-localization-extraction gaps the app had carried since v0.2. Bumps kadr ≥ 0.11.0 (atomic CancellationToken, Speed enum, FilterID + keyed filter ops) and kadr-ui ≥ 0.10.1 (Sendable event-struct callbacks, OverlayHost multi-select, snapshot + gesture-driver harness). Adds schema v4 + library recovery screen, `@SceneStorage` + scenePhase background flush, `ErrorSanitizer` + Photos permission pre-check, `ReelsStudioUITests` (5 critical flows), en-US `Localizable.strings` (~150 keys), `PrivacyInfo.xcprivacy`, fastlane scaffolding, opt-in Sentry crash reporting.
 
 | Layer | What's wired |
 |---|---|
 | **Launch** | `ProjectListView` → tap a project to open the editor; `+ New Project` / `Sample` empty-state CTAs; swipe-to-delete |
-| **Persistence** | schema v3 Codable `ProjectDocument` — round-trips every kadr clip / overlay / filter + per-property `Animation<T>` keyframes + speed curves + per-project zoom + fixed-center-playhead flag + accent color; v1 / v2 documents continue loading |
+| **Persistence** | schema v4 Codable `ProjectDocument` — round-trips every kadr clip / overlay / filter (with kadr v0.11 `FilterID`s) + per-property `Animation<T>` keyframes + speed curves + per-project zoom + fixed-center-playhead flag + accent color; v1 / v2 / v3 documents continue loading; corrupt / future-schema files surface in a "Skipped projects" recovery section |
 | **Errors** | three-tier `AppError` model — transient toast / resumable sheet / catastrophic alert; single `.toastHost(_:)` modifier installed at app root |
 | **Undo / Redo** | `UndoManager`-backed snapshot history with action names; per-action granularity via `groupsByEvent = false`; top-bar arrow buttons |
 | **Two-tier toolbar** | `EditorToolbar` swaps between root verbs / clip-action / overlay-action / multi-select rows with a uniform spring crossfade; selection-driven; long-press a clip → multi-select mode |

@@ -64,21 +64,21 @@ Reels-studio-only cycle — first since v0.2 with no kadr-ui / kadr surface chan
 
 Suite: 210 → 228 (18 new tests).
 
-## v0.6.0 — Robustness + release engineering *(planned)*
+## v0.6.0 — Robustness + release engineering ✓ shipped
 
-Cross-package-audit response cycle. Closes the cluster of robustness gaps the app has carried since v0.2 — none user-visible in the happy path, all visible to App Store reviewers and to users hitting non-English locales / corrupt files / force-quit scenarios. Nine tiers:
+Bumped kadr floor to **≥ 0.11.0** and kadr-ui floor to **≥ 0.10.1**. Cross-package-audit response cycle — closed the robustness gaps the app had carried since v0.2 (corrupt / future-schema docs silently dropped, raw paths in error toasts, lost-on-force-quit edits, no privacy manifest, no localization extraction, no XCUITest coverage). Nine tiers:
 
-1. **Floor bump** to kadr 0.11.0 + kadr-ui 0.10.0. Migrate `TimelineArea` callbacks to new event structs; `applySpeedCurve` to take `Speed` cases; `ProjectStore+Filters` to keyed-animation API.
-2. **Schema v4 migration shim + recovery screen** — additive `filterID` field; "Skipped projects" surface in `ProjectListView` for corrupt / future-schema docs.
-3. **`@SceneStorage` + `scenePhase` flush** — restore last-opened project + playhead + selection on cold launch; force-flush auto-save on `.background`.
-4. **Error sanitization + Photos permission pre-check** — no file URLs in toasts; route `.denied`/`.restricted` Photos access to Settings.app.
-5. **Snapshot + gesture-driver tests** — kadr-ui 0.10.1 harness for every screen + gesture path.
-6. **Integration / E2E tests** — XCUITest target with 5–10 critical flows.
-7. **Localization extraction** — every user-facing string → `Localizable.strings`; en-US bundle.
-8. **Release engineering** — `PrivacyInfo.xcprivacy`, fastlane + match + gym + TestFlight, Sentry / Crashlytics.
-9. Release prep + tag v0.6.0.
+1. **Floor bump + consumer migrations** — `TimelineArea` to event-struct callbacks; `applySpeedCurve` to `Speed.curved` / `.flat`; `ProjectStore+Filters` to keyed `setFilter(for:)` / `removeFilter(for:)`.
+2. **Schema v4 migration shim + library recovery** — additive `filterIDs: [String]?` on `VideoClipData`; `ProjectLibrary.skippedProjects` surfaces corrupt / future-schema files; `ProjectListView` recovery section with swipe-to-Details / swipe-to-Discard.
+3. **`@SceneStorage` + `scenePhase` flush** — `lastOpenedProjectID` re-pushes the editor on cold launch; `EditorView` persists playhead + selection gated on `documentID`; `.background` force-flushes `autoSave()`.
+4. **Error sanitization + Photos permission pre-check** — `ErrorSanitizer` strips file URLs / sandbox paths from messages; `PhotosAuthorizationGate.ensureAccess()` routes `.denied` / `.restricted` to a Settings-redirect alert.
+5. **Gesture-driver tests** — `GestureWiringTests` ViewInspector smokes. Snapshot tests trialed mid-cycle and dropped — `swift-snapshot-testing` UIImage baselines drift between contributor laptops and `macos-15` runners; deferred until a pinned-Xcode re-record job lands.
+6. **XCUITest integration / E2E suite** — `ReelsStudioUITests` with five critical flows (empty state, new project, sample, settings gear, back navigation). `--ui-test-reset` launch arg wipes the projects directory between runs.
+7. **Localization extraction** — `Resources/en.lproj/Localizable.strings` catalogues ~150 user-facing strings; SwiftUI's `LocalizedStringKey` auto-bridges literal call sites. Parameterized keys (counts / percentages / paths) carry format specifiers for future call-site migration.
+8. **Release engineering** — `PrivacyInfo.xcprivacy` with FileTimestamp / UserDefaults / DiskSpace required-reason API categories; fastlane scaffolding (`Gemfile`, `Appfile`, `Matchfile`, `Fastfile` beta / release / refresh_match lanes); Sentry SDK wired with DSN-gated boot.
+9. **Release prep** — CHANGELOG / README / ROADMAP, develop → main, tag v0.6.0.
 
-Pairs with **kadr v0.11** + **kadr-ui v0.10.0 + v0.10.1** which must merge first.
+Suite: 228 → 252 unit + 5 UI (29 unit + 5 UI new across the cycle).
 
 ## v0.7.0 — Editor UX catch-up *(planned)*
 
@@ -111,3 +111,4 @@ iOS 17 floor bump + `@Observable` migration. Auto-captions via kadr-captions v0.
 | 0.3.0 | ≥ 0.10.1 | ≥ 0.8.0 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.4.0 | ≥ 0.10.1 | ≥ 0.9.2 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.5.0 | ≥ 0.10.1 | ≥ 0.9.2 | ≥ 0.4.0 | ≥ 0.4.0 |
+| 0.6.0 | ≥ 0.11.0 | ≥ 0.10.1 | ≥ 0.4.0 | ≥ 0.4.0 |
