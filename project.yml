@@ -25,6 +25,9 @@ packages:
   KadrPhotos:
     url: https://github.com/SteliyanH/kadr-photos.git
     from: 0.4.0
+  Sentry:
+    url: https://github.com/getsentry/sentry-cocoa.git
+    from: 8.36.0
   ViewInspector:
     url: https://github.com/nalexn/ViewInspector.git
     from: 0.9.11
@@ -61,6 +64,8 @@ targets:
       - package: KadrUI
       - package: KadrCaptions
       - package: KadrPhotos
+      - package: Sentry
+        product: Sentry
 
   ReelsStudioTests:
     type: bundle.unit-test

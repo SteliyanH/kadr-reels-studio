@@ -1,0 +1,9 @@
+# fastlane Appfile — identifies the app + team for every lane.
+# Real values are sourced from environment variables so neither the
+# bundle id (which is public anyway) nor the team id (also public, but
+# leaking it invites mistargeted signing) lives in version control.
+
+app_identifier(ENV["APP_IDENTIFIER"] || "com.steliyanh.reels-studio")
+apple_id(ENV["APPLE_ID"])                # iTunes Connect account, e.g. dev@example.com
+team_id(ENV["TEAM_ID"])                  # 10-char Apple Developer Team ID
+itc_team_id(ENV["ITC_TEAM_ID"])          # Optional — App Store Connect team id (numeric)
