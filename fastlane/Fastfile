@@ -1,0 +1,83 @@
+# fastlane release lanes. v0.6 Tier 8 baseline.
+#
+# Run from the repo root:
+#   `bundle exec fastlane beta`       — build + upload to TestFlight
+#   `bundle exec fastlane release`    — build + submit to App Store review
+#   `bundle exec fastlane refresh_match` — re-sync signing certs (one-time / rotation)
+#
+# All credentials come from environment variables — see fastlane/Appfile +
+# fastlane/Matchfile. CI sets them via repository secrets.
+
+default_platform(:ios)
+
+# Path the xcodegen-generated project lives at. Regenerate before building
+# so the lane is reproducible against a fresh checkout.
+XCODE_PROJECT = "ReelsStudio.xcodeproj"
+SCHEME = "ReelsStudio"
+
+platform :ios do
+
+  before_all do
+    # Guard against running against a stale project.yml — fastlane writes
+    # to the same Xcode project xcodegen owns, so keep them in sync.
+    sh("which xcodegen > /dev/null") rescue UI.user_error!("xcodegen not installed — `brew install xcodegen`")
+    sh("xcodegen generate", error_callback: ->(_) { UI.user_error!("xcodegen failed") })
+  end
+
+  desc "Build + upload to TestFlight"
+  lane :beta do
+    setup_signing
+    bump_build_number
+    build
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      changelog: ENV["TESTFLIGHT_CHANGELOG"] || "Internal build."
+    )
+  end
+
+  desc "Build + submit to App Store review"
+  lane :release do
+    setup_signing
+    bump_build_number
+    build
+    upload_to_app_store(
+      submit_for_review: false,         # gate manually until we're at v1.0
+      automatic_release: false,
+      force: true,                      # skip metadata-mismatch prompts
+      precheck_include_in_app_purchases: false
+    )
+  end
+
+  desc "Sync signing certificates from the match repo (run after rotating, or on a fresh machine)"
+  lane :refresh_match do
+    match(type: "appstore", readonly: false)
+  end
+
+  # MARK: - Private helpers
+
+  private_lane :setup_signing do
+    # readonly: true on CI means no new certs / profiles are generated even
+    # if the local keychain is missing them — surfaces signing mismatches
+    # loudly instead of silently provisioning a wrong cert.
+    match(type: "appstore", readonly: ENV["CI"] ? true : false)
+  end
+
+  private_lane :bump_build_number do
+    # CFBundleVersion is the auto-incremented build counter. v0.6 ships at
+    # build 1; `increment_build_number` reads the current value from the
+    # Info.plist xcodegen wrote and bumps by one.
+    increment_build_number(xcodeproj: XCODE_PROJECT)
+  end
+
+  private_lane :build do
+    gym(
+      project: XCODE_PROJECT,
+      scheme: SCHEME,
+      configuration: "Release",
+      clean: true,
+      export_method: "app-store",
+      output_directory: "build",
+      output_name: "ReelsStudio.ipa"
+    )
+  end
+end

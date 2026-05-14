@@ -1,0 +1,19 @@
+# match — fetches signing certificates and provisioning profiles from a
+# private git repo so every machine (laptops, CI) signs the same way.
+#
+# Initial setup:
+#   1. Create a private repo (suggested: github.com/<owner>/ios-certificates).
+#   2. `bundle exec fastlane match init` (interactive — enters this file's
+#      values for you).
+#   3. `bundle exec fastlane match appstore` to generate distribution certs.
+#
+# After setup, CI just calls `match(type: "appstore", readonly: true)` and
+# never touches the keychain interactively.
+
+git_url(ENV["MATCH_GIT_URL"])            # e.g. https://github.com/<owner>/ios-certificates.git
+storage_mode("git")
+
+type("appstore")                         # "appstore" / "adhoc" / "development"
+
+app_identifier([ENV["APP_IDENTIFIER"] || "com.steliyanh.reels-studio"])
+username(ENV["APPLE_ID"])

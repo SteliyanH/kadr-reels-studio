@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  PrivacyInfo.xcprivacy — required by App Store Connect since May 2024 for
+  apps using one of Apple's "required reason API" categories. Declares:
+  1. What user data the app collects (none — Reels Studio is fully offline).
+  2. Whether the app uses tracking (no).
+  3. Tracking domains the app contacts (none).
+  4. "Required reason APIs" we touch, with category codes from Apple's
+     published table — submission gets rejected if a touched API isn't
+     listed with a valid reason.
+
+  v0.6 Tier 8 baseline. Update this file whenever the app gains a new
+  data-touching feature (camera, microphone, location, etc.).
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array>
+        <!-- Photos / videos: the user picks them via PhotoPicker, we resolve
+             to file URLs and bring them into the project. We don't transmit
+             them, link them to identity, or use them for tracking. They
+             remain on-device for the editor's lifetime. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+    </array>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <!-- ProjectLibrary reads / writes `modifiedAt` from Foundation's
+             Data(contentsOf:) + FileManager metadata to sort projects by
+             recency. Apple categorizes this under `FileTimestamp`. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>C617.1</string>
+                <!-- "Display file timestamps to the user." -->
+            </array>
+        </dict>
+        <!-- AppSettings + @SceneStorage use UserDefaults / standard
+             defaults. Required-reason category since spring 2024. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+                <!-- "Access user defaults to read/write information that is
+                      only accessible to the app itself." -->
+            </array>
+        </dict>
+        <!-- Disk space: ProjectLibrary's FileManager queries to ensure the
+             projects directory exists. Apple flagged `systemFreeSize` /
+             related metadata under this category — we don't currently
+             query free space, but the FileManager directory walks fall in
+             the same audit bucket. Listed defensively. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>E174.1</string>
+                <!-- "Display disk-space information to the user, or write to
+                      the user's documents on a need-known basis." -->
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
