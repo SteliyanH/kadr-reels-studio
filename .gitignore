@@ -34,3 +34,17 @@ Sources/ReelsStudio/Info.plist
 .cursor/
 .aider*
 .continue/
+
+# fastlane (v0.6 Tier 8)
+build/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+*.ipa
+*.app.dSYM.zip
+
+# Ruby
+.bundle/
+vendor/bundle/
+Gemfile.lock

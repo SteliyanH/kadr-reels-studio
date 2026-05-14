@@ -3,6 +3,14 @@ import SwiftUI
 @main
 struct ReelsStudioApp: App {
 
+    /// v0.6 Tier 8 — boot Sentry at the earliest possible call site so app-
+    /// launch crashes are captured. No-op when no DSN is configured.
+    /// `_` so the compiler doesn't strip the side effect.
+    private static let _crashReportingBoot: Bool = {
+        Task { @MainActor in CrashReporter.startIfConfigured() }
+        return true
+    }()
+
     /// Single library instance for the app's lifetime. Built on first access
     /// so a `FileManager` failure doesn't crash launch — we surface it as an
     /// in-app alert via ``LibraryHostView`` instead.
