@@ -618,16 +618,108 @@ CHANGELOG / README / ROADMAP / DESIGN updates; develop → main; tag v0.6.0; GH 
 - **Multi-device sync architecture today vs. defer.** RFC defers — overridable `ProjectLibrary` directory is the only hook; no real CloudKit / iCloud Documents work. Multi-device is a v0.7+ decision.
 - **iOS 17 floor move now or in v0.8.** v0.6 stays on iOS 16+. Moving to iOS 17 unlocks `@Observable` + `accessibilityLiveRegion` on toasts; the cost is dropping the small iOS 16 install base. Decide at v0.8.
 
-## v0.7 — Editor UX catch-up *(planned, sketch)*
+## v0.7 — Editor UX catch-up
 
-CapCut-baseline parity. Six tiers:
+**Status:** RFC. No code yet.
 
-1. **Audio waveform editing** — trim handles + scrub on audio tracks (likely needs a kadr-ui v0.10.2 mid-cycle patch exposing the surface).
-2. **Transitions picker UI** — grid sheet + duration slider; pushed from a clip-action toolbar button.
-3. **Text effects inspector** — stroke / shadow / outline / animated text properties surfaced in `OverlayInspectorArea`.
-4. **Chroma key UI** — color swatch / picker in `FiltersSheet`'s add-menu; "select from preview" gesture.
-5. **Project thumbnails** — first-frame swatch in `ProjectListView` rows; cached in App Support.
-6. Release prep + tag v0.7.0.
+### Motivation
+
+v0.1 → v0.6 stabilized the editor's foundation: persistence, undo/redo, accessibility, robustness, release engineering. What's still missing is the *creator surface* — the obvious moves a returning CapCut / TikTok / Reels user expects to find on day one:
+
+- They can't see the shape of a music track. Audio rows render as flat color bars, so trimming "the chorus to the drop" means scrubbing the preview by ear.
+- They can't pick a transition. The data model supports `.fade` / `.dissolve` since v0.1, but nothing in the toolbar inserts one.
+- Their text overlays can't take a stroke, a shadow, or an animated entrance. `TitleSequence` and `TextOverlayData` only expose color + alignment + weight.
+- They can't isolate a green-screen subject. `Filter.chromaKey` ships in kadr v0.9+ but isn't surfaced in `FiltersSheet`.
+- The project list is a wall of names. No frame thumbnail.
+
+v0.7 closes that surface gap. Each tier is a CapCut-baseline feature with a kadr-ui or kadr surface dependency where one is needed; we follow the v0.3 / v0.6 pattern of opening upstream patches mid-cycle when the editor design forces it.
+
+### Pairs with — upstream patches
+
+- **kadr-ui v0.10.2** *(Tier 1 prerequisite — surface design first, ship before reels-studio Tier 1 lands)* — audio trim handles on `TimelineView` audio rows. Two new callbacks: `onAudioTrim(_ event: AudioTrimEvent)` and `onAudioScrubStart(_ event: AudioScrubEvent)`. The waveform peak rendering already exists; this exposes the gesture surface.
+- **kadr v0.12** *(Tier 3 prerequisite)* — `TextStyle` gains `stroke: TextStroke?`, `shadow: TextShadow?` fields plus the engine compositor pipeline for both. `TextStroke` carries `width: Double` + `color: PlatformColor`; `TextShadow` carries `offset: CGSize` + `blur: Double` + `color: PlatformColor`. Additive; v0.11 docs continue rendering with both nil.
+
+Tier 4 (chroma key) and Tier 5 (thumbnails) need no upstream changes — kadr already exposes the underlying APIs.
+
+### Scope lock — v0.7
+
+In scope:
+- **Audio waveform trim handles** on every `ProjectAudioTrack` row. Drag handles bind to new `ProjectStore.applyMusicTrim(_:)` / `applySFXTrim(_:)` mutations. Scrubbing the audio row updates `currentTime` so the user can hear the trim point.
+- **Transitions picker sheet.** Grid of transition kinds (Fade, Dissolve — same set the data model supports today). Duration slider 0.1s–2.0s. Inserted between two selected adjacent clips via a new "+ between" affordance in the timeline gap. Mutation: `insertTransition(afterClipID:kind:duration:)`.
+- **Text effects inspector.** `OverlayInspectorArea`'s text-overlay subview gains stroke + shadow rows. Stroke: width 0–10 + color. Shadow: offset (slider per axis) + blur + color. Bindings route through new `setTextStroke(_:)` / `setTextShadow(_:)` mutations on `ProjectStore`.
+- **Chroma key UI.** `FiltersSheet`'s + menu gains a "Chroma Key" entry. On tap, pushes a dedicated `ChromaKeySheet` with a color preview tile, a `ColorPicker`, and a threshold slider. Mutation: `addChromaKey(id:color:threshold:)` wraps the existing `addFilter` path with the `Filter.chromaKey` case.
+- **Project thumbnails.** `ProjectRow` gains an 80×80 thumbnail rendered from frame 0 of the first `VideoClip` / `ImageClip` in the project. Cached under `App Support/ReelsStudio/Thumbnails/<projectID>.jpg`, invalidated when `modifiedAt` advances. Empty projects render a gradient placeholder.
+
+Out of scope:
+- **More transition kinds.** Today's model exposes `.fade` and `.dissolve` only — adding `.slide` / `.zoom` / `.wipe` is a kadr v0.12+ surface bump we'd rather not bundle into v0.7's UX cycle.
+- **Animated text entrances.** Stroke + shadow are static. "Bounce in" / "type-on" animations are a v0.8 AI-adjacent feature that pairs with auto-captions.
+- **Audio waveform *generation* during import.** kadr-ui already computes peaks at render time; we don't pre-bake.
+- **iOS 17 floor.** Still on iOS 16 — `@Observable` migration waits for v0.8.
+
+### Tier breakdown
+
+#### Tier 1 — Audio waveform trim handles
+
+**Upstream:** kadr-ui v0.10.2 (must merge first). Adds `AudioTrimEvent` Sendable struct + `onAudioTrim(_:)` modifier on `TimelineView`. Mirrors the existing `onTrackTrim` pattern.
+
+**Downstream:**
+- `ProjectStore.applyMusicTrim(_:)` — applies leading/trailing trim to `audioTracks[index].startTimeSeconds` + `.explicitDurationSeconds`. Undoable, named "Trim Music".
+- `ProjectStore.applySFXTrim(_:)` — same for SFX rows.
+- `TimelineArea` wires `onAudioTrim` to the right mutation based on the lane kind.
+
+~120 LOC + ~10 tests (mutation correctness, undo round-trip, edge cases for trims past clip length).
+
+#### Tier 2 — Transitions picker UI
+
+**No upstream changes** — `TransitionData` ships in schema v1+.
+
+- New `TransitionsSheet` view: `LazyVGrid` of transition tiles (icon + label), `Slider` for duration.
+- `EditorToolbar` clip-action row gains a "Transition" button when a clip has a successor. Tapping pushes `TransitionsSheet` for that gap.
+- `ProjectStore.insertTransition(afterClipID:kind:duration:)` — inserts `ProjectClip.transition(TransitionData)` between the named clip and its successor in `project.clips`. Replaces an existing transition at the same gap (not duplicates). Undoable, named "Add Transition" / "Change Transition".
+
+~180 LOC + ~12 tests (gap detection, replace-not-duplicate, undo, removing the trailing clip removes the transition too).
+
+#### Tier 3 — Text effects inspector
+
+**Upstream:** kadr v0.12 (must merge first). Adds `TextStyle.stroke: TextStroke?` + `TextStyle.shadow: TextShadow?` and the engine compositor wiring for both. Schema needs no bump on the reels-studio side because `TextOverlayData` doesn't currently mirror `TextStyle` fully — we add `strokeWidth: Double?`, `strokeColorHex: String?`, `shadowOffsetX: Double?`, `shadowOffsetY: Double?`, `shadowBlur: Double?`, `shadowColorHex: String?` as additive fields on `TextOverlayData` (schema v4 → v5 minor bump).
+
+**Downstream:**
+- `OverlayInspectorArea` text section gains a "Stroke" disclosure group (width slider, color picker) and a "Shadow" disclosure group (X/Y offset sliders, blur slider, color picker).
+- `ProjectStore.setTextStroke(layerID:_:)` + `setTextShadow(layerID:_:)` mutations. Both undoable.
+- Persistence bridge updated.
+- Schema v5 round-trip tests + v4-decodes-without-fields test.
+
+~260 LOC + ~16 tests.
+
+#### Tier 4 — Chroma key UI
+
+**No upstream changes** — `Filter.chromaKey(ChromaKey)` exists since kadr v0.9.
+
+- `FiltersSheet`'s "+" menu gains a "Chroma Key" entry as the twelfth filter kind. Tapping opens a dedicated `ChromaKeySheet` (separate from the scalar-filter row UI because it needs a color picker + a "Pick from preview" affordance that the existing slider row can't host).
+- `ChromaKeySheet`: color preview tile + `ColorPicker` + threshold slider (0.0–1.0).
+- `ProjectStore.addChromaKey(clipID:r:g:b:threshold:)` — builds a `Filter.chromaKey(ChromaKey(color: PlatformColor, threshold:))` and routes through the existing `addFilter` path.
+- "Pick from preview" gesture is filed as a follow-up — needs `VideoPreview` to expose tap → color sampling.
+
+~150 LOC + ~10 tests.
+
+#### Tier 5 — Project thumbnails
+
+- `ProjectThumbnailRenderer` — `@MainActor` actor-equivalent that, given a `ProjectDocument`, renders frame 0 of the first non-transition clip to a JPEG at 80×80 (2× retina = 160×160 stored). Saves under `App Support/ReelsStudio/Thumbnails/<projectID>.jpg`. Returns a `UIImage` on success, nil on failure.
+- `ProjectRow` adds an 80×80 thumbnail tile to the leading edge. Loads from cache on appear; renders + caches on cache miss via a `Task { ... }`. Empty projects render a `LinearGradient` placeholder keyed off `projectID.hashValue` so each empty project looks visually distinct.
+- Cache invalidation: keyed by `<projectID>-<modifiedAt-unix>.jpg` so a save bumps the filename and old thumbnails are GC'd lazily on next load.
+- Optional: a "regenerate thumbnails" action in Settings for debugging.
+
+~220 LOC + ~12 tests (render correctness, cache hit/miss, empty-project placeholder, invalidation on modifiedAt change).
+
+#### Tier 6 — Release prep + tag v0.7.0
+
+CHANGELOG, README, ROADMAP, develop → main, tag v0.7.0, GitHub release, back-merge.
+
+### Risks
+
+- **Tier 1 timing** — kadr-ui v0.10.2 must land cleanly before downstream Tier 1 can start. Track via the upstream RFC.
+- **Tier 3 timing** — kadr v0.12 stroke/shadow surface is the deepest upstream dependency. Slipping it slides the whole reels-studio cycle.
+- **Tier 5 perf** — rendering a thumbnail for every project on first launch could spike CPU. Mitigation: render lazily on `.onAppear` of each `ProjectRow`, not eagerly at launch. Confirm with Instruments before merge.
 
 ## v0.8 — On-device AI *(planned, sketch)*
 
