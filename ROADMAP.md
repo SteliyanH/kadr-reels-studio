@@ -82,7 +82,16 @@ Suite: 228 → 252 unit + 5 UI (29 unit + 5 UI new across the cycle).
 
 ## v0.7.0 — Editor UX catch-up *(planned)*
 
-CapCut-baseline parity. Six tiers: audio waveform editing, transitions picker UI, text effects inspector, chroma key UI, project thumbnails, release prep. May need a kadr-ui mid-cycle patch for the waveform-editing surface.
+CapCut-baseline parity. Closes the *creator surface* gaps a returning CapCut / TikTok / Reels user expects on day one: flat audio rows with no trim handles, no transition picker (data model has supported `.fade` / `.dissolve` since v0.1 without UI), text overlays with no stroke / shadow, no chroma key UI (filter case exists, picker doesn't), and a project list that's a wall of names with no thumbnails. Six tiers:
+
+1. **Audio waveform trim handles** — drag handles on audio rows bind to new `applyMusicTrim` / `applySFXTrim` mutations. Pairs with **kadr-ui v0.10.2** (must merge first) exposing `AudioTrimEvent` + `onAudioTrim(_:)`.
+2. **Transitions picker UI** — `TransitionsSheet` grid + duration slider, pushed from a new "+" affordance in the timeline gap. `ProjectStore.insertTransition(afterClipID:kind:duration:)` mutation. No upstream changes.
+3. **Text effects inspector** — `OverlayInspectorArea` text section gains stroke + shadow rows (width / offset / blur / color). Pairs with **kadr v0.12** (must merge first) adding `TextStyle.stroke` + `.shadow`. Schema v5 (additive).
+4. **Chroma key UI** — `FiltersSheet`'s + menu gains a Chroma Key entry pushing a dedicated `ChromaKeySheet` with color preview + picker + threshold slider. No upstream changes.
+5. **Project thumbnails** — `ProjectRow` shows an 80×80 thumbnail rendered from frame 0 of the first clip. Cached under App Support, keyed by project id + modifiedAt for lazy invalidation. Empty projects render a deterministic gradient placeholder.
+6. Release prep + tag v0.7.0.
+
+Pairs with **kadr v0.12** + **kadr-ui v0.10.2** which must merge first.
 
 ## v0.8.0 — On-device AI *(planned)*
 
