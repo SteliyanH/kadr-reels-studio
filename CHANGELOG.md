@@ -4,6 +4,54 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-05-21
+
+Editor UX catch-up. Closes the creator-surface gaps the foundation cycles (v0.1–v0.6) left for later — flat audio rows with no trim handles, a transition data model with no UI to add them (`.fade` / `.dissolve` have shipped since v0.1), text overlays without stroke or shadow, `Filter.chromaKey` without a picker, a project list that was a wall of names without thumbnails. Bumped kadr floor to **≥ 0.12.0** and kadr-ui floor to **≥ 0.10.2**. Six tiers.
+
+### Added — audio trim wiring (Tier 1)
+
+- **`ProjectStore.applyAudioTrim(trackIndex:leadingTrim:trailingTrim:)`** — shifts the row's `startTime` by the leading delta (clamped at `.zero` — kadr's compositor doesn't accept negative composition times), reduces `explicitDuration` by the combined delta. Music + SFX share the same `audioTracks` array, so a single mutation handles both. Action name "Trim Audio" so the system Edit menu reads cleanly regardless of source. Pure helper `applyingAudioTrim` mirrors the `applyingTrackTrim` shape for test parity.
+- **`TimelineArea.onAudioTrim`** wires kadr-ui v0.10.2's new callback + fires a snap haptic on drag-end (matches existing trim-haptic convention).
+- Trailing trim on a row without `explicitDuration` is a no-op — kadr-ui doesn't synchronously resolve natural asset length, so we can't know the trailing edge to subtract from. Leading-trim shift still applies.
+
+### Added — transitions picker UI (Tier 2)
+
+- **`TransitionKind`** UI mirror of `Kadr.Transition`'s cases (`.fade` / `.dissolve`). Decouples the picker sheet from kadr's enum so the picker enumerates via `allCases` and renders SF Symbol tiles. kadr's `.slide` case is deliberately not mirrored — persistence schema doesn't carry it.
+- **`ProjectStore.insertTransition(afterClipID:kind:duration:)`** — inserts at the gap, or replaces an existing transition at the same gap. Distinct action names ("Add Transition" / "Change Transition") for the Edit menu. Plus `removeTransition` for the destructive "Remove transition" button. Pure helpers (`insertingTransition` / `removingTransition` / `hasTransitionAfter` / `currentTransition`) mirror `applyingTrackTrim` test surface.
+- **`TransitionsSheet`** — `LazyVGrid` of kind tiles + duration `Slider` (0.1–2.0s, matches CapCut's default range). Seeds from current state when a transition is in place; destructive Remove button appears only when one exists.
+- **`EditorToolbar`** clip-action row gains a "Transition" button shown only when `clipHasSuccessor` returns true (a transition needs something to dissolve into). Top-level only — Track-internal transitions are a separate cycle.
+
+### Added — text effects inspector + schema v5 (Tier 3)
+
+- **Schema v5** — additive `strokeWidth` / `strokeColorHex` / `shadowOffsetX` / `shadowOffsetY` / `shadowBlur` / `shadowColorHex` on `TextOverlayData` AND `TitleSequenceData`. All optional; v1–v4 docs decode with every field nil and the runtime renders without effects (parity with pre-v0.7).
+- **Bridge** — `runtimeStroke` returns nil for width 0 or missing (mirrors `TextStroke`'s API). `runtimeShadow` is strict: any field missing = nil. Persistence is all-or-nothing on shadow so re-saves round-trip cleanly.
+- **`ProjectStore.setTextStroke` / `setTextShadow`** — undoable, no-op for non-text overlay ids. `rebuildTextOverlay` pure helper preserves layerID + text + position + anchor + opacity + animation while swapping style.
+- **`TextEffectsSection`** — local inspector view appended under `OverlayInspectorPanel` when the selection is a `TextOverlay`. Two disclosure groups (Stroke / Shadow), each with an Enable toggle + sliders + `ColorPicker`. Hides for non-text overlays. No kadr-ui v0.10.3 patch needed — surfaced through the consumer's `OverlayInspectorArea` directly.
+
+### Added — chroma key UI (Tier 4)
+
+- **`ProjectStore.addChromaKey(id:color:threshold:)`** — builds `Kadr.ChromaKey(color:threshold:)` and routes through the existing `addFilter` path. Same "Add Filter" action name as every other filter — the Edit menu reads consistently.
+- **`ChromaKeySheet`** — dedicated sub-sheet pushed from `FiltersSheet`'s add menu. Color preview tile + `ColorPicker` (no alpha — threshold handles tolerance) + threshold `Slider` (0–1). Defaults to green / 0.4, the canonical green-screen starting point.
+- **`FiltersSheet`** add menu gains a "Chroma Key…" entry that flips into the new sheet. The other eleven filters still add directly with their default scalar.
+- "Pick from preview" tap-to-sample gesture deferred — needs `VideoPreview` to expose tap → color sampling. In-row editing of an existing chroma key (FilterRow's slider hides because no scalarRange matches) deferred to v0.7.x.
+
+### Added — project thumbnails (Tier 5)
+
+- **`ProjectThumbnailRenderer`** enum — `render(_:)` async emits an 80pt-point / 160px-pixel JPEG under `App Support/ReelsStudio/Thumbnails/<projectID>-<modifiedAt-unix>.jpg`. Idempotent — a cache hit on the same `(id, modifiedAt)` returns the existing URL without re-rendering. `cachedURL(for:)` sync body-path lookup. `purge(projectID:)` wired from `ProjectLibrary.delete` so renders don't outlive their source.
+- **Invalidation** is filename-based: a save bumps `modifiedAt` → new cache file → old one orphaned. Stale orphans are GC'd by `purge` on delete; bulk-pruning between saves is deferred (acceptable for v0.7).
+- **Rendering** supports `VideoClip` via `AVAssetImageGenerator` (sampled at `trimStartSeconds`) and `ImageClip` via `CGImageSource` (URL) or `Data` (embedded PNG). Title / Transition / Track skipped — projects without a video or image fall through to the placeholder.
+- **`ProjectThumbnailTile`** — sync body lookup + async render-on-appear. Empty projects render a deterministic `LinearGradient` built from the project id's hash + a film SF Symbol overlay; each empty project looks visually distinct in a long list.
+
+### Tests
+
+Suite: 254 (v0.6 baseline) → 291 unit + 5 UI tests (37 unit + 0 UI new across the cycle). Highlights: `AudioTrimTests` (7), `TransitionsTests` (11), `SchemaV5Tests` (11), `ChromaKeyTests` (4), `ProjectThumbnailRendererTests` (6). `SchemaV4Tests`'s schema-version assertion was migrated to track `currentSchemaVersion` so future cycles don't break it per landing.
+
+### Dependencies
+
+- **kadr ≥ 0.12.0** (up from 0.11.0). Adds `TextStyle.stroke: TextStroke?` + `TextStyle.shadow: TextShadow?` with `NSAttributedString` / `CALayer` renderer wiring.
+- **kadr-ui ≥ 0.10.2** (up from 0.10.1). Adds `AudioTrimEvent` Sendable + `TimelineView.onAudioTrim(_:)` modifier + audio-row trim handle render path.
+- kadr-captions ≥ 0.4.0, kadr-photos ≥ 0.4.0 unchanged.
+
 ## [0.6.0] - 2026-05-14
 
 Robustness + release engineering. Cross-package-audit response cycle — closes the cluster of robustness gaps the app has carried since v0.2 (none user-visible in the happy path, all visible to App Store reviewers and to users hitting non-English locales / corrupt files / force-quit scenarios). Bumped kadr floor to **≥ 0.11.0** and kadr-ui floor to **≥ 0.10.1**. Eight delivery tiers + release prep.
