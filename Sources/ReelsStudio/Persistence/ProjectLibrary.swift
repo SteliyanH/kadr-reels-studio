@@ -77,13 +77,16 @@ final class ProjectLibrary: ObservableObject {
         documents.sort { $0.modifiedAt > $1.modifiedAt }
     }
 
-    /// Delete a project from disk and the in-memory list.
+    /// Delete a project from disk and the in-memory list. Also purges any
+    /// cached thumbnails for the project (v0.7 Tier 5) so stale renders
+    /// don't outlive the source.
     public func delete(id: UUID) throws {
         let url = fileURL(for: id)
         if fileManager.fileExists(atPath: url.path) {
             try fileManager.removeItem(at: url)
         }
         documents.removeAll { $0.id == id }
+        ProjectThumbnailRenderer.purge(projectID: id)
     }
 
     /// Duplicate an existing project under a new id with " Copy" suffixed name.
