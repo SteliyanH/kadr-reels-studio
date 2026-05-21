@@ -18,12 +18,16 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
     /// Current persistence schema version. Increment for incompatible changes;
     /// load-side migrations live in ``ProjectLibrary``.
     ///
-    /// **v4 (this release)** adds `filterIDs: [String]?` on `VideoClipData` —
-    /// a parallel-array mirror of kadr v0.11's `VideoClip.filterIDs`. Lets
-    /// future tooling round-trip stable per-filter identities across saves.
-    /// Missing on v1 / v2 / v3 documents decodes nil and the bridge falls
-    /// back to kadr's auto-generated ids on load — older documents migrate
-    /// silently and re-save into v4.
+    /// **v5 (this release)** adds text-effect fields on `TextOverlayData`
+    /// and `TitleSequenceData` — `strokeWidth` + `strokeColorHex` for outline,
+    /// `shadowOffsetX/Y` + `shadowBlur` + `shadowColorHex` for drop shadow.
+    /// Mirrors kadr v0.12's `TextStyle.stroke` + `.shadow`. All additive
+    /// and optional; v1-v4 docs decode with nil and the runtime renders
+    /// without effects (matching their old behavior).
+    ///
+    /// **v4** added `filterIDs: [String]?` on `VideoClipData` — a parallel-
+    /// array mirror of kadr v0.11's `VideoClip.filterIDs`. Lets future tooling
+    /// round-trip stable per-filter identities across saves.
     ///
     /// **v3** added `fixedCenterPlayhead: Bool?` — per-project opt-in for
     /// kadr-ui v0.9's `TimelineView.fixedCenterPlayhead(_:)`.
@@ -32,7 +36,7 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
     /// `filterAnimations` on clips, `speedCurve` on `VideoClipData`,
     /// `transformAnimation` / `opacityAnimation` on overlays, and
     /// `ProjectClip.track` for `Kadr.Track {}` blocks.
-    public static let currentSchemaVersion: Int = 4
+    public static let currentSchemaVersion: Int = 5
 
     public let id: UUID
     public var name: String
@@ -245,6 +249,18 @@ struct TitleSequenceData: Codable, Sendable, Equatable {
     public var durationSeconds: Double
     public var transform: ProjectTransform?
 
+    /// Per-text outline. Width in points, color as hex. `nil` (or width 0)
+    /// = no stroke. v5.
+    public var strokeWidth: Double?
+    public var strokeColorHex: String?
+
+    /// Per-text drop shadow. Offset in points, blur in points, color as hex.
+    /// `nil` (any field) = no shadow. v5.
+    public var shadowOffsetX: Double?
+    public var shadowOffsetY: Double?
+    public var shadowBlur: Double?
+    public var shadowColorHex: String?
+
     public init(
         clipID: String? = nil,
         text: String,
@@ -253,7 +269,13 @@ struct TitleSequenceData: Codable, Sendable, Equatable {
         colorHex: String? = nil,
         alignment: ProjectTextAlignment = .leading,
         durationSeconds: Double = 2.0,
-        transform: ProjectTransform? = nil
+        transform: ProjectTransform? = nil,
+        strokeWidth: Double? = nil,
+        strokeColorHex: String? = nil,
+        shadowOffsetX: Double? = nil,
+        shadowOffsetY: Double? = nil,
+        shadowBlur: Double? = nil,
+        shadowColorHex: String? = nil
     ) {
         self.clipID = clipID
         self.text = text
@@ -263,6 +285,12 @@ struct TitleSequenceData: Codable, Sendable, Equatable {
         self.alignment = alignment
         self.durationSeconds = durationSeconds
         self.transform = transform
+        self.strokeWidth = strokeWidth
+        self.strokeColorHex = strokeColorHex
+        self.shadowOffsetX = shadowOffsetX
+        self.shadowOffsetY = shadowOffsetY
+        self.shadowBlur = shadowBlur
+        self.shadowColorHex = shadowColorHex
     }
 }
 
@@ -301,6 +329,19 @@ struct TextOverlayData: Codable, Sendable, Equatable {
     public var anchor: ProjectAnchor
     public var opacity: Double
 
+    /// Outline (width in points, color as hex). `nil` / width 0 = no
+    /// stroke; v4 docs decode with both nil so existing overlays render
+    /// unchanged. v5.
+    public var strokeWidth: Double?
+    public var strokeColorHex: String?
+
+    /// Drop shadow (offset in points + Gaussian blur in points + hex color).
+    /// All four fields nil = no shadow. v5.
+    public var shadowOffsetX: Double?
+    public var shadowOffsetY: Double?
+    public var shadowBlur: Double?
+    public var shadowColorHex: String?
+
     public init(
         layerID: String? = nil,
         text: String,
@@ -311,7 +352,13 @@ struct TextOverlayData: Codable, Sendable, Equatable {
         positionX: Double = 0.5,
         positionY: Double = 0.5,
         anchor: ProjectAnchor = .center,
-        opacity: Double = 1.0
+        opacity: Double = 1.0,
+        strokeWidth: Double? = nil,
+        strokeColorHex: String? = nil,
+        shadowOffsetX: Double? = nil,
+        shadowOffsetY: Double? = nil,
+        shadowBlur: Double? = nil,
+        shadowColorHex: String? = nil
     ) {
         self.layerID = layerID
         self.text = text
@@ -323,6 +370,12 @@ struct TextOverlayData: Codable, Sendable, Equatable {
         self.positionY = positionY
         self.anchor = anchor
         self.opacity = opacity
+        self.strokeWidth = strokeWidth
+        self.strokeColorHex = strokeColorHex
+        self.shadowOffsetX = shadowOffsetX
+        self.shadowOffsetY = shadowOffsetY
+        self.shadowBlur = shadowBlur
+        self.shadowColorHex = shadowColorHex
     }
 }
 

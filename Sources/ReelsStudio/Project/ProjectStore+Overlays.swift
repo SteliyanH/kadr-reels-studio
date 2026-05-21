@@ -83,6 +83,46 @@ extension ProjectStore {
         }
     }
 
+    /// Set the outline on a `TextOverlay`'s `TextStyle`. Pass `nil` to clear.
+    /// No-op for other overlay kinds. v0.7 Tier 3.
+    func setTextStroke(id: LayerID, _ stroke: TextStroke?) {
+        updateOverlay(id: id, actionName: "Edit Text Stroke") { overlay in
+            guard let textOverlay = overlay as? TextOverlay else { return overlay }
+            var newStyle = textOverlay.style
+            newStyle.stroke = stroke
+            return ProjectStore.rebuildTextOverlay(textOverlay, style: newStyle)
+        }
+    }
+
+    /// Set the drop shadow on a `TextOverlay`'s `TextStyle`. Pass `nil` to
+    /// clear. No-op for other overlay kinds. v0.7 Tier 3.
+    func setTextShadow(id: LayerID, _ shadow: TextShadow?) {
+        updateOverlay(id: id, actionName: "Edit Text Shadow") { overlay in
+            guard let textOverlay = overlay as? TextOverlay else { return overlay }
+            var newStyle = textOverlay.style
+            newStyle.shadow = shadow
+            return ProjectStore.rebuildTextOverlay(textOverlay, style: newStyle)
+        }
+    }
+
+    /// Pure helper: replace a `TextOverlay`'s style while preserving every
+    /// other field (text, position, anchor, opacity, layerID, animation).
+    /// Used by `setTextStroke` / `setTextShadow`.
+    nonisolated static func rebuildTextOverlay(
+        _ overlay: TextOverlay,
+        style: TextStyle
+    ) -> TextOverlay {
+        var rebuilt = TextOverlay(overlay.text, style: style)
+            .position(overlay.position)
+            .anchor(overlay.anchor)
+            .opacity(overlay.opacity)
+        if let id = overlay.layerID { rebuilt = rebuilt.id(id) }
+        if let animation = overlay.textAnimation {
+            rebuilt = rebuilt.animation(animation)
+        }
+        return rebuilt
+    }
+
     /// Set a `StickerOverlay`'s rotation in radians. No-op for other kinds.
     func applyOverlayRotation(id: LayerID, _ radians: Double) {
         updateOverlay(id: id, actionName: "Edit Rotation") { overlay in
