@@ -80,18 +80,20 @@ Bumped kadr floor to **≥ 0.11.0** and kadr-ui floor to **≥ 0.10.1**. Cross-p
 
 Suite: 228 → 252 unit + 5 UI (29 unit + 5 UI new across the cycle).
 
-## v0.7.0 — Editor UX catch-up *(planned)*
+## v0.7.0 — Editor UX catch-up ✓ shipped
 
-CapCut-baseline parity. Closes the *creator surface* gaps a returning CapCut / TikTok / Reels user expects on day one: flat audio rows with no trim handles, no transition picker (data model has supported `.fade` / `.dissolve` since v0.1 without UI), text overlays with no stroke / shadow, no chroma key UI (filter case exists, picker doesn't), and a project list that's a wall of names with no thumbnails. Six tiers:
+CapCut-baseline parity. Closed the *creator surface* gaps a returning CapCut / TikTok / Reels user expects on day one. Bumped kadr floor to **≥ 0.12.0** and kadr-ui floor to **≥ 0.10.2**. Six tiers:
 
-1. **Audio waveform trim handles** — drag handles on audio rows bind to new `applyMusicTrim` / `applySFXTrim` mutations. Pairs with **kadr-ui v0.10.2** (must merge first) exposing `AudioTrimEvent` + `onAudioTrim(_:)`.
-2. **Transitions picker UI** — `TransitionsSheet` grid + duration slider, pushed from a new "+" affordance in the timeline gap. `ProjectStore.insertTransition(afterClipID:kind:duration:)` mutation. No upstream changes.
-3. **Text effects inspector** — `OverlayInspectorArea` text section gains stroke + shadow rows (width / offset / blur / color). Pairs with **kadr v0.12** (must merge first) adding `TextStyle.stroke` + `.shadow`. Schema v5 (additive).
-4. **Chroma key UI** — `FiltersSheet`'s + menu gains a Chroma Key entry pushing a dedicated `ChromaKeySheet` with color preview + picker + threshold slider. No upstream changes.
-5. **Project thumbnails** — `ProjectRow` shows an 80×80 thumbnail rendered from frame 0 of the first clip. Cached under App Support, keyed by project id + modifiedAt for lazy invalidation. Empty projects render a deterministic gradient placeholder.
-6. Release prep + tag v0.7.0.
+1. **Audio trim wiring** — `ProjectStore.applyAudioTrim(...)` shifts startTime + reduces explicitDuration; `TimelineArea.onAudioTrim` wires kadr-ui v0.10.2's callback + snap haptic. Music + SFX share the same `audioTracks` array → single mutation handles both. Trailing trim on a row without `explicitDuration` is a no-op (asset length not synchronously available).
+2. **Transitions picker UI** — `TransitionKind` UI mirror (fade + dissolve; kadr's slide deliberately omitted from persistence scope). `insertTransition` / `removeTransition` mutations with distinct action names. `TransitionsSheet` (`LazyVGrid` of tiles + 0.1–2.0s duration slider). Toolbar "Transition" button gated on `clipHasSuccessor`.
+3. **Text effects inspector + schema v5** — additive `strokeWidth` / `strokeColorHex` / `shadowOffsetX/Y` / `shadowBlur` / `shadowColorHex` on `TextOverlayData` AND `TitleSequenceData`. v1–v4 docs decode with nil. `setTextStroke` / `setTextShadow` mutations + `rebuildTextOverlay` pure helper. `TextEffectsSection` view appended under `OverlayInspectorPanel` for text overlays.
+4. **Chroma key UI** — `addChromaKey(id:color:threshold:)` mutation routes through `addFilter`. Dedicated `ChromaKeySheet` with color preview + `ColorPicker` + threshold slider, defaults green / 0.4. `FiltersSheet`'s + menu gains "Chroma Key…" entry.
+5. **Project thumbnails** — `ProjectThumbnailRenderer` (VideoClip via `AVAssetImageGenerator`, ImageClip via `CGImageSource`). JPEG cache under App Support keyed by `<id>-<modifiedAt-unix>.jpg` for lazy invalidation. `ProjectThumbnailTile` sync-lookup + async render-on-appear; deterministic gradient placeholder for empty projects.
+6. **Release prep** — CHANGELOG / README / ROADMAP, develop → main, tag v0.7.0.
 
-Pairs with **kadr v0.12** + **kadr-ui v0.10.2** which must merge first.
+Suite: 254 → 291 unit + 5 UI (37 unit new across the cycle).
+
+Paired with **kadr v0.12.0** + **kadr-ui v0.10.2** which shipped during the cycle.
 
 ## v0.8.0 — On-device AI *(planned)*
 
@@ -121,3 +123,4 @@ iOS 17 floor bump + `@Observable` migration. Auto-captions via kadr-captions v0.
 | 0.4.0 | ≥ 0.10.1 | ≥ 0.9.2 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.5.0 | ≥ 0.10.1 | ≥ 0.9.2 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.6.0 | ≥ 0.11.0 | ≥ 0.10.1 | ≥ 0.4.0 | ≥ 0.4.0 |
+| 0.7.0 | ≥ 0.12.0 | ≥ 0.10.2 | ≥ 0.4.0 | ≥ 0.4.0 |
