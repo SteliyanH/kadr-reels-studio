@@ -95,9 +95,18 @@ Suite: 254 → 291 unit + 5 UI (37 unit new across the cycle).
 
 Paired with **kadr v0.12.0** + **kadr-ui v0.10.2** which shipped during the cycle.
 
-## v0.8.0 — On-device AI *(planned)*
+## v0.8.0 — Platform polish + import/export *(planned)*
 
-iOS 17 floor bump + `@Observable` migration. Auto-captions via kadr-captions v0.7's `SpeechAnalyzer`-backed generator. Person cutout via Vision framework (requires kadr v0.13.x). Four tiers.
+Last cycle before v1.0 App Store submission. No new AI features — auto-captions, person cutout, and Vision-based smart crop all moved to kadr-pro per the [Kadr Pro scope](https://github.com/SteliyanH/kadr/blob/main/ROADMAP.md#kadr-pro). What's left to ship in the OSS app:
+
+1. **iOS 17 floor bump + `@Observable` migration.** Drop iOS 16 support; migrate `ProjectStore` / `ProjectLibrary` / `AppSettings` / `LibraryHost` from `ObservableObject` to `@Observable`. Pairs with **kadr-ui v0.12** which makes the same migration.
+2. **iPad polish.** Split-view layout (project list on the leading column, editor on the trailing), hardware-keyboard shortcuts (⌘N new project, ⌘Z undo / ⇧⌘Z redo, ⌘. cancel export, space play/pause), Apple Pencil scrubbing with hover state.
+3. **Project import/export.** `.kadr` documents — zipped bundle of `ProjectDocument.json` + every embedded image / LUT / caption file referenced. SwiftUI `.fileExporter` / `.fileImporter` on the project list. Enables "share to TestFlight tester" without screen-recording the editor.
+4. **PiP export preview.** While `Exporter.run()` is in flight, render the in-progress frame in a corner-pinned overlay so the user can continue editing the next project. Pairs with kadr v0.13's `AVAssetImageGenerator` reuse (perf cycle).
+5. **Sentry DSN wiring + crash reporting end-to-end.** v0.6 Tier 8 scaffolded `CrashReporter.startIfConfigured()` but never connected to a real DSN. Wire the `SentryDSN` Info.plist entry via fastlane, validate the trace-sample-rate plumbing, ship a "Help → Send diagnostic info" affordance.
+6. **Release prep + tag v0.8.0.**
+
+Six tiers. Pairs with **kadr v0.13** (engine perf) + **kadr-ui v0.12** (`@Observable` migration), both of which must merge first.
 
 ## v1.0.0 — App Store *(planned)*
 
