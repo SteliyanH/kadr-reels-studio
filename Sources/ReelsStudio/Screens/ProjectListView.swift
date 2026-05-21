@@ -253,16 +253,20 @@ struct ProjectRow: View {
     let document: ProjectDocument
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(document.name)
-                .font(.body.weight(.semibold))
-            HStack(spacing: 8) {
-                Text(document.modifiedAt, format: .relative(presentation: .named))
-                Text("·")
-                Text("\(document.clips.count) clip\(document.clips.count == 1 ? "" : "s")")
+        HStack(spacing: 12) {
+            ProjectThumbnailTile(document: document)
+                .frame(width: 56, height: 56)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(document.name)
+                    .font(.body.weight(.semibold))
+                HStack(spacing: 8) {
+                    Text(document.modifiedAt, format: .relative(presentation: .named))
+                    Text("·")
+                    Text("\(document.clips.count) clip\(document.clips.count == 1 ? "" : "s")")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
         // Collapse the row into a single VoiceOver element so the user
