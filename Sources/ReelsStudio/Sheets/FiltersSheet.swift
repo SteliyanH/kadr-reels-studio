@@ -14,6 +14,10 @@ struct FiltersSheet: View {
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
 
+    /// Drives the Chroma Key sub-sheet. Bound to a Bool because the sheet
+    /// itself is parameterless (it reads from `clipID` directly). v0.7 Tier 4.
+    @State private var showChromaKey = false
+
     var body: some View {
         NavigationStack {
             content
@@ -26,6 +30,9 @@ struct FiltersSheet: View {
                     ToolbarItem(placement: .topBarLeading) {
                         addMenu
                     }
+                }
+                .sheet(isPresented: $showChromaKey) {
+                    ChromaKeySheet(store: store, clipID: clipID)
                 }
         }
     }
@@ -99,6 +106,10 @@ struct FiltersSheet: View {
             Button("Sharpen")    { store.addFilter(id: clipID, .sharpen(amount: 0.4)) }
             Button("Zoom Blur")  { store.addFilter(id: clipID, .zoomBlur(amount: 20)) }
             Button("Glow")       { store.addFilter(id: clipID, .glow(intensity: 1)) }
+            // v0.7 Tier 4 — chroma key needs a color picker + threshold,
+            // so route through a dedicated sub-sheet instead of inserting
+            // straight from the menu.
+            Button("Chroma Key…") { showChromaKey = true }
         } label: {
             Image(systemName: "plus")
         }
