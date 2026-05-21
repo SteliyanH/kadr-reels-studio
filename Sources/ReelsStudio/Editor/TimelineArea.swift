@@ -20,6 +20,8 @@ struct TimelineArea: View {
     var onSpeedCurve: (Kadr.ClipID) -> Void = { _ in }
     /// Clip-action: pushes `FiltersSheet` for the selected clip id.
     var onFilters: (Kadr.ClipID) -> Void = { _ in }
+    /// Clip-action: pushes `TransitionsSheet` for the gap after this clip.
+    var onTransition: (Kadr.ClipID) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -33,7 +35,8 @@ struct TimelineArea: View {
                 onAddCaptions: onAddCaptions,
                 onExport: onExport,
                 onSpeedCurve: onSpeedCurve,
-                onFilters: onFilters
+                onFilters: onFilters,
+                onTransition: onTransition
             )
             timeline
         }

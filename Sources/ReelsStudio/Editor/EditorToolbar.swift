@@ -26,6 +26,7 @@ struct EditorToolbar: View {
     // Clip-row callbacks that need a sheet — also owned by the editor.
     var onSpeedCurve: (ClipID) -> Void
     var onFilters: (ClipID) -> Void = { _ in }
+    var onTransition: (ClipID) -> Void = { _ in }
 
     private enum Mode: Equatable { case root, clip(ClipID), overlay(LayerID), multiSelect }
 
@@ -119,6 +120,20 @@ struct EditorToolbar: View {
             ) {
                 onFilters(id)
             }
+            // v0.7 Tier 2 — only shown when the clip has a successor (a
+            // transition needs something to dissolve into). The check looks
+            // at the top-level `project.clips` array; clips inside a Track
+            // don't get the button because Track-internal transitions are
+            // a separate cycle.
+            if EditorToolbar.clipHasSuccessor(id: id, in: store.project.clips) {
+                ToolbarButton(
+                    systemImage: "rectangle.righthalf.inset.filled.arrow.right",
+                    label: "Transition",
+                    hint: "Edit the transition between this clip and the next"
+                ) {
+                    onTransition(id)
+                }
+            }
             Spacer()
             ToolbarButton(
                 systemImage: "trash",
@@ -211,6 +226,17 @@ struct EditorToolbar: View {
 }
 
 extension EditorToolbar {
+    /// Whether `id` identifies a top-level clip that has a successor in
+    /// `clips` (a transition needs something to dissolve into). v0.7 Tier 2.
+    /// Returns false when the clip isn't at the top level (Track-internal
+    /// clips don't get the toolbar transition button) or is the last entry.
+    nonisolated static func clipHasSuccessor(id: ClipID, in clips: [any Clip]) -> Bool {
+        guard let index = clips.firstIndex(where: { $0.clipID == id }) else {
+            return false
+        }
+        return index + 1 < clips.count
+    }
+
     /// User-facing detail for each `splitClip` failure mode.
     static func splitFailureDetail(_ result: ProjectStore.SplitResult) -> String {
         switch result {
