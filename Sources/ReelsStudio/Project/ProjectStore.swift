@@ -241,6 +241,79 @@ final class ProjectStore: ObservableObject {
         }
     }
 
+    /// Apply a leading + trailing trim delta to the audio track at
+    /// `trackIndex` in `project.audioTracks`. v0.7 Tier 1 — wired from
+    /// `kadr-ui v0.10.2`'s `TimelineView.onAudioTrim(_:)` callback.
+    ///
+    /// Music and SFX live in the same `audioTracks` array (only the
+    /// `.at(time:)` modifier distinguishes them at the call site), so a
+    /// single mutation handles both — `AddMusicSheet` and `AddSFXSheet`
+    /// share the storage. Action name stays generic ("Trim Audio") so the
+    /// Edit menu reads cleanly regardless of source.
+    ///
+    /// Sign convention mirrors `applyTrackTrim`:
+    /// - `leadingTrim > 0` shifts `startTime` later (trims the head).
+    /// - `trailingTrim > 0` reduces `explicitDuration` (trims the tail).
+    /// - Negative deltas extend in the opposite direction; clamped to zero
+    ///   so a runaway drag can't produce a negative duration.
+    ///
+    /// `explicitDuration == nil` means "play to natural asset end" — kadr-ui
+    /// doesn't synchronously resolve the asset length, so a trailing trim on
+    /// an unset duration is a no-op (the leading-trim startTime shift still
+    /// applies). Once the user trims a trailing handle on such a track, the
+    /// downstream music sheet's "Add" path can be re-entered to set an
+    /// explicit duration explicitly. Acceptable for v0.7; revisit if real
+    /// users hit it.
+    func applyAudioTrim(
+        trackIndex: Int,
+        leadingTrim: CMTime,
+        trailingTrim: CMTime
+    ) {
+        applyMutation("Trim Audio") { project in
+            project.audioTracks = ProjectStore.applyingAudioTrim(
+                tracks: project.audioTracks,
+                trackIndex: trackIndex,
+                leadingTrim: leadingTrim,
+                trailingTrim: trailingTrim
+            )
+        }
+    }
+
+    /// Pure helper: produce a new audio-track array with the trim applied to
+    /// the row at `trackIndex`. Returns the array unchanged for out-of-range
+    /// indices (matches editor-consumer expectations under stale indices —
+    /// same convention as `applyingTrackTrim`).
+    nonisolated static func applyingAudioTrim(
+        tracks: [AudioTrack],
+        trackIndex: Int,
+        leadingTrim: CMTime,
+        trailingTrim: CMTime
+    ) -> [AudioTrack] {
+        guard tracks.indices.contains(trackIndex) else { return tracks }
+        let existing = tracks[trackIndex]
+
+        // Shift startTime by the leading delta. Clamp to .zero so a runaway
+        // drag can't push the track to negative composition time.
+        let baseStart = existing.startTime ?? .zero
+        let newStart = CMTimeMaximum(.zero, baseStart + leadingTrim)
+        var track = existing.at(time: newStart)
+
+        // Trim trailing only when explicitDuration is set — without it we
+        // don't know the natural asset length synchronously. Same caveat is
+        // surfaced by the upstream kadr-ui Tier 1 callback contract.
+        if let existingDuration = existing.explicitDuration {
+            let newDuration = CMTimeMaximum(
+                .zero,
+                existingDuration - leadingTrim - trailingTrim
+            )
+            track = track.duration(newDuration)
+        }
+
+        var copy = tracks
+        copy[trackIndex] = track
+        return copy
+    }
+
     /// Pure helper: produce a new clips array with the trim applied to the
     /// requested inner clip. Returns the array unchanged for out-of-range
     /// indices (matches editor-consumer expectations under stale indices).

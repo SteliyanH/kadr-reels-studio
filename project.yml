@@ -15,10 +15,10 @@ settings:
 packages:
   Kadr:
     url: https://github.com/SteliyanH/kadr.git
-    from: 0.11.0
+    from: 0.12.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
-    from: 0.10.1
+    from: 0.10.2
   KadrCaptions:
     url: https://github.com/SteliyanH/kadr-captions.git
     from: 0.4.0
