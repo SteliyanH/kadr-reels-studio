@@ -41,6 +41,7 @@ struct EditorView: View {
     @State private var showExportSheet = false
     @State private var speedCurveClipID: ClipID?
     @State private var filtersClipID: ClipID?
+    @State private var transitionClipID: ClipID?
     @State private var showSettings = false
 
     /// v0.6 Tier 4 — Photos access pre-check. When the user taps "Add clip"
@@ -76,7 +77,8 @@ struct EditorView: View {
                 onAddCaptions: { showCaptionsSheet = true },
                 onExport: { showExportSheet = true },
                 onSpeedCurve: { speedCurveClipID = $0 },
-                onFilters: { filtersClipID = $0 }
+                onFilters: { filtersClipID = $0 },
+                onTransition: { transitionClipID = $0 }
             )
             // Inspector / keyframe pair — routes to clip- or overlay-targeted
             // surfaces based on which selection slot is active. Mutual
@@ -151,6 +153,16 @@ struct EditorView: View {
         ) {
             if let id = filtersClipID {
                 FiltersSheet(store: store, clipID: id)
+            }
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { transitionClipID != nil },
+                set: { if !$0 { transitionClipID = nil } }
+            )
+        ) {
+            if let id = transitionClipID {
+                TransitionsSheet(store: store, clipID: id)
             }
         }
         .sheet(isPresented: $showSettings) {
