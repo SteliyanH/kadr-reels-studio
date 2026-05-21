@@ -127,7 +127,17 @@ extension ProjectDocument {
             fontSize: data.fontSize,
             color: platformColor(forHex: data.colorHex) ?? .white,
             alignment: textAlignment(from: data.alignment),
-            weight: fontWeight(from: data.fontWeight)
+            weight: fontWeight(from: data.fontWeight),
+            stroke: runtimeStroke(
+                width: data.strokeWidth,
+                colorHex: data.strokeColorHex
+            ),
+            shadow: runtimeShadow(
+                offsetX: data.shadowOffsetX,
+                offsetY: data.shadowOffsetY,
+                blur: data.shadowBlur,
+                colorHex: data.shadowColorHex
+            )
         )
         var title = TitleSequence(
             data.text,
@@ -139,6 +149,33 @@ extension ProjectDocument {
         }
         if let id = data.clipID { title = title.id(ClipID(id)) }
         return title
+    }
+
+    /// Reconstruct a kadr `TextStroke` from persisted fields. Returns nil
+    /// when width is nil or zero — both render as "no stroke". v5.
+    nonisolated static func runtimeStroke(width: Double?, colorHex: String?) -> TextStroke? {
+        guard let width, width > 0 else { return nil }
+        let color = platformColor(forHex: colorHex) ?? .black
+        return TextStroke(width: width, color: color)
+    }
+
+    /// Reconstruct a kadr `TextShadow` from persisted fields. Returns nil
+    /// when any field is missing — shadow is all-or-nothing on persistence.
+    /// The runtime tolerates partial state but we keep the bridge strict so
+    /// re-save round-trips cleanly. v5.
+    nonisolated static func runtimeShadow(
+        offsetX: Double?,
+        offsetY: Double?,
+        blur: Double?,
+        colorHex: String?
+    ) -> TextShadow? {
+        guard let offsetX, let offsetY, let blur else { return nil }
+        let color = platformColor(forHex: colorHex) ?? .platformShadowDefault
+        return TextShadow(
+            offset: CGSize(width: offsetX, height: offsetY),
+            blur: blur,
+            color: color
+        )
     }
 
     // MARK: Filter / Transform reconstruction
@@ -204,7 +241,17 @@ extension ProjectDocument {
             fontSize: data.fontSize,
             color: platformColor(forHex: data.colorHex) ?? .white,
             alignment: textAlignment(from: data.alignment),
-            weight: fontWeight(from: data.fontWeight)
+            weight: fontWeight(from: data.fontWeight),
+            stroke: runtimeStroke(
+                width: data.strokeWidth,
+                colorHex: data.strokeColorHex
+            ),
+            shadow: runtimeShadow(
+                offsetX: data.shadowOffsetX,
+                offsetY: data.shadowOffsetY,
+                blur: data.shadowBlur,
+                colorHex: data.shadowColorHex
+            )
         )
         var overlay = TextOverlay(data.text, style: style)
             .position(.normalized(x: data.positionX, y: data.positionY))
@@ -333,7 +380,13 @@ extension ProjectDocument {
                 colorHex: hexString(from: title.style.color),
                 alignment: documentAlignment(from: title.style.alignment),
                 durationSeconds: CMTimeGetSeconds(title.duration),
-                transform: title.transform.map(documentTransform(from:))
+                transform: title.transform.map(documentTransform(from:)),
+                strokeWidth: title.style.stroke?.width,
+                strokeColorHex: title.style.stroke.flatMap { hexString(from: $0.color) },
+                shadowOffsetX: title.style.shadow.map { Double($0.offset.width) },
+                shadowOffsetY: title.style.shadow.map { Double($0.offset.height) },
+                shadowBlur: title.style.shadow?.blur,
+                shadowColorHex: title.style.shadow.flatMap { hexString(from: $0.color) }
             ))
         }
         if let transition = clip as? Kadr.Transition {
@@ -439,7 +492,13 @@ extension ProjectDocument {
                 positionX: positionXY(text.position).x,
                 positionY: positionXY(text.position).y,
                 anchor: documentAnchor(from: text.anchor),
-                opacity: text.opacity
+                opacity: text.opacity,
+                strokeWidth: text.style.stroke?.width,
+                strokeColorHex: text.style.stroke.flatMap { hexString(from: $0.color) },
+                shadowOffsetX: text.style.shadow.map { Double($0.offset.width) },
+                shadowOffsetY: text.style.shadow.map { Double($0.offset.height) },
+                shadowBlur: text.style.shadow?.blur,
+                shadowColorHex: text.style.shadow.flatMap { hexString(from: $0.color) }
             ))
         }
         if let image = overlay as? ImageOverlay {
