@@ -172,6 +172,148 @@ final class ProjectStore: ObservableObject {
         applyMutation("Add Audio") { $0.audioTracks.append(audioTrack) }
     }
 
+    // MARK: - Transitions (v0.7 Tier 2)
+
+    /// Insert a `Transition` after the clip with `afterClipID`, or *replace*
+    /// the existing transition at that gap if one is already there. No-op
+    /// when the clip is the last one in `project.clips` (a transition needs
+    /// a successor to dissolve into).
+    ///
+    /// Mutation routes through `applyMutation` so undo / auto-save inherit.
+    /// Action name distinguishes the insert vs. replace case so the system
+    /// Edit menu reads cleanly ("Add Transition" / "Change Transition").
+    ///
+    /// `kind` mirrors kadr's `Transition` enum cases at the API level — the
+    /// `TransitionKind` enum here is a UI-friendly mirror that decouples the
+    /// transitions picker sheet from kadr's type. v0.7 Tier 2.
+    func insertTransition(
+        afterClipID: ClipID,
+        kind: TransitionKind,
+        duration: CMTime
+    ) {
+        // Pre-compute whether we're replacing or inserting so applyMutation
+        // gets the right action name. The pure helper does the work twice
+        // when called inside the mutation closure (once for the name lookup,
+        // once for the apply); cheap enough on a clips array to not matter.
+        let replacing = ProjectStore.hasTransitionAfter(
+            clipID: afterClipID,
+            in: project.clips
+        )
+        let actionName = replacing ? "Change Transition" : "Add Transition"
+        applyMutation(actionName) { project in
+            project.clips = ProjectStore.insertingTransition(
+                clips: project.clips,
+                afterClipID: afterClipID,
+                kind: kind,
+                duration: duration
+            )
+        }
+    }
+
+    /// Pure helper: produce a new clips array with the transition either
+    /// inserted or replaced. No-op (returns the array unchanged) when:
+    /// - the clip with `afterClipID` isn't at the top level of `clips`, or
+    /// - the clip is the last entry (a transition needs a successor).
+    nonisolated static func insertingTransition(
+        clips: [any Clip],
+        afterClipID: ClipID,
+        kind: TransitionKind,
+        duration: CMTime
+    ) -> [any Clip] {
+        guard let index = clips.firstIndex(where: { $0.clipID == afterClipID }) else {
+            return clips
+        }
+        let nextIndex = index + 1
+        guard nextIndex < clips.count else { return clips }
+
+        let transition: any Clip = kind.makeTransition(duration: duration)
+        var newClips = clips
+        if newClips[nextIndex] is Kadr.Transition {
+            // Replace the existing transition at the gap.
+            newClips[nextIndex] = transition
+        } else {
+            // Insert before the successor media clip.
+            newClips.insert(transition, at: nextIndex)
+        }
+        return newClips
+    }
+
+    /// Pure helper: whether the clip with `clipID` is immediately followed by
+    /// a transition in `clips`. Returns false when the clip isn't found or
+    /// has no successor. Used by `insertTransition` to pick a clean action
+    /// name for the system Edit menu, and by the UI to seed the transitions
+    /// picker with the current selection.
+    nonisolated static func hasTransitionAfter(
+        clipID: ClipID,
+        in clips: [any Clip]
+    ) -> Bool {
+        guard let index = clips.firstIndex(where: { $0.clipID == clipID }) else {
+            return false
+        }
+        let nextIndex = index + 1
+        return nextIndex < clips.count && clips[nextIndex] is Kadr.Transition
+    }
+
+    /// Remove the transition (if any) at the gap following `afterClipID`.
+    /// No-op when no transition is present, so callers can issue
+    /// unconditionally. v0.7 Tier 2.
+    func removeTransition(afterClipID: ClipID) {
+        applyMutation("Remove Transition") { project in
+            project.clips = ProjectStore.removingTransition(
+                clips: project.clips,
+                afterClipID: afterClipID
+            )
+        }
+    }
+
+    /// Pure helper: produce a new clips array with the transition at the gap
+    /// following `afterClipID` removed. Returns the array unchanged when no
+    /// transition is in place.
+    nonisolated static func removingTransition(
+        clips: [any Clip],
+        afterClipID id: ClipID
+    ) -> [any Clip] {
+        guard let index = clips.firstIndex(where: { $0.clipID == id }) else {
+            return clips
+        }
+        let nextIndex = index + 1
+        guard nextIndex < clips.count, clips[nextIndex] is Kadr.Transition else {
+            return clips
+        }
+        var newClips = clips
+        newClips.remove(at: nextIndex)
+        return newClips
+    }
+
+    /// Pure helper: return the existing transition's kind + duration at the
+    /// gap following the clip identified by `afterClipID`, if any. Powers
+    /// the transitions picker's "seed current selection" behavior. Returns
+    /// nil when no transition is in place.
+    nonisolated static func currentTransition(
+        afterClipID id: ClipID,
+        in clips: [any Clip]
+    ) -> (kind: TransitionKind, duration: CMTime)? {
+        guard let index = clips.firstIndex(where: { $0.clipID == id }) else {
+            return nil
+        }
+        let nextIndex = index + 1
+        guard nextIndex < clips.count,
+              let transition = clips[nextIndex] as? Kadr.Transition else {
+            return nil
+        }
+        switch transition {
+        case .fade(let dur):     return (.fade, dur)
+        case .dissolve(let dur): return (.dissolve, dur)
+        case .slide:
+            // kadr v0.7 added `.slide` to the engine but the persistence
+            // schema + reels-studio's `TransitionKind` mirror only know
+            // fade + dissolve. Treat slide as "unknown to the picker" —
+            // the sheet falls back to the default selection rather than
+            // crashing on an exhaustiveness mismatch.
+            return nil
+        }
+    }
+
     func append(captions newCaptions: [Caption]) {
         applyMutation("Add Captions") { $0.captions.append(contentsOf: newCaptions) }
     }
