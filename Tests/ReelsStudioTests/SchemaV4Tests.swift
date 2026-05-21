@@ -7,13 +7,12 @@ import Kadr
 @MainActor
 final class SchemaV4Tests: XCTestCase {
 
-    // MARK: - currentSchemaVersion bump
-
-    func testCurrentSchemaVersionIsFour() {
-        XCTAssertEqual(ProjectDocument.currentSchemaVersion, 4)
-    }
-
     // MARK: - filterIDs persistence
+
+    // Note: the dedicated `testCurrentSchemaVersionIs*` assertion moved to
+    // the file matching the current schema (`SchemaV5Tests`) when v5
+    // landed. v4's filterIDs persistence is still load-bearing — those
+    // tests follow.
 
     /// Writing a clip with filters writes a parallel `filterIDs` array that
     /// matches the live `VideoClip.filterIDs`. Without this guarantee, future
@@ -102,7 +101,10 @@ final class SchemaV4Tests: XCTestCase {
         let runtime = loaded.toRuntimeProject()
         let promoted = runtime.toDocument(inheriting: loaded)
 
-        XCTAssertEqual(promoted.schemaVersion, 4)
+        // Promotion target tracks `currentSchemaVersion` rather than pinning
+        // to a specific number — when v5+ landed this test would otherwise
+        // need updating per cycle. Same pattern as `SchemaV3Tests` uses.
+        XCTAssertEqual(promoted.schemaVersion, ProjectDocument.currentSchemaVersion)
         guard case .video(let videoData) = promoted.clips.first else {
             return XCTFail("Expected video clip after re-save")
         }
