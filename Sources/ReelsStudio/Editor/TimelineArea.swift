@@ -97,6 +97,17 @@ struct TimelineArea: View {
                 )
             }
         )
+        .onAudioTrim { event in
+            // v0.7 Tier 1 — kadr-ui v0.10.2's audio trim callback. Music and
+            // SFX share the same `audioTracks` array; a single mutation
+            // handles both.
+            store.applyAudioTrim(
+                trackIndex: event.trackIndex,
+                leadingTrim: event.leadingTrim,
+                trailingTrim: event.trailingTrim
+            )
+            HapticEngine.shared.snap()
+        }
         .fixedCenterPlayhead(store.project.fixedCenterPlayhead)
         .onZoomSnap { _ in HapticEngine.shared.snap() }
         .onClipDragSnap { HapticEngine.shared.snap() }
