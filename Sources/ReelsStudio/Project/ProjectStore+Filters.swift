@@ -10,6 +10,14 @@ extension ProjectStore {
     /// Append `filter` to the selected `VideoClip`'s filter stack. No-op when
     /// the clip isn't a `VideoClip`. Routes through the standard
     /// `updateClip(id:actionName:_:)` so undo / auto-save inherit.
+    /// Add a chroma-key filter built from `color` + `threshold` to the
+    /// selected clip's filter stack. Routes through ``addFilter`` so undo /
+    /// auto-save inherit the same way every other filter does. v0.7 Tier 4.
+    func addChromaKey(id: ClipID, color: PlatformColor, threshold: Double) {
+        let chromaKey = Kadr.ChromaKey(color: color, threshold: threshold)
+        addFilter(id: id, .chromaKey(chromaKey))
+    }
+
     func addFilter(id: ClipID, _ filter: Filter) {
         updateClip(id: id, actionName: "Add Filter") { clip in
             guard let video = clip as? VideoClip else { return clip }
