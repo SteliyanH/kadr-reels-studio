@@ -9,10 +9,9 @@ import KadrUI
 ///
 /// Edits route through ``ProjectStore/applySpeedCurve(id:_:)`` so undo /
 /// redo + auto-save Just Work.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct SpeedCurveSheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
 
@@ -81,7 +80,6 @@ struct SpeedCurveSheet: View {
     }
 }
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 private extension View {
     @ViewBuilder
     func navigationBarTitleDisplayModeInline() -> some View {

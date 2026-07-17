@@ -7,10 +7,9 @@ import Kadr
 /// kadr exposes. Reorder is deferred — list order matches kadr's render
 /// order (declaration order), but the v0.4 surface is tap-to-select, so
 /// drag-to-reorder isn't a primitive yet.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct FiltersSheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
 
@@ -122,7 +121,6 @@ struct FiltersSheet: View {
 
 // MARK: - Row
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 private struct FilterRow: View {
     let filter: Filter
     let onIntensityChange: (Double) -> Void
@@ -199,7 +197,6 @@ private struct FilterRow: View {
     }
 }
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 private extension View {
     @ViewBuilder
     func navigationBarTitleDisplayModeInline() -> some View {

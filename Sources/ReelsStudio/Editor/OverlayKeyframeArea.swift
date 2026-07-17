@@ -10,10 +10,9 @@ import KadrUI
 /// - `ImageOverlay` / `StickerOverlay` — `.position`, `.size`
 /// - `TextOverlay` — none (uses enum-driven `TextAnimation` instead;
 ///   the editor renders zero rows for text overlays)
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct OverlayKeyframeArea: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
 
     var body: some View {
         OverlayKeyframeEditor(

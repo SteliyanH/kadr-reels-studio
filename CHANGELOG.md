@@ -4,6 +4,26 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] - 2026-07-17
+
+Platform modernization — raises the deployment floor to **iOS 17** and migrates the app's stores from `ObservableObject` to the `@Observable` macro. The payoff of the coordinated ecosystem iOS 17 move (kadr v0.15 / kadr-ui v0.12 / kadr-captions v0.8 / kadr-photos v0.7 / **this**). No user-facing feature change.
+
+### Changed
+
+- **Deployment target → iOS 17** (`project.yml`); kadr floor → **≥ 0.15.0**, kadr-ui floor → **≥ 0.12.0** (kadr-captions / kadr-photos pulled to their iOS-17 releases too). The whole stack now shares the iOS 17 baseline.
+- **`@Observable` migration.** The five stores — `ProjectStore`, `ProjectLibrary`, `AppSettings`, `ToastCenter`, `LibraryHost` — move from `ObservableObject` / `@Published` to `@Observable`. Call sites migrate accordingly: `@StateObject` → `@State`, `@ObservedObject` → plain properties (or `@Bindable` where a `$binding` is needed), `@EnvironmentObject` → `@Environment(_:)`, `.environmentObject(_:)` → `.environment(_:)`. Combine (`import Combine`, `@Published`) is dropped where it only backed observation.
+- **Auto-save debounce** rebuilt without Combine: `@Observable` has no `$` publisher, so the editor's debounced save now runs a cancel-and-restart `Task` keyed off a new monotonic `ProjectStore.revision` counter (same 0.5s window). `Project` isn't `Equatable` (it holds `[any Clip]`), so the counter is the change signal.
+- Adopted the iOS-17 two-parameter `onChange(of:_:)` throughout; dropped 38 now-redundant `@available(iOS 16, …)` annotations.
+
+### Fixed
+
+- Migrated a `ProjectStore.applyFilterAnimation` call from kadr's removed index-based `filterAnimation(at:_:)` to the keyed `filterAnimation(for: FilterID, _:)` (resolving the index via the clip's `filterIDs`), preserving the out-of-range no-op. kadr removed the index-based overload in 0.14.
+- Test hygiene: two UI tests now `waitForExistence` before tapping (were racing cold launch); the settings-sheet assertion matches the SDK's uppercased `Form` section header (`"HAPTICS"`).
+
+### Compatibility
+
+Requires **iOS 17+**. Verified: **291 unit + 5 UI tests pass** on-simulator.
+
 ## [0.7.0] - 2026-05-21
 
 Editor UX catch-up. Closes the creator-surface gaps the foundation cycles (v0.1–v0.6) left for later — flat audio rows with no trim handles, a transition data model with no UI to add them (`.fade` / `.dissolve` have shipped since v0.1), text overlays without stroke or shadow, `Filter.chromaKey` without a picker, a project list that was a wall of names without thumbnails. Bumped kadr floor to **≥ 0.12.0** and kadr-ui floor to **≥ 0.10.2**. Six tiers.

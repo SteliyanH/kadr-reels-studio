@@ -7,7 +7,7 @@ import KadrUI
 /// selection-driven swap).
 struct TimelineArea: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     /// Root-row sheet triggers — owned by the parent so it can present them.
     var onAddClip: () -> Void = {}
     var onAddOverlay: () -> Void = {}

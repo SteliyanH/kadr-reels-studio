@@ -10,10 +10,9 @@ import Kadr
 /// Both stroke and shadow have an "Enable" toggle so clearing them through
 /// the UI is a single tap. Wide sliders matching the inspector's existing
 /// 0-1 / 0-360 sliders so the layout doesn't feel inconsistent.
-@available(iOS 16, *)
 struct TextEffectsSection: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
 
     var body: some View {
         if let id = store.selectedOverlayID,

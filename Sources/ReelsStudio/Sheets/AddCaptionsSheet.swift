@@ -14,12 +14,11 @@ import KadrCaptions
 /// `CaptionEditor` always emits the full sorted-by-start array on every
 /// commit, so a single replace call covers add / remove / retime / text
 /// changes uniformly. Undo / redo + auto-save inherit.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct AddCaptionsSheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var toasts: ToastCenter
+    @Environment(ToastCenter.self) private var toasts
 
     @State private var selectedTab: Tab
 
@@ -179,7 +178,6 @@ struct AddCaptionsSheet: View {
     }
 }
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 private extension View {
     @ViewBuilder
     func navigationBarTitleDisplayModeInline() -> some View {

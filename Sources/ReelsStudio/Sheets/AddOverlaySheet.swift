@@ -13,12 +13,11 @@ import Photos
 /// Image / sticker source uses kadr-photos' `PhotoPicker`; the picked
 /// `PHAsset` resolves through `PhotosClipResolver.image(asset:duration:...)`
 /// and the resulting `PlatformImage` powers the overlay constructor.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct AddOverlaySheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var toasts: ToastCenter
+    @Environment(ToastCenter.self) private var toasts
 
     @State private var selectedTab: Tab = .text
 
@@ -60,10 +59,9 @@ struct AddOverlaySheet: View {
 
 // MARK: - Text tab
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 private struct TextOverlayTab: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     let dismiss: DismissAction
 
     @State private var text: String = "New text"
@@ -145,7 +143,6 @@ private struct TextOverlayTab: View {
 
 // MARK: - Image / Sticker tab
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 private struct PhotoOverlayTab: View {
 
     enum Kind {
@@ -164,10 +161,10 @@ private struct PhotoOverlayTab: View {
         }
     }
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     let kind: Kind
     let dismiss: DismissAction
-    @EnvironmentObject private var toasts: ToastCenter
+    @Environment(ToastCenter.self) private var toasts
 
     @State private var picked: [PhotoPickerResult] = []
     @State private var pickedImage: PlatformImage?
@@ -216,7 +213,7 @@ private struct PhotoOverlayTab: View {
             )
             .ignoresSafeArea()
         }
-        .onChange(of: picked) { newValue in
+        .onChange(of: picked) { _, newValue in
             guard !newValue.isEmpty else { return }
             let items = newValue
             Task { await resolvePicked(items) }
@@ -320,7 +317,6 @@ extension PlatformColor {
 
 // MARK: - Inline navigation-bar shim
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 private extension View {
     @ViewBuilder
     func navigationBarTitleDisplayModeInline() -> some View {

@@ -6,7 +6,7 @@ import KadrUI
 /// (gesture-routed overlays). Aspect ratio locked to the project preset's resolution.
 struct PreviewArea: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
 
     var body: some View {
         let video = store.video

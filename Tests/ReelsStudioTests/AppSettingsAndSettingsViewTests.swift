@@ -51,7 +51,7 @@ final class AppSettingsTests: XCTestCase {
 final class SettingsViewTests: XCTestCase {
 
     // SettingsView reads `@EnvironmentObject AppSettings`; calling `.body`
-    // on `someView.environmentObject(...)` traps because `.body` isn't
+    // on `someView.environment(...)` traps because `.body` isn't
     // defined on the wrapping `ModifiedContent`, and constructing the
     // EnvironmentObject without a hosting controller is messy. The Form's
     // construction is exercised by the build / Xcode preview / manual QA;

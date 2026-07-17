@@ -2,7 +2,7 @@ name: ReelsStudio
 options:
   bundleIdPrefix: com.steliyanh
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
   developmentLanguage: en
   createIntermediateGroups: true
 
@@ -15,16 +15,16 @@ settings:
 packages:
   Kadr:
     url: https://github.com/SteliyanH/kadr.git
-    from: 0.12.0
+    from: 0.15.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
-    from: 0.10.2
+    from: 0.12.0
   KadrCaptions:
     url: https://github.com/SteliyanH/kadr-captions.git
-    from: 0.4.0
+    from: 0.8.0
   KadrPhotos:
     url: https://github.com/SteliyanH/kadr-photos.git
-    from: 0.4.0
+    from: 0.7.0
   Sentry:
     url: https://github.com/getsentry/sentry-cocoa.git
     from: 8.36.0
@@ -55,7 +55,7 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1,2"
-        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         ENABLE_PREVIEWS: YES
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: ""
