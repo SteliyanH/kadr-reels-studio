@@ -7,10 +7,9 @@ import KadrUI
 /// (Position / Anchor / Opacity) + type-specific (Text + animation,
 /// Sticker rotation) controls. Mutations route through ``ProjectStore``'s
 /// overlay-mutation surface.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct OverlayInspectorArea: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
 
     var body: some View {
         VStack(spacing: 8) {

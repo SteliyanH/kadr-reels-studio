@@ -6,10 +6,9 @@ import Kadr
 /// Sheet for adding a time-pinned sound effect. User picks an audio file, drags a
 /// slider to set the composition time at which the SFX fires, taps **Add** →
 /// appends an `AudioTrack` pinned via `.at(time:)`.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct AddSFXSheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var pickedURL: URL?

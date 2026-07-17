@@ -9,10 +9,9 @@ import Kadr
 /// Tapping a row sets ``ProjectStore/selectedOverlayID`` and dismisses —
 /// the editor's body picks up the new selection and swaps its inspector /
 /// keyframe surface to the overlay-targeted variants.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct LayersSheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -124,7 +123,6 @@ struct LayersSheet: View {
     }
 }
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 private extension View {
     @ViewBuilder
     func navigationBarTitleDisplayModeInline() -> some View {

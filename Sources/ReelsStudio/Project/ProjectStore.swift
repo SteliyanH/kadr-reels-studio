@@ -1,26 +1,33 @@
 import Foundation
-import Combine
 import CoreMedia
 import SwiftUI
 import Kadr
 import KadrUI
 
-/// `ObservableObject` owning the editor's ``Project`` state. Targeting iOS 16 keeps
-/// us on `ObservableObject` rather than the iOS 17+ `@Observable` macro — a v0.2
-/// patch can swap when the deployment floor moves.
+/// `@Observable` store owning the editor's ``Project`` state. Migrated from
+/// `ObservableObject` when the deployment floor moved to iOS 17.
 ///
 /// The store is the single source of truth. Mutations go through its methods so we
 /// can extend them later (history / undo, persistence). The derived ``video`` is
 /// recomputed on every read; SwiftUI's body invalidation handles caching at the
 /// view level.
 @MainActor
-final class ProjectStore: ObservableObject {
+@Observable
+final class ProjectStore {
 
-    @Published private(set) var project: Project
+    private(set) var project: Project {
+        didSet { revision &+= 1 }
+    }
+
+    /// Monotonic change counter — bumped on every `project` mutation. A stable,
+    /// `Equatable` signal for `onChange`-driven auto-save now that `@Observable`
+    /// replaced the `@Published` Combine publisher the debounce used to observe.
+    /// `Project` itself isn't `Equatable` (it holds `[any Clip]` existentials).
+    private(set) var revision = 0
 
     /// Currently-selected clip's ``ClipID``, mirrored to the inspector and keyframe
     /// editor. `nil` when nothing's selected.
-    @Published var selectedClipID: ClipID? {
+    var selectedClipID: ClipID? {
         didSet {
             // Mutual exclusion: selecting a clip clears any overlay selection.
             // The editor body picks which inspector / keyframe surface to
@@ -32,14 +39,14 @@ final class ProjectStore: ObservableObject {
     /// Currently-selected overlay's ``LayerID``. v0.3 surfaces selection
     /// through the Layers sheet; v0.4 will add tap-to-select on
     /// ``KadrUI/OverlayHost``. Mutually exclusive with ``selectedClipID``.
-    @Published var selectedOverlayID: LayerID? {
+    var selectedOverlayID: LayerID? {
         didSet {
             if selectedOverlayID != nil { selectedClipID = nil }
         }
     }
 
     /// Composition-time playhead. Driven by `TimelineView`'s tap-to-scrub.
-    @Published var currentTime: CMTime = .zero
+    var currentTime: CMTime = .zero
 
     /// Multi-select mode flag — when `true`, taps on timeline clips toggle
     /// set membership (`selectedClipIDs`) instead of writing single-select
@@ -47,7 +54,7 @@ final class ProjectStore: ObservableObject {
     /// `onLongPressClip`); exited via the multi-select toolbar's Cancel or
     /// by completing a `wrapInTrack`. Clearing the flag clears the set.
     /// v0.4 Tier 5.
-    @Published var isMultiSelecting: Bool = false {
+    var isMultiSelecting: Bool = false {
         didSet {
             if !isMultiSelecting { selectedClipIDs.removeAll() }
         }
@@ -56,7 +63,7 @@ final class ProjectStore: ObservableObject {
     /// The set of clip ids currently multi-selected. Drives kadr-ui v0.9.2's
     /// `selectedClipIDs:` binding (every member of the set renders a
     /// selection ring). Empty when not in multi-select mode. v0.4 Tier 5.
-    @Published var selectedClipIDs: Set<ClipID> = []
+    var selectedClipIDs: Set<ClipID> = []
 
     /// History stack for ``undo()`` / ``redo()``. Snapshots the previous
     /// `Project` value before every mutation. Selection / playhead aren't
@@ -65,10 +72,10 @@ final class ProjectStore: ObservableObject {
 
     /// SwiftUI-observable mirror of ``undoManager.canUndo``. Drives the
     /// disabled state of the toolbar arrows.
-    @Published private(set) var canUndo = false
+    private(set) var canUndo = false
 
     /// SwiftUI-observable mirror of ``undoManager.canRedo``.
-    @Published private(set) var canRedo = false
+    private(set) var canRedo = false
 
     init(project: Project) {
         self.project = project
@@ -553,7 +560,7 @@ final class ProjectStore: ObservableObject {
 
     /// Replace the speed curve on the identified `VideoClip`. Pass `nil` to
     /// clear the curve (the engine then uses the static `speedRate` instead;
-    /// the user resets the rate via `clip.speed(1.0)` independently). No-op
+    /// the user resets the rate via `clip.speed(.flat(1.0))` independently). No-op
     /// for non-VideoClip clip kinds.
     ///
     /// Routes through ``SpeedCurveEditor``'s `onUpdate` callback. Persists

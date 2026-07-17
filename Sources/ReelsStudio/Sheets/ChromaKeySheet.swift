@@ -13,10 +13,9 @@ import Kadr
 /// "Pick from preview" (tap the video preview to sample a color) is a
 /// follow-up — needs `VideoPreview` to expose tap → color sampling, which
 /// the current kadr-ui surface doesn't offer.
-@available(iOS 16, *)
 struct ChromaKeySheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
 
@@ -115,7 +114,6 @@ struct ChromaKeySheet: View {
 
 // MARK: - Bridges
 
-@available(iOS 16, *)
 private extension View {
     @ViewBuilder
     func navigationBarTitleDisplayModeInline() -> some View {

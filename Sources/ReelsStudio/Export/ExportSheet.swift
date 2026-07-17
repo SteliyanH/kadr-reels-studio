@@ -7,10 +7,9 @@ import UIKit
 /// Export sheet — preset picker, run button, progress UI, and a share-sheet
 /// presentation on completion. Drives `Kadr.Exporter.run()`'s
 /// `AsyncThrowingStream<ExportProgress, Error>` to surface live progress.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct ExportSheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedPreset: ExportPreset = .reelsAndShorts
@@ -144,7 +143,6 @@ struct ExportSheet: View {
 
 // MARK: - Preset enum (kadr-side bridge)
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 extension ExportSheet {
     enum ExportPreset: String, CaseIterable, Identifiable {
         case reelsAndShorts
@@ -190,7 +188,6 @@ extension ExportSheet {
 // MARK: - UIActivityViewController bridge
 
 #if canImport(UIKit)
-@available(iOS 16, *)
 private struct ActivityView: UIViewControllerRepresentable {
     let items: [Any]
 

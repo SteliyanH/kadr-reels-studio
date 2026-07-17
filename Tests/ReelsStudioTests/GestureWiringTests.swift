@@ -22,8 +22,8 @@ final class GestureWiringTests: XCTestCase {
     func testProjectListExposesNewProjectButton() throws {
         let library = try makeLibrary()
         let view = ProjectListView(library: library)
-            .environmentObject(ToastCenter())
-            .environmentObject(AppSettings.shared)
+            .environment(ToastCenter())
+            .environment(AppSettings.shared)
         // We can't traverse a NavigationStack body from ViewInspector cleanly,
         // but the smoke proves the view *constructs* and that the library
         // dependency is honored — a missing `@EnvironmentObject` here would

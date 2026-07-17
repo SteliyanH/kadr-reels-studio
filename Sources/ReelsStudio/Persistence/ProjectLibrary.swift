@@ -8,16 +8,17 @@ import Foundation
 /// schedules saves on a debounced background task; this layer doesn't
 /// itself enforce any save cadence.
 @MainActor
-final class ProjectLibrary: ObservableObject {
+@Observable
+final class ProjectLibrary {
 
-    @Published public private(set) var documents: [ProjectDocument]
+    public private(set) var documents: [ProjectDocument]
 
     /// Project files in the library directory that failed to load. Populated
     /// by ``loadAll(in:fileManager:)`` (v0.6 Tier 2) — drives the "Skipped
     /// projects" recovery section in `ProjectListView`. Mutations are
     /// ``discardSkipped(_:)`` to delete the file off disk and remove it
     /// from this list.
-    @Published public private(set) var skippedProjects: [SkippedProject]
+    public private(set) var skippedProjects: [SkippedProject]
 
     private let directoryURL: URL
     private let fileManager: FileManager

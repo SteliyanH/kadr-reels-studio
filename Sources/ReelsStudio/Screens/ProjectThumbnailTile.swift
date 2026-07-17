@@ -8,7 +8,6 @@ import SwiftUI
 /// AVAssetImageGenerator. Empty / unrenderable projects fall back to a
 /// deterministic `LinearGradient` keyed off the project id so each
 /// project looks visually distinct even without a real first frame.
-@available(iOS 16, *)
 struct ProjectThumbnailTile: View {
 
     let document: ProjectDocument
@@ -81,7 +80,6 @@ struct ProjectThumbnailTile: View {
 /// to a system "photo" glyph on failure so the cell can't get stuck at a
 /// half-rendered state. Hoisted out of the tile body so the test surface
 /// stays trivial.
-@available(iOS 16, *)
 private func imageFromDisk(_ url: URL) -> Image {
     #if canImport(UIKit)
     if let uiImage = UIImage(contentsOfFile: url.path) {

@@ -15,12 +15,11 @@ import Photos
 /// `PhotosClipResolver.clips(from:)` and appends the resolved clips to the project.
 /// Resolution failures surface as a console log in v0.1; a v0.1.x patch can wire an
 /// alert.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct AddClipFlow: ViewModifier {
 
     @Binding var isPresented: Bool
-    @ObservedObject var store: ProjectStore
-    @EnvironmentObject var toasts: ToastCenter
+    var store: ProjectStore
+    @Environment(ToastCenter.self) private var toasts
     @State private var pickedItems: [PhotoPickerResult] = []
     @State private var isResolving = false
 
@@ -33,7 +32,7 @@ struct AddClipFlow: ViewModifier {
                 )
                 .ignoresSafeArea()
             }
-            .onChange(of: pickedItems) { newItems in
+            .onChange(of: pickedItems) { _, newItems in
                 guard !newItems.isEmpty else { return }
                 let items = newItems
                 Task { await resolveAndAppend(items) }
@@ -64,7 +63,6 @@ struct AddClipFlow: ViewModifier {
     }
 }
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 extension View {
     /// Convenience: attach the ``AddClipFlow`` modifier.
     func addClipFlow(isPresented: Binding<Bool>, store: ProjectStore) -> some View {
@@ -74,7 +72,6 @@ extension View {
 
 /// Loading overlay shown while `clips(from:)` is in flight. Dimmed background +
 /// progress indicator + label.
-@available(iOS 16, macOS 13, visionOS 1, *)
 private struct ResolvingOverlay: View {
     var body: some View {
         ZStack {

@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 import CoreMedia
 import Kadr
 
@@ -12,9 +11,9 @@ import Kadr
 /// Save button anywhere; closing the editor is enough.
 struct EditorView: View {
 
-    @StateObject private var store: ProjectStore
-    @ObservedObject private var library: ProjectLibrary
-    @EnvironmentObject private var toasts: ToastCenter
+    @State private var store: ProjectStore
+    private var library: ProjectLibrary
+    @Environment(ToastCenter.self) private var toasts
     @Environment(\.scenePhase) private var scenePhase
 
     /// The document this editor is bound to. Mutated in-place as auto-save
@@ -54,11 +53,15 @@ struct EditorView: View {
     /// (slider drags, inspector typing) while still feeling near-instant.
     private static let autoSaveDebounce: TimeInterval = 0.5
 
+    /// In-flight debounced auto-save. Cancelled and restarted on every store
+    /// mutation (iOS 17 replacement for the Combine `.debounce` pipeline).
+    @State private var autoSaveTask: Task<Void, Never>?
+
     init(document: ProjectDocument, library: ProjectLibrary) {
         self._document = State(initialValue: document)
-        self._library = ObservedObject(initialValue: library)
-        self._store = StateObject(
-            wrappedValue: ProjectStore(project: document.toRuntimeProject())
+        self.library = library
+        self._store = State(
+            initialValue: ProjectStore(project: document.toRuntimeProject())
         )
     }
 
@@ -166,7 +169,12 @@ struct EditorView: View {
             }
         }
         .sheet(isPresented: $showSettings) {
+            // Re-inject AppSettings on the sheet: @Observable environment objects
+            // injected at the app root don't reliably cross the sheet boundary the way
+            // `.environmentObject` did, and SettingsView reads `@Environment(AppSettings.self)`.
+            // `AppSettings.shared` is the same instance the root injects.
             SettingsView(store: store)
+                .environment(AppSettings.shared)
         }
         .alert(
             "Photos access needed",
@@ -206,28 +214,29 @@ struct EditorView: View {
                 .help("Open settings")
             }
         }
-        .onReceive(
-            store.$project
-                .dropFirst()
-                .debounce(
-                    for: .seconds(Self.autoSaveDebounce),
-                    scheduler: DispatchQueue.main
-                )
-        ) { _ in
-            autoSave()
+        // iOS 17 — @Observable has no Combine publisher, so debounce auto-save with a
+        // cancel-and-restart Task keyed off the store's revision counter (replaces the
+        // old `store.$project.debounce(...)` pipeline). Same 0.5s window.
+        .onChange(of: store.revision) {
+            autoSaveTask?.cancel()
+            autoSaveTask = Task {
+                try? await Task.sleep(for: .seconds(Self.autoSaveDebounce))
+                guard !Task.isCancelled else { return }
+                autoSave()
+            }
         }
         .onAppear { restoreSceneStateIfMatching() }
-        .onChange(of: store.currentTime) { newValue in
+        .onChange(of: store.currentTime) { _, newValue in
             savedPlayheadSeconds = CMTimeGetSeconds(newValue)
             savedDocumentID = document.id.uuidString
         }
-        .onChange(of: store.selectedClipID) { newValue in
+        .onChange(of: store.selectedClipID) { _, newValue in
             savedSelectedClipID = newValue?.rawValue ?? ""
         }
-        .onChange(of: store.selectedOverlayID) { newValue in
+        .onChange(of: store.selectedOverlayID) { _, newValue in
             savedSelectedOverlayID = newValue?.rawValue ?? ""
         }
-        .onChange(of: scenePhase) { phase in
+        .onChange(of: scenePhase) { _, phase in
             // .background fires when the user backgrounds the app (home /
             // swipe-up / lock). Force-flush any pending autosave so a force-
             // quit while the debounce timer is in-flight doesn't lose work.

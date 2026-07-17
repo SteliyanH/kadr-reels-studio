@@ -9,10 +9,9 @@ import KadrUI
 /// values and rebuilds the affected clip via the immutable kadr modifier
 /// chain. Every operation runs through ``ProjectStore/applyMutation(actionName:)``
 /// so undo / redo and auto-save Just Work.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct KeyframeArea: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
 
     var body: some View {
         KeyframeEditor(

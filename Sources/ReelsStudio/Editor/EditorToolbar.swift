@@ -11,8 +11,8 @@ import Kadr
 /// row reserves their slots but renders them disabled until that PR.
 struct EditorToolbar: View {
 
-    @ObservedObject var store: ProjectStore
-    @EnvironmentObject private var toasts: ToastCenter
+    var store: ProjectStore
+    @Environment(ToastCenter.self) private var toasts
 
     // Root-row callbacks — owned by `EditorView` so it can present sheets.
     var onAddClip: () -> Void
