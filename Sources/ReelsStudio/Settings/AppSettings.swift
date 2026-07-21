@@ -1,17 +1,17 @@
 import Foundation
-import Combine
 
 /// App-wide preferences. UserDefaults-backed; separate from
 /// ``ProjectDocument`` because these are device-environment scoped, not
 /// project-scoped (per the v0.5 RFC — haptic preference travels with the
 /// user, not with the file).
 ///
-/// Owned at the app root via ``ReelsStudioApp``'s `@StateObject`; reached
-/// from any screen via `@EnvironmentObject`. ``HapticEngine`` reads the
+/// Owned at the app root via ``ReelsStudioApp``'s `@State`; reached
+/// from any screen via `@Environment(AppSettings.self)`. ``HapticEngine`` reads the
 /// process-global ``shared`` instance directly so gating doesn't need to
 /// thread state through every call site.
 @MainActor
-final class AppSettings: ObservableObject {
+@Observable
+final class AppSettings {
 
     /// Process-global instance. ``HapticEngine`` reads from this so haptic
     /// fires gate on the current intensity without per-call dependency
@@ -19,7 +19,7 @@ final class AppSettings: ObservableObject {
     /// instance with a sandboxed `UserDefaults` suite.
     static let shared = AppSettings()
 
-    @Published var hapticIntensity: HapticIntensity {
+    var hapticIntensity: HapticIntensity {
         didSet { defaults.set(hapticIntensity.rawValue, forKey: Keys.hapticIntensity) }
     }
 

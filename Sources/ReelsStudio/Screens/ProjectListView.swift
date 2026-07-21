@@ -7,10 +7,9 @@ import SwiftUI
 ///
 /// Tier 2 of v0.2 — first-run UX. Replaces the v0.1 launch path that booted
 /// straight into a hardcoded sample project.
-@available(iOS 16, *)
 struct ProjectListView: View {
 
-    @ObservedObject var library: ProjectLibrary
+    var library: ProjectLibrary
 
     /// Drives `NavigationStack` programmatic navigation: pushing a document id
     /// pushes the corresponding `EditorView`. Held by the list so the
@@ -32,7 +31,7 @@ struct ProjectListView: View {
             content
                 .navigationTitle("Projects")
                 .onAppear { restoreLastOpenedIfPossible() }
-                .onChange(of: path) { newPath in
+                .onChange(of: path) { _, newPath in
                     lastOpenedProjectID = newPath.last?.uuidString ?? ""
                 }
                 .toolbar {
@@ -247,7 +246,6 @@ struct ProjectListView: View {
 
 // MARK: - Row
 
-@available(iOS 16, *)
 struct ProjectRow: View {
 
     let document: ProjectDocument
@@ -291,7 +289,6 @@ struct ProjectRow: View {
 
 // MARK: - Skipped recovery views
 
-@available(iOS 16, *)
 struct SkippedProjectRow: View {
 
     let skipped: SkippedProject
@@ -325,7 +322,6 @@ struct SkippedProjectRow: View {
     }
 }
 
-@available(iOS 16, *)
 struct SkippedProjectDetailSheet: View {
 
     let skipped: SkippedProject

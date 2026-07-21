@@ -5,10 +5,9 @@ import Kadr
 /// Sheet for adding a background music track. User picks an audio file via
 /// `.fileImporter`, sets volume + ducking, taps **Add** → appends an `AudioTrack`
 /// with sensible defaults (fade-in 0.5s, fade-out 1.0s, optional ducking 0.3).
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct AddMusicSheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var pickedURL: URL?

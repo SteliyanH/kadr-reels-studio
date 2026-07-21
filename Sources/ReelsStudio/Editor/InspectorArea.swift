@@ -7,10 +7,9 @@ import KadrUI
 /// curve…" affordance that pushes ``SpeedCurveSheet`` for `VideoClip`
 /// selections (the editor's log-scaled multiplier axis needs room a row
 /// can't give).
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct InspectorArea: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     @State private var showSpeedCurveSheet = false
 
     var body: some View {

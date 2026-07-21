@@ -246,14 +246,17 @@ extension ProjectStore {
         return clip
     }
 
-    /// Apply (or clear) the animation on `filters[filterIndex]`. Routes
-    /// through kadr v0.10.1's `filterAnimation(at:_:)` setter which
-    /// addresses the indexed slot directly without disturbing siblings.
+    /// Apply (or clear) the animation on `filters[filterIndex]`. Routes through
+    /// kadr's `filterAnimation(for:_:)` keyed setter (the index-based
+    /// `filterAnimation(at:_:)` was removed in kadr 0.14); resolves the index to
+    /// its `FilterID` via the clip's parallel `filterIDs` array, preserving the
+    /// out-of-range no-op behavior the index path had.
     nonisolated static func applyFilterAnimation(
         _ video: VideoClip,
         filterIndex: Int,
         animation: Kadr.Animation<Double>?
     ) -> VideoClip {
-        video.filterAnimation(at: filterIndex, animation)
+        guard filterIndex >= 0, filterIndex < video.filterIDs.count else { return video }
+        return video.filterAnimation(for: video.filterIDs[filterIndex], animation)
     }
 }

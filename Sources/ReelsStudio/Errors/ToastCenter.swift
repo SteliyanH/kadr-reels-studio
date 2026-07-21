@@ -3,7 +3,7 @@ import SwiftUI
 
 /// App-wide error / status surfacing. Single instance owned at the
 /// ``ReelsStudioApp`` root via ``LibraryHost``; routed into every screen
-/// through `.environmentObject(toasts)`.
+/// through `.environment(toasts)`.
 ///
 /// **Severity routing** mirrors ``AppError``:
 /// - `.transient` → ``current`` toast banner, auto-dismisses after 2s.
@@ -14,11 +14,12 @@ import SwiftUI
 /// Only one of each tier is shown at a time. A new toast replaces the
 /// in-flight one (the user has already moved past the previous error).
 @MainActor
-final class ToastCenter: ObservableObject {
+@Observable
+final class ToastCenter {
 
-    @Published var current: TransientToast?
-    @Published var resumable: ResumableError?
-    @Published var catastrophic: CatastrophicError?
+    var current: TransientToast?
+    var resumable: ResumableError?
+    var catastrophic: CatastrophicError?
 
     private var dismissTask: Task<Void, Never>?
 

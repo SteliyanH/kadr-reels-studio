@@ -11,10 +11,9 @@ import Kadr
 /// `ProjectStore.insertTransition(afterClipID:kind:duration:)` — the
 /// mutation replaces an existing transition at the same gap or inserts a
 /// new one, so the sheet doesn't have to branch.
-@available(iOS 16, *)
 struct TransitionsSheet: View {
 
-    @ObservedObject var store: ProjectStore
+    var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
 
@@ -159,7 +158,6 @@ struct TransitionsSheet: View {
 
 /// `.navigationBarTitleDisplayMode(.inline)` is iOS-only. Same shim pattern
 /// the editor uses.
-@available(iOS 16, *)
 private extension View {
     @ViewBuilder
     func navigationBarTitleDisplayModeInline() -> some View {

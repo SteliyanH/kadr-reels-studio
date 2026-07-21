@@ -95,6 +95,10 @@ Suite: 254 → 291 unit + 5 UI (37 unit new across the cycle).
 
 Paired with **kadr v0.12.0** + **kadr-ui v0.10.2** which shipped during the cycle.
 
+## v0.7.1 — iOS 17 floor + `@Observable` migration ✓ shipped
+
+Platform modernization, not features. Raises the deployment floor to **iOS 17** and migrates the five app stores (`ProjectStore`, `ProjectLibrary`, `AppSettings`, `ToastCenter`, `LibraryHost`) from `ObservableObject` to the `@Observable` macro — the payoff of the coordinated ecosystem iOS 17 move (kadr v0.15 / kadr-ui v0.12 / kadr-captions v0.8 / kadr-photos v0.7 / this). Auto-save debounce rebuilt on structured concurrency (no Combine); the removed kadr `filterAnimation(at:)` call migrated to the keyed API. 291 unit + 5 UI tests pass. No user-facing change; v0.8 features are unaffected.
+
 ## v0.8.0 — Platform polish + import/export *(planned)*
 
 Last cycle before v1.0 App Store submission. No new AI features — auto-captions, person cutout, and Vision-based smart crop all moved to kadr-pro per the [Kadr Pro scope](https://github.com/SteliyanH/kadr/blob/main/ROADMAP.md#kadr-pro). What's left to ship in the OSS app:

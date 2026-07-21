@@ -12,11 +12,10 @@ import SwiftUI
 /// v0.5 Tier 1. The picker UI is reels-studio's only entry point for the
 /// preferences v0.4 introduced — before this, the only way to set a custom
 /// accent or disable the fixed-center playhead was editing JSON on disk.
-@available(iOS 16, macOS 13, visionOS 1, *)
 struct SettingsView: View {
 
-    @ObservedObject var store: ProjectStore
-    @EnvironmentObject private var settings: AppSettings
+    var store: ProjectStore
+    @Environment(AppSettings.self) private var settings
     @Environment(\.dismiss) private var dismiss
 
     /// Mirror of `store.project.accentColor != nil`. Bound to the System /
@@ -64,13 +63,13 @@ struct SettingsView: View {
                 Text("Custom").tag(true)
             }
             .pickerStyle(.segmented)
-            .onChange(of: useCustomAccent) { newValue in
+            .onChange(of: useCustomAccent) { _, newValue in
                 store.setAccentColor(newValue ? customAccent : nil)
             }
 
             if useCustomAccent {
                 ColorPicker("Color", selection: $customAccent, supportsOpacity: false)
-                    .onChange(of: customAccent) { newValue in
+                    .onChange(of: customAccent) { _, newValue in
                         store.setAccentColor(newValue)
                     }
             }
@@ -94,9 +93,12 @@ struct SettingsView: View {
 
     // MARK: - Haptics
 
-    @ViewBuilder
     private var hapticsSection: some View {
-        Section("Haptics") {
+        // iOS 17 — derive a binding to the @Observable @Environment settings via a
+        // local @Bindable (the replacement for `@ObservedObject` / `@EnvironmentObject`
+        // bindings).
+        @Bindable var settings = settings
+        return Section("Haptics") {
             Picker("Strength", selection: $settings.hapticIntensity) {
                 ForEach(HapticIntensity.allCases, id: \.self) { intensity in
                     Text(intensity.displayName).tag(intensity)
@@ -107,7 +109,6 @@ struct SettingsView: View {
     }
 }
 
-@available(iOS 16, macOS 13, visionOS 1, *)
 private extension View {
     @ViewBuilder
     func navigationBarTitleDisplayModeInline() -> some View {

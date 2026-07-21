@@ -48,7 +48,7 @@ extension View {
 
 private struct ToastHostModifier: ViewModifier {
 
-    @ObservedObject var center: ToastCenter
+    @Bindable var center: ToastCenter
 
     func body(content: Content) -> some View {
         content
@@ -100,7 +100,7 @@ private struct ToastHostModifier: ViewModifier {
 
 private struct ResumableErrorSheet: View {
     let error: ResumableError
-    @ObservedObject var center: ToastCenter
+    var center: ToastCenter
 
     var body: some View {
         VStack(spacing: 16) {
