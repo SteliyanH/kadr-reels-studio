@@ -84,12 +84,14 @@ final class ReelsStudioUITests: XCTestCase {
         XCTAssertTrue(settings.waitForExistence(timeout: 5))
         settings.tap()
 
-        // SettingsView's body has a "Haptics" Section — its header text is
-        // unique to the sheet (the editor doesn't render this string),
-        // making it a clean sheet-presence assertion. The section header is
-        // exposed uppercased ("HAPTICS") by the Form styling on the current SDK.
+        // Assert on the Haptics section's "Medium" option button rather than the
+        // section header text: `Form` section headers are exposed with OS-dependent
+        // casing (title-case "Haptics" on some runtimes, uppercased "HAPTICS" on
+        // others), so a header-text match is brittle across SDKs. Button labels keep
+        // their case, and "Medium" is unique to the Haptics section — a stable proof
+        // the Settings sheet presented.
         XCTAssertTrue(
-            app.staticTexts["HAPTICS"].waitForExistence(timeout: 5),
+            app.buttons["Medium"].waitForExistence(timeout: 5),
             "Tapping the gear should present the Settings sheet"
         )
     }
