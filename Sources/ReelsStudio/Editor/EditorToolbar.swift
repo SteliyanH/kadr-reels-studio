@@ -13,6 +13,7 @@ struct EditorToolbar: View {
 
     var store: ProjectStore
     @Environment(ToastCenter.self) private var toasts
+    @Environment(\.modernistPalette) private var palette
 
     // Root-row callbacks — owned by `EditorView` so it can present sheets.
     var onAddClip: () -> Void
@@ -200,7 +201,7 @@ struct EditorToolbar: View {
             }
             Text("\(store.selectedClipIDs.count) selected")
                 .font(.caption.bold())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
                 .padding(.leading, 4)
                 .accessibilityLabel("Selection")
                 .accessibilityValue("\(store.selectedClipIDs.count) clips selected")
@@ -278,6 +279,13 @@ private struct ToolbarButton: View {
     var hint: String? = nil
     let action: () -> Void
 
+    /// Decision 4 — the accent already *is* red, so a second red fill can't
+    /// read as "danger". Destructive cells take the accent-outlined secondary
+    /// style (they already carry the trash glyph); everything else keeps the
+    /// platform bordered style until Tier 5 moves the whole row onto
+    /// `ModernistToolbarButtonStyle`.
+    private var isDestructive: Bool { role == .destructive }
+
     var body: some View {
         Button(role: role, action: action) {
             VStack(spacing: 2) {
@@ -288,7 +296,7 @@ private struct ToolbarButton: View {
             }
             .frame(minWidth: 56, minHeight: 44)
         }
-        .buttonStyle(.bordered)
+        .modernistDestructiveOrBordered(isDestructive)
         // Default VoiceOver output combines the image's localized name and
         // the text — verbose ("plus rectangle Clip"). Replace it with just
         // the user-facing label so the audio matches the visible text.
@@ -298,5 +306,18 @@ private struct ToolbarButton: View {
         // macOS / Catalyst. Falls back to the visible label when no richer
         // hint is provided. iOS phones (no pointer) ignore .help silently.
         .help(hint ?? label)
+    }
+}
+
+private extension View {
+    /// Two `ButtonStyle` types can't be chosen with a ternary, so the branch
+    /// lives in a `@ViewBuilder`. v0.8 Tier 3.
+    @ViewBuilder
+    func modernistDestructiveOrBordered(_ isDestructive: Bool) -> some View {
+        if isDestructive {
+            buttonStyle(ModernistSecondaryButtonStyle())
+        } else {
+            buttonStyle(.bordered)
+        }
     }
 }

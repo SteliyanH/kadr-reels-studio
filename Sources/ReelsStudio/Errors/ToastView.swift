@@ -7,15 +7,20 @@ struct ToastView: View {
     let toast: TransientToast
     var onTap: (() -> Void)? = nil
 
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
+        // v0.8 Tier 3 — the banner is an inverted block: ink ground, ground-
+        // coloured type. Same read as the old black-at-85% panel, but stated
+        // in palette roles, so it inverts correctly on the studio ground.
         VStack(alignment: .leading, spacing: 2) {
             Text(toast.message)
                 .font(.callout.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(palette.bg)
             if let detail = toast.detail {
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(palette.bg.opacity(0.85))
                     .lineLimit(2)
             }
         }
@@ -24,7 +29,7 @@ struct ToastView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: Modernist.Radius.md)
-                .fill(Color.black.opacity(0.85))
+                .fill(palette.text)
         )
         .padding(.horizontal, 16)
         .onTapGesture { onTap?() }
@@ -102,11 +107,15 @@ private struct ResumableErrorSheet: View {
     let error: ResumableError
     var center: ToastCenter
 
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
         VStack(spacing: 16) {
+            // Decision 4 — no warning role; the accent is what flags a
+            // problem in this scheme.
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(.orange)
+                .foregroundStyle(palette.accent)
             Text(error.message)
                 .font(.headline)
                 .multilineTextAlignment(.center)

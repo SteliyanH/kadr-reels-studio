@@ -9,6 +9,7 @@ struct AddMusicSheet: View {
 
     var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
 
     @State private var pickedURL: URL?
     @State private var showImporter = false
@@ -41,7 +42,7 @@ struct AddMusicSheet: View {
                 Section {
                     Text("Music auto-fades in over 0.5s and out over 1.0s. Auto-ducking lowers music to 30% while clip audio plays.")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.textMuted)
                 }
             }
             .navigationTitle("Add Music")

@@ -16,6 +16,7 @@ struct TransitionsSheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
 
     @State private var selectedKind: TransitionKind
     @State private var durationSeconds: Double
@@ -76,7 +77,7 @@ struct TransitionsSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Kind")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 110, maximum: 160), spacing: 12)], spacing: 12) {
                 ForEach(TransitionKind.allCases, id: \.self) { kind in
                     transitionTile(kind: kind)
@@ -99,13 +100,16 @@ struct TransitionsSheet: View {
             }
             .frame(maxWidth: .infinity, minHeight: 80)
             .padding(8)
+            // v0.8 Tier 3 — the selected-cell pattern for the whole app: a
+            // named `accentTint` fill (never an ad-hoc accent opacity) and a
+            // 2pt accent rule.
             .background(
                 RoundedRectangle(cornerRadius: Modernist.Radius.md)
-                    .fill(isSelected ? Color.accentColor.opacity(0.2) : Color(.secondarySystemBackground))
+                    .fill(isSelected ? palette.accentTint : palette.surface)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Modernist.Radius.md)
-                    .stroke(isSelected ? Color.accentColor : .clear, lineWidth: Modernist.ruleWidth)
+                    .stroke(isSelected ? palette.accent : .clear, lineWidth: Modernist.ruleWidth)
             )
         }
         .buttonStyle(.plain)
@@ -119,11 +123,11 @@ struct TransitionsSheet: View {
             HStack {
                 Text("Duration")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
                 Spacer()
                 Text(String(format: "%.2fs", durationSeconds))
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
             }
             Slider(value: $durationSeconds, in: Self.minDuration...Self.maxDuration)
                 .accessibilityValue(String(format: "%.2f seconds", durationSeconds))
@@ -132,15 +136,17 @@ struct TransitionsSheet: View {
 
     @ViewBuilder
     private var removeButton: some View {
+        // Decision 4 — the accent already *is* red, so destructive is the
+        // accent-outlined secondary style plus the trash glyph, never a
+        // second red fill.
         Button(role: .destructive) {
             store.removeTransition(afterClipID: clipID)
             dismiss()
         } label: {
             Label("Remove transition", systemImage: "trash")
-                .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
-        .padding(.top, 4)
+        .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+        .padding(.top, Modernist.Space.s1)
     }
 
     // MARK: - State

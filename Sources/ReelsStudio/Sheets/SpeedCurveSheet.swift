@@ -14,6 +14,7 @@ struct SpeedCurveSheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
 
     var body: some View {
         NavigationStack {
@@ -36,7 +37,7 @@ struct SpeedCurveSheet: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text(headerText(for: clip))
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
                     .padding(.horizontal)
                 SpeedCurveEditor(
                     clip: clip,
@@ -57,12 +58,12 @@ struct SpeedCurveSheet: View {
             VStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
                 Text("Clip not available")
                     .font(.headline)
                 Text("This clip is no longer in the project. Close this sheet and reselect.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }

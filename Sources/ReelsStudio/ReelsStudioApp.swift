@@ -70,6 +70,8 @@ struct LibraryHostView: View {
 
     var host: LibraryHost
 
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
         if let library = host.library {
             ProjectListView(library: library)
@@ -77,13 +79,13 @@ struct LibraryHostView: View {
             VStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
                 Text("Couldn't open project library")
                     .font(.headline)
                 if let message = host.setupError {
                     Text(message)
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.textMuted)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                 }

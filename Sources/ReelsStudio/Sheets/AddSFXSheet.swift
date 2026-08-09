@@ -10,6 +10,7 @@ struct AddSFXSheet: View {
 
     var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
 
     @State private var pickedURL: URL?
     @State private var showImporter = false
@@ -52,7 +53,7 @@ struct AddSFXSheet: View {
                 Section {
                     Text("SFX play once at the pinned time and don't loop. Total composition is \(String(format: "%.1fs", compositionDurationSeconds)).")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.textMuted)
                 }
             }
             .navigationTitle("Add SFX")

@@ -20,6 +20,8 @@ struct ExportSheet: View {
     @State private var showShareSheet = false
     @State private var exporter: Exporter?
 
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
         NavigationStack {
             Form {
@@ -34,7 +36,7 @@ struct ExportSheet: View {
                     .disabled(stage == .running)
                     Text(selectedPreset.detail)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.textMuted)
                 }
                 Section("Status") {
                     statusRow
@@ -80,25 +82,28 @@ struct ExportSheet: View {
         switch stage {
         case .idle:
             Label("Ready", systemImage: "circle.dotted")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
         case .running:
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView(value: fractionCompleted)
                 Text(String(format: "%.0f%%", fractionCompleted * 100))
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
             }
         case .completed:
+            // Decision 4 — status isn't an accent job, and the scheme has no
+            // success role. Completion reads as plain ink.
             Label("Export complete", systemImage: "checkmark.circle")
-                .foregroundStyle(.green)
+                .foregroundStyle(palette.text)
         case .failed:
+            // …and the accent is the one thing that flags a problem.
             VStack(alignment: .leading, spacing: 4) {
                 Label("Export failed", systemImage: "xmark.circle")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(palette.accent)
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(palette.accentText)
                 }
             }
         }

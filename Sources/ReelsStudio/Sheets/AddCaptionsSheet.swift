@@ -125,7 +125,7 @@ struct AddCaptionsSheet: View {
                 if let pickedURL {
                     Text(pickedURL.pathExtension.uppercased())
                         .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.textMuted)
                 }
             }
             if lastImportedCount > 0 {
@@ -134,7 +134,8 @@ struct AddCaptionsSheet: View {
                         "\(lastImportedCount) cue\(lastImportedCount == 1 ? "" : "s") appended",
                         systemImage: "checkmark.circle"
                     )
-                    .foregroundStyle(.green)
+                    // Decision 4 — no success role; a confirmation is ink.
+                    .foregroundStyle(palette.text)
                     Button("Switch to Edit") {
                         selectedTab = .edit
                     }
@@ -144,7 +145,7 @@ struct AddCaptionsSheet: View {
             Section {
                 Text("Supported formats: SRT, VTT, iTT, ASS, SSA. Cues append to the project's caption list — switch to Edit to retime / rename / delete.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
             }
         }
         .fileImporter(

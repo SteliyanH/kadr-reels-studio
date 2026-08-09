@@ -20,6 +20,12 @@ struct ChromaKeySheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modernistPalette) private var palette
 
+    /// The one chromatic literal left in view code, deliberately. This is not
+    /// chrome — it's the sampled key colour the filter matches against, and
+    /// green is the canonical green-screen start. The v0.8 Tier 3 mono sweep
+    /// styles the chrome around this control and leaves the control (and its
+    /// default) whole: constraining it to the ramp would be a functional
+    /// regression, not a style call.
     @State private var keyColor: Color = .green
     @State private var threshold: Double = 0.4
 
@@ -64,7 +70,7 @@ struct ChromaKeySheet: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Key color")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
             HStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: Modernist.Radius.md)
                     .fill(keyColor)
@@ -86,11 +92,11 @@ struct ChromaKeySheet: View {
             HStack {
                 Text("Threshold")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
                 Spacer()
                 Text(String(format: "%.2f", threshold))
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
             }
             Slider(value: $threshold, in: 0...1)
                 .accessibilityValue(String(format: "%.2f", threshold))
@@ -101,7 +107,7 @@ struct ChromaKeySheet: View {
     private var helpText: some View {
         Text("Picks any pixel near the key color and replaces it with transparency. Lower threshold keeps more of the subject; higher keys out more background.")
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(palette.textMuted)
     }
 
     // MARK: - Apply

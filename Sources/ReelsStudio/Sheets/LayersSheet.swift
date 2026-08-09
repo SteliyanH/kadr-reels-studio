@@ -13,6 +13,7 @@ struct LayersSheet: View {
 
     var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
 
     var body: some View {
         NavigationStack {
@@ -35,12 +36,12 @@ struct LayersSheet: View {
             VStack(spacing: 12) {
                 Image(systemName: "square.stack.3d.up.slash")
                     .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
                 Text("No overlays yet")
                     .font(.headline)
                 Text("Tap **+ Overlay** in the toolbar to add text or stickers.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -77,29 +78,33 @@ struct LayersSheet: View {
     private func row(for overlay: any Overlay, index: Int) -> some View {
         let (icon, kind) = LayersSheet.iconAndKind(for: overlay)
         HStack(spacing: 12) {
+            // v0.8 Tier 3 — the icon tile is an accent-tinted block with an
+            // accent glyph; `.tint` at an arbitrary opacity is replaced by
+            // the named tint role.
             RoundedRectangle(cornerRadius: Modernist.Radius.md)
-                .fill(.tint.opacity(0.2))
+                .fill(palette.accentTint)
                 .frame(width: Modernist.minHitTarget, height: Modernist.minHitTarget)
                 .overlay(
                     Image(systemName: icon)
                         .font(.title3)
-                        .foregroundStyle(.tint)
+                        .foregroundStyle(palette.accent)
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text(LayersSheet.title(for: overlay, index: index))
                     .font(.body.bold())
                 Text(kind)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
             }
             Spacer()
+            // Decision 4 — selection checkmarks go accent.
             if let id = overlay.layerID, store.selectedOverlayID == id {
                 Image(systemName: "checkmark")
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(palette.accent)
             }
             Image(systemName: "chevron.right")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(palette.textMuted)
         }
         .padding(.vertical, 4)
     }

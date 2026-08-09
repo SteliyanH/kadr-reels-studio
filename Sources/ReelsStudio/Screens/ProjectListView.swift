@@ -26,6 +26,8 @@ struct ProjectListView: View {
     /// alert keeps the list robust.
     @State private var errorMessage: String?
 
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
         NavigationStack(path: $path) {
             content
@@ -50,7 +52,7 @@ struct ProjectListView: View {
                         // Document was deleted out from under us — bounce
                         // back to the list with a placeholder.
                         Text("Project not found")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(palette.textMuted)
                     }
                 }
                 .alert(
@@ -91,12 +93,12 @@ struct ProjectListView: View {
         VStack(spacing: 16) {
             Image(systemName: "film.stack")
                 .font(.system(size: 56))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
             Text("No projects yet")
                 .font(.title3.weight(.semibold))
             Text("Start with a new project, or import the bundled sample to see what the editor can do.")
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             HStack(spacing: 12) {
@@ -180,7 +182,8 @@ struct ProjectListView: View {
                         } label: {
                             Label("Details", systemImage: "doc.text.magnifyingglass")
                         }
-                        .tint(.blue)
+                        // v0.8 Tier 3 — one accent, no second hue.
+                        .tint(palette.accent)
                     }
                     .contentShape(Rectangle())
                     .onTapGesture { inspectingSkipped = skipped }
@@ -254,6 +257,8 @@ struct ProjectRow: View {
 
     let document: ProjectDocument
 
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
         HStack(spacing: 12) {
             ProjectThumbnailTile(document: document)
@@ -267,7 +272,7 @@ struct ProjectRow: View {
                     Text("\(document.clips.count) clip\(document.clips.count == 1 ? "" : "s")")
                 }
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
             }
         }
         .padding(.vertical, 4)
@@ -297,10 +302,14 @@ struct SkippedProjectRow: View {
 
     let skipped: SkippedProject
 
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
+            // v0.8 Tier 3 / Decision 4 — the scheme has no warning role. This
+            // is the one place the accent flags a problem.
             Image(systemName: iconName)
-                .foregroundStyle(.orange)
+                .foregroundStyle(palette.accent)
                 .font(.title3)
             VStack(alignment: .leading, spacing: 2) {
                 Text(skipped.id)
@@ -309,7 +318,7 @@ struct SkippedProjectRow: View {
                     .truncationMode(.middle)
                 Text(skipped.reason.displayLabel)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
             }
         }
         .padding(.vertical, 4)
@@ -330,6 +339,7 @@ struct SkippedProjectDetailSheet: View {
 
     let skipped: SkippedProject
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
 
     var body: some View {
         NavigationStack {
@@ -340,7 +350,7 @@ struct SkippedProjectDetailSheet: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Details")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(palette.textMuted)
                         Text(skipped.reason.detail)
                             .font(.callout)
                             .textSelection(.enabled)
@@ -366,7 +376,7 @@ struct SkippedProjectDetailSheet: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
             Text(value)
                 .font(.callout)
                 .textSelection(.enabled)

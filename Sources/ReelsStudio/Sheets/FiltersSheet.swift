@@ -12,6 +12,7 @@ struct FiltersSheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
 
     /// Drives the Chroma Key sub-sheet. Bound to a Bool because the sheet
     /// itself is parameterless (it reads from `clipID` directly). v0.7 Tier 4.
@@ -68,7 +69,7 @@ struct FiltersSheet: View {
             VStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.textMuted)
                 Text("Clip not available")
                     .font(.headline)
             }
@@ -81,12 +82,12 @@ struct FiltersSheet: View {
         VStack(spacing: 12) {
             Image(systemName: "camera.filters")
                 .font(.system(size: 48))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
             Text("No filters")
                 .font(.headline)
             Text("Add a filter from the menu above.")
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.textMuted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -127,6 +128,8 @@ private struct FilterRow: View {
     let filter: Filter
     let onIntensityChange: (Double) -> Void
 
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -136,7 +139,7 @@ private struct FilterRow: View {
                 if let scalar = scalarValue {
                     Text(String(format: "%.2f", scalar))
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.textMuted)
                 }
             }
             if let scalar = scalarValue, let range = scalarRange {

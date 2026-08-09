@@ -5,9 +5,9 @@ import SwiftUI
 /// Reads the cached JPEG synchronously in `body` for the hot path; on cache
 /// miss kicks off `ProjectThumbnailRenderer.render(_:)` from `.onAppear` so
 /// the row renders something immediately rather than blocking on
-/// AVAssetImageGenerator. Empty / unrenderable projects fall back to a
-/// deterministic `LinearGradient` keyed off the project id so each
-/// project looks visually distinct even without a real first frame.
+/// AVAssetImageGenerator. Empty / unrenderable projects fall back to a flat
+/// `surface` block inside a 2pt dashed rule (v0.8 Tier 3 — the hue-derived
+/// gradient this used to draw can't survive a mono scheme).
 struct ProjectThumbnailTile: View {
 
     let document: ProjectDocument
@@ -21,24 +21,44 @@ struct ProjectThumbnailTile: View {
     var body: some View {
         ZStack {
             if let image {
+                // Decision 5 — every content photograph and video thumbnail
+                // goes through grayscale. (The preview *stage* does not; the
+                // user grades colour there.)
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+                    .modernistGrayscale()
             } else {
-                ProjectThumbnailTile.placeholderGradient(for: document.id)
+                // v0.8 Tier 3 — the placeholder was a hue-derived gradient
+                // keyed off the project id. A generated hue is the opposite
+                // of a mono scheme, so an empty project reads as a flat
+                // surface inside a 2pt dashed rule instead.
+                palette.surface
                 if document.clips.isEmpty {
                     Image(systemName: "film")
                         .font(.system(size: 22))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(palette.textMuted)
                 }
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
         .overlay(
             RoundedRectangle(cornerRadius: Modernist.Radius.md)
-                .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
+                .strokeBorder(palette.divider, style: frameStroke)
         )
         .onAppear { loadIfNeeded() }
+    }
+
+    /// A rendered frame sits inside a solid 2pt rule; a placeholder sits
+    /// inside a dashed one, which is how the approved design distinguishes
+    /// "nothing here yet" from "a frame that happens to be dark".
+    private var frameStroke: StrokeStyle {
+        image == nil
+            ? StrokeStyle(
+                lineWidth: Modernist.ruleWidth,
+                dash: [Modernist.Space.s1, Modernist.Space.s1]
+              )
+            : StrokeStyle(lineWidth: Modernist.ruleWidth)
     }
 
     /// Sync cache-only lookup + async render fallback. Runs from
@@ -59,19 +79,21 @@ struct ProjectThumbnailTile: View {
         }
     }
 
-    /// Pure: produce a deterministic gradient for the placeholder. Hash of
-    /// the project id picks two hues so each empty project looks distinct
-    /// in a long list. v0.7 Tier 5.
+    /// The placeholder fill, as a `LinearGradient`.
+    ///
+    /// v0.7 Tier 5 derived two hues from a hash of the project id so empty
+    /// projects looked distinct. v0.8 Tier 3 collapsed that into the mono
+    /// scheme — a generated hue is exactly what the system forbids — so the
+    /// "gradient" is now one flat print `surface` stop, and the tile paints
+    /// `palette.surface` from the environment directly.
+    ///
+    /// Kept, with its original signature, because it is public API pinned by
+    /// `ProjectThumbnailRendererTests`. It is still deterministic per id
+    /// (trivially so). Retire it with that test, not before.
     nonisolated static func placeholderGradient(for projectID: UUID) -> LinearGradient {
-        var hasher = Hasher()
-        hasher.combine(projectID)
-        let hash = abs(hasher.finalize())
-        let h1 = Double(hash % 360) / 360
-        let h2 = Double((hash / 7) % 360) / 360
-        let start = Color(hue: h1, saturation: 0.45, brightness: 0.62)
-        let end = Color(hue: h2, saturation: 0.55, brightness: 0.42)
+        let fill = ModernistPalette.print.surface
         return LinearGradient(
-            gradient: Gradient(colors: [start, end]),
+            gradient: Gradient(colors: [fill, fill]),
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )

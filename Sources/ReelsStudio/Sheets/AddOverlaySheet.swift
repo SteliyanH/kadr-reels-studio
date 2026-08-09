@@ -72,8 +72,29 @@ private struct TextOverlayTab: View {
 
     @State private var text: String = "New text"
     @State private var fontSize: Double = 56
-    @State private var color: Color = .white
+    /// v0.8 Tier 3 — the default is the first swatch of the ramp rather than
+    /// a bare `Color.white`. Same role (the lightest neutral), named.
+    @State private var color: Color = Modernist.Neutral.n100
     @State private var weight: TextWeight = .bold
+
+    @Environment(\.modernistPalette) private var palette
+
+    /// Decision 4 / the overlay sheet's "COLOR" row — the accent ramp plus
+    /// neutrals, not the iOS system palette. Square cells; the selected one
+    /// takes a 2pt ring in `palette.text`. The eyedropper (`ColorPicker`)
+    /// stays alongside so arbitrary colours are still reachable: narrowing
+    /// the swatches is a style call, removing the picker would be a
+    /// functional one.
+    private var swatches: [Color] {
+        [
+            Modernist.Neutral.n100,
+            Modernist.Neutral.n500,
+            Modernist.Neutral.n900,
+            Modernist.Accent.a500,
+            Modernist.Accent.a700,
+            palette.text,
+        ]
+    }
 
     enum TextWeight: String, CaseIterable, Identifiable {
         case regular, medium, bold
@@ -106,6 +127,7 @@ private struct TextOverlayTab: View {
                         Text(w.rawValue.capitalized).tag(w)
                     }
                 }
+                swatchRow
                 ColorPicker("Color", selection: $color)
             }
             Section("Preview") {
@@ -122,6 +144,35 @@ private struct TextOverlayTab: View {
                 .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
+    }
+
+    @ViewBuilder
+    private var swatchRow: some View {
+        HStack(spacing: Modernist.Space.s2) {
+            ForEach(Array(swatches.enumerated()), id: \.offset) { _, swatch in
+                Button {
+                    color = swatch
+                } label: {
+                    Rectangle()
+                        .fill(swatch)
+                        .frame(
+                            width: Modernist.minHitTarget,
+                            height: Modernist.minHitTarget
+                        )
+                        .overlay(
+                            Rectangle()
+                                .strokeBorder(
+                                    color == swatch ? palette.text : palette.divider,
+                                    lineWidth: Modernist.ruleWidth
+                                )
+                        )
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(color == swatch ? [.isSelected] : [])
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var swiftUIWeight: Font.Weight {

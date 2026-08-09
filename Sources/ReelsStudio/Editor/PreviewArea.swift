@@ -25,7 +25,11 @@ struct PreviewArea: View {
                 }
         }
         .aspectRatio(aspect, contentMode: .fit)
-        .background(Color.black)
+        // v0.8 Tier 3 — the letterbox stays true black: this is the field the
+        // user grades against, so it takes the stage token rather than a
+        // ground-tinted role. Decision 5's "never grayscale the stage" applies
+        // to the same surface for the same reason.
+        .background(Modernist.stageInk)
         .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
     }
 }

@@ -63,11 +63,11 @@ struct InspectorArea: View {
                 if hasSpeedCurve {
                     Text("Custom")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.textMuted)
                 }
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(palette.textMuted)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
