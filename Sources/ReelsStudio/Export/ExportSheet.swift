@@ -25,7 +25,7 @@ struct ExportSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Preset") {
+                Section(header: Text("Preset").modernistLabel()) {
                     Picker("Format", selection: $selectedPreset) {
                         ForEach(ExportPreset.allCases) { preset in
                             Text(preset.label).tag(preset)
@@ -35,10 +35,10 @@ struct ExportSheet: View {
                     .labelsHidden()
                     .disabled(stage == .running)
                     Text(selectedPreset.detail)
-                        .font(.footnote)
+                        .font(Modernist.Typography.caption)
                         .foregroundStyle(palette.textMuted)
                 }
-                Section("Status") {
+                Section(header: Text("Status").modernistLabel()) {
                     statusRow
                 }
                 if stage == .completed, resultURL != nil {
@@ -87,7 +87,7 @@ struct ExportSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView(value: fractionCompleted)
                 Text(String(format: "%.0f%%", fractionCompleted * 100))
-                    .font(.caption.monospacedDigit())
+                    .font(Modernist.Typography.numeric)
                     .foregroundStyle(palette.textMuted)
             }
         case .completed:
@@ -102,7 +102,7 @@ struct ExportSheet: View {
                     .foregroundStyle(palette.accent)
                 if let errorMessage {
                     Text(errorMessage)
-                        .font(.caption)
+                        .font(Modernist.Typography.caption)
                         .foregroundStyle(palette.accentText)
                 }
             }

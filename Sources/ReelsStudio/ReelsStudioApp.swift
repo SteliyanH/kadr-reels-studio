@@ -78,15 +78,14 @@ struct LibraryHostView: View {
         } else {
             VStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 40))
+                    .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
                     .foregroundStyle(palette.textMuted)
                 Text("Couldn't open project library")
-                    .font(.headline)
+                    .font(Modernist.Typography.h5)
                 if let message = host.setupError {
                     Text(message)
-                        .font(.callout)
+                        .font(Modernist.Typography.body)
                         .foregroundStyle(palette.textMuted)
-                        .multilineTextAlignment(.center)
                         .padding(.horizontal)
                 }
             }

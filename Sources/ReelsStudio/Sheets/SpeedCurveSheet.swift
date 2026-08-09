@@ -36,7 +36,7 @@ struct SpeedCurveSheet: View {
         if let clip = videoClip(matching: clipID) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(headerText(for: clip))
-                    .font(.callout)
+                    .font(Modernist.Typography.body)
                     .foregroundStyle(palette.textMuted)
                     .padding(.horizontal)
                 SpeedCurveEditor(
@@ -57,14 +57,13 @@ struct SpeedCurveSheet: View {
         } else {
             VStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 40))
+                    .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
                     .foregroundStyle(palette.textMuted)
                 Text("Clip not available")
-                    .font(.headline)
+                    .font(Modernist.Typography.h5)
                 Text("This clip is no longer in the project. Close this sheet and reselect.")
-                    .font(.callout)
+                    .font(Modernist.Typography.body)
                     .foregroundStyle(palette.textMuted)
-                    .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

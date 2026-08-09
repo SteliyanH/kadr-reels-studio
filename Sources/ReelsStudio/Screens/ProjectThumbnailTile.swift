@@ -36,7 +36,7 @@ struct ProjectThumbnailTile: View {
                 palette.surface
                 if document.clips.isEmpty {
                     Image(systemName: "film")
-                        .font(.system(size: 22))
+                        .font(.system(size: Modernist.Typography.Glyph.sm, weight: Modernist.Typography.headingWeight))
                         .foregroundStyle(palette.textMuted)
                 }
             }

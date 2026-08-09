@@ -69,8 +69,7 @@ struct ChromaKeySheet: View {
     private var colorPreviewSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Key color")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(palette.textMuted)
+                .modernistLabel()
             HStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: Modernist.Radius.md)
                     .fill(keyColor)
@@ -91,11 +90,10 @@ struct ChromaKeySheet: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Threshold")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(palette.textMuted)
+                    .modernistLabel()
                 Spacer()
                 Text(String(format: "%.2f", threshold))
-                    .font(.caption.monospacedDigit())
+                    .font(Modernist.Typography.numeric)
                     .foregroundStyle(palette.textMuted)
             }
             Slider(value: $threshold, in: 0...1)
@@ -106,7 +104,7 @@ struct ChromaKeySheet: View {
     @ViewBuilder
     private var helpText: some View {
         Text("Picks any pixel near the key color and replaces it with transparency. Lower threshold keeps more of the subject; higher keys out more background.")
-            .font(.caption)
+            .font(Modernist.Typography.caption)
             .foregroundStyle(palette.textMuted)
     }
 

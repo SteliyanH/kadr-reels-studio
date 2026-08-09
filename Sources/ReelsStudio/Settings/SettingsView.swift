@@ -105,7 +105,7 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var appearanceSection: some View {
-        Section("Appearance") {
+        Section(header: Text("Appearance").modernistLabel()) {
             Text("Accent")
             ModernistSegmentedControl(
                 options: AccentChoice.allCases.map { ($0, $0.label) },
@@ -123,7 +123,7 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var playbackSection: some View {
-        Section("Playback") {
+        Section(header: Text("Playback").modernistLabel()) {
             Toggle(
                 "Fixed-center playhead",
                 isOn: Binding(
@@ -141,7 +141,7 @@ struct SettingsView: View {
         // local @Bindable (the replacement for `@ObservedObject` / `@EnvironmentObject`
         // bindings).
         @Bindable var settings = settings
-        return Section("Haptics") {
+        return Section(header: Text("Haptics").modernistLabel()) {
             Picker("Strength", selection: $settings.hapticIntensity) {
                 ForEach(HapticIntensity.allCases, id: \.self) { intensity in
                     Text(intensity.displayName).tag(intensity)

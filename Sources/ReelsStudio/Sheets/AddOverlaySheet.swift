@@ -110,16 +110,16 @@ private struct TextOverlayTab: View {
 
     var body: some View {
         Form {
-            Section("Text") {
+            Section(header: Text("Text").modernistLabel()) {
                 TextField("Caption", text: $text, axis: .vertical)
                     .lineLimit(1...3)
             }
-            Section("Style") {
+            Section(header: Text("Style").modernistLabel()) {
                 HStack {
                     Text("Size")
                     Slider(value: $fontSize, in: 24...96, step: 2)
                     Text("\(Int(fontSize))")
-                        .font(.caption.monospacedDigit())
+                        .font(Modernist.Typography.numeric)
                         .frame(width: 32, alignment: .trailing)
                 }
                 Picker("Weight", selection: $weight) {
@@ -130,8 +130,11 @@ private struct TextOverlayTab: View {
                 swatchRow
                 ColorPicker("Color", selection: $color)
             }
-            Section("Preview") {
+            Section(header: Text("Preview").modernistLabel()) {
                 Text(text.isEmpty ? "New text" : text)
+                    // Not chrome: this renders the overlay at the size and
+                    // weight the user authored, so it stays off the app's type
+                    // scale by design. v0.8 Tier 4.
                     .font(.system(size: CGFloat(fontSize), weight: swiftUIWeight))
                     .foregroundStyle(color)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -231,7 +234,7 @@ private struct PhotoOverlayTab: View {
 
     var body: some View {
         Form {
-            Section("Source") {
+            Section(header: Text("Source").modernistLabel()) {
                 Button {
                     showPicker = true
                 } label: {
@@ -244,12 +247,12 @@ private struct PhotoOverlayTab: View {
                     pickedThumbnail(pickedImage)
                 }
             }
-            Section("Style") {
+            Section(header: Text("Style").modernistLabel()) {
                 HStack {
                     Text("Opacity")
                     Slider(value: $opacity, in: 0...1)
                     Text(String(format: "%.0f%%", opacity * 100))
-                        .font(.caption.monospacedDigit())
+                        .font(Modernist.Typography.numeric)
                         .frame(width: 44, alignment: .trailing)
                 }
             }

@@ -171,6 +171,23 @@ enum Modernist {
         /// Timecodes, durations, percentages, px/s readouts. Tabular, always.
         static var numeric: Font { font(size: 11, weight: bodyWeight).monospacedDigit() }
 
+        /// Display glyph sizes.
+        ///
+        /// SF Symbols sit outside the CSS type scale — they're set with
+        /// `.system(size:weight:)`, not a text style — but a bare
+        /// `.font(.system(size: 40))` at a call site is still a literal. These
+        /// name the five sizes the app's empty-state and status glyphs
+        /// already used, so the v0.8 Tier 4 sweep could keep every size
+        /// pixel-identical while removing the literals. Weight comes from the
+        /// scale (`headingWeight`), which is the part that actually changed.
+        enum Glyph {
+            static let sm: CGFloat = 22
+            static let md: CGFloat = 32
+            static let lg: CGFloat = 40
+            static let xl: CGFloat = 48
+            static let xxl: CGFloat = 56
+        }
+
         /// CSS gives line-height as a multiple; SwiftUI takes the delta.
         static func lineSpacing(forSize size: CGFloat, multiple: CGFloat) -> CGFloat {
             (size * multiple) - size

@@ -113,7 +113,7 @@ struct AddCaptionsSheet: View {
     @ViewBuilder
     private var importTab: some View {
         Form {
-            Section("Caption file") {
+            Section(header: Text("Caption file").modernistLabel()) {
                 Button {
                     showImporter = true
                 } label: {
@@ -124,12 +124,12 @@ struct AddCaptionsSheet: View {
                 }
                 if let pickedURL {
                     Text(pickedURL.pathExtension.uppercased())
-                        .font(.caption.monospaced())
+                        .font(Modernist.Typography.numeric)
                         .foregroundStyle(palette.textMuted)
                 }
             }
             if lastImportedCount > 0 {
-                Section("Imported") {
+                Section(header: Text("Imported").modernistLabel()) {
                     Label(
                         "\(lastImportedCount) cue\(lastImportedCount == 1 ? "" : "s") appended",
                         systemImage: "checkmark.circle"
@@ -139,12 +139,12 @@ struct AddCaptionsSheet: View {
                     Button("Switch to Edit") {
                         selectedTab = .edit
                     }
-                    .font(.callout)
+                    .font(Modernist.Typography.body)
                 }
             }
             Section {
                 Text("Supported formats: SRT, VTT, iTT, ASS, SSA. Cues append to the project's caption list — switch to Edit to retime / rename / delete.")
-                    .font(.footnote)
+                    .font(Modernist.Typography.caption)
                     .foregroundStyle(palette.textMuted)
             }
         }

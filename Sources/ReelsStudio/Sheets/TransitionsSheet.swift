@@ -76,8 +76,7 @@ struct TransitionsSheet: View {
     private var kindGrid: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Kind")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(palette.textMuted)
+                .modernistLabel()
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 110, maximum: 160), spacing: 12)], spacing: 12) {
                 ForEach(TransitionKind.allCases, id: \.self) { kind in
                     transitionTile(kind: kind)
@@ -94,9 +93,9 @@ struct TransitionsSheet: View {
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: kind.systemImage)
-                    .font(.system(size: 32))
+                    .font(.system(size: Modernist.Typography.Glyph.md, weight: Modernist.Typography.headingWeight))
                 Text(kind.displayLabel)
-                    .font(.caption)
+                    .font(Modernist.Typography.caption)
             }
             .frame(maxWidth: .infinity, minHeight: 80)
             .padding(8)
@@ -122,11 +121,10 @@ struct TransitionsSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Duration")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(palette.textMuted)
+                    .modernistLabel()
                 Spacer()
                 Text(String(format: "%.2fs", durationSeconds))
-                    .font(.caption.monospacedDigit())
+                    .font(Modernist.Typography.numeric)
                     .foregroundStyle(palette.textMuted)
             }
             Slider(value: $durationSeconds, in: Self.minDuration...Self.maxDuration)

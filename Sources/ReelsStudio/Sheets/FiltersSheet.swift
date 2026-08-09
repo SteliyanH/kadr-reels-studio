@@ -68,10 +68,10 @@ struct FiltersSheet: View {
         } else {
             VStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 40))
+                    .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
                     .foregroundStyle(palette.textMuted)
                 Text("Clip not available")
-                    .font(.headline)
+                    .font(Modernist.Typography.h5)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -81,12 +81,12 @@ struct FiltersSheet: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "camera.filters")
-                .font(.system(size: 48))
+                .font(.system(size: Modernist.Typography.Glyph.xl, weight: Modernist.Typography.headingWeight))
                 .foregroundStyle(palette.textMuted)
             Text("No filters")
-                .font(.headline)
+                .font(Modernist.Typography.h5)
             Text("Add a filter from the menu above.")
-                .font(.callout)
+                .font(Modernist.Typography.body)
                 .foregroundStyle(palette.textMuted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -134,11 +134,11 @@ private struct FilterRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(label)
-                    .font(.callout)
+                    .font(Modernist.Typography.body)
                 Spacer()
                 if let scalar = scalarValue {
                     Text(String(format: "%.2f", scalar))
-                        .font(.caption.monospacedDigit())
+                        .font(Modernist.Typography.numeric)
                         .foregroundStyle(palette.textMuted)
                 }
             }

@@ -61,7 +61,7 @@ struct TextEffectsSection: View {
                             in: 0.5...10
                         )
                         Text(String(format: "%.1f", stroke.width))
-                            .font(.caption.monospacedDigit())
+                            .font(Modernist.Typography.numeric)
                             .frame(width: 36, alignment: .trailing)
                     }
                     ColorPicker(
@@ -82,7 +82,7 @@ struct TextEffectsSection: View {
             .padding(.vertical, 4)
         } label: {
             Label("Stroke", systemImage: "circle.dashed")
-                .font(.subheadline.weight(.semibold))
+                .font(Modernist.Typography.bodyEmphasis)
         }
     }
 
@@ -124,7 +124,7 @@ struct TextEffectsSection: View {
                             in: 0...20
                         )
                         Text(String(format: "%.1f", shadow.blur))
-                            .font(.caption.monospacedDigit())
+                            .font(Modernist.Typography.numeric)
                             .frame(width: 36, alignment: .trailing)
                     }
                     ColorPicker(
@@ -149,7 +149,7 @@ struct TextEffectsSection: View {
             .padding(.vertical, 4)
         } label: {
             Label("Shadow", systemImage: "shadow")
-                .font(.subheadline.weight(.semibold))
+                .font(Modernist.Typography.bodyEmphasis)
         }
     }
 
@@ -182,7 +182,7 @@ struct TextEffectsSection: View {
                 in: -20...20
             )
             Text(String(format: "%.1f", value))
-                .font(.caption.monospacedDigit())
+                .font(Modernist.Typography.numeric)
                 .frame(width: 36, alignment: .trailing)
         }
     }

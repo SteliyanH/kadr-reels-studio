@@ -35,14 +35,13 @@ struct LayersSheet: View {
         if store.project.overlays.isEmpty {
             VStack(spacing: 12) {
                 Image(systemName: "square.stack.3d.up.slash")
-                    .font(.system(size: 40))
+                    .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
                     .foregroundStyle(palette.textMuted)
                 Text("No overlays yet")
-                    .font(.headline)
+                    .font(Modernist.Typography.h5)
                 Text("Tap **+ Overlay** in the toolbar to add text or stickers.")
-                    .font(.callout)
+                    .font(Modernist.Typography.body)
                     .foregroundStyle(palette.textMuted)
-                    .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -86,14 +85,14 @@ struct LayersSheet: View {
                 .frame(width: Modernist.minHitTarget, height: Modernist.minHitTarget)
                 .overlay(
                     Image(systemName: icon)
-                        .font(.title3)
+                        .font(Modernist.Typography.h4)
                         .foregroundStyle(palette.accent)
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text(LayersSheet.title(for: overlay, index: index))
-                    .font(.body.bold())
+                    .font(Modernist.Typography.bodyEmphasis)
                 Text(kind)
-                    .font(.caption)
+                    .font(Modernist.Typography.caption)
                     .foregroundStyle(palette.textMuted)
             }
             Spacer()
@@ -103,7 +102,7 @@ struct LayersSheet: View {
                     .foregroundStyle(palette.accent)
             }
             Image(systemName: "chevron.right")
-                .font(.caption)
+                .font(Modernist.Typography.caption)
                 .foregroundStyle(palette.textMuted)
         }
         .padding(.vertical, 4)

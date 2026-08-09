@@ -92,19 +92,18 @@ struct ProjectListView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "film.stack")
-                .font(.system(size: 56))
+                .font(.system(size: Modernist.Typography.Glyph.xxl, weight: Modernist.Typography.headingWeight))
                 .foregroundStyle(palette.textMuted)
             Text("No projects yet")
-                .font(.title3.weight(.semibold))
+                .font(Modernist.Typography.h4)
             Text("Start with a new project, or import the bundled sample to see what the editor can do.")
-                .font(.callout)
+                .font(Modernist.Typography.body)
                 .foregroundStyle(palette.textMuted)
-                .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             HStack(spacing: 12) {
                 Button { createNewProject() } label: {
                     Label("New Project", systemImage: "plus.circle.fill")
-                        .font(.body.bold())
+                        .font(Modernist.Typography.bodyEmphasis)
                 }
                 .buttonStyle(.borderedProminent)
                 Button { importSample() } label: {
@@ -190,8 +189,10 @@ struct ProjectListView: View {
             }
         } header: {
             Text("Skipped projects")
+                .modernistLabel()
         } footer: {
             Text("These files couldn't be loaded. Tap one to see details, or swipe to discard.")
+                .font(Modernist.Typography.caption)
         }
     }
 
@@ -265,13 +266,13 @@ struct ProjectRow: View {
                 .frame(width: 56, height: 56)
             VStack(alignment: .leading, spacing: 4) {
                 Text(document.name)
-                    .font(.body.weight(.semibold))
+                    .font(Modernist.Typography.bodyEmphasis)
                 HStack(spacing: 8) {
                     Text(document.modifiedAt, format: .relative(presentation: .named))
                     Text("·")
                     Text("\(document.clips.count) clip\(document.clips.count == 1 ? "" : "s")")
                 }
-                .font(.caption)
+                .font(Modernist.Typography.caption)
                 .foregroundStyle(palette.textMuted)
             }
         }
@@ -310,14 +311,14 @@ struct SkippedProjectRow: View {
             // is the one place the accent flags a problem.
             Image(systemName: iconName)
                 .foregroundStyle(palette.accent)
-                .font(.title3)
+                .font(Modernist.Typography.h4)
             VStack(alignment: .leading, spacing: 2) {
                 Text(skipped.id)
-                    .font(.body.weight(.semibold))
+                    .font(Modernist.Typography.bodyEmphasis)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(skipped.reason.displayLabel)
-                    .font(.caption)
+                    .font(Modernist.Typography.caption)
                     .foregroundStyle(palette.textMuted)
             }
         }
@@ -349,10 +350,9 @@ struct SkippedProjectDetailSheet: View {
                     label("Reason", value: skipped.reason.displayLabel)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Details")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(palette.textMuted)
+                            .modernistLabel()
                         Text(skipped.reason.detail)
-                            .font(.callout)
+                            .font(Modernist.Typography.body)
                             .textSelection(.enabled)
                     }
                 }
@@ -375,10 +375,9 @@ struct SkippedProjectDetailSheet: View {
     private func label(_ title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(palette.textMuted)
+                .modernistLabel()
             Text(value)
-                .font(.callout)
+                .font(Modernist.Typography.body)
                 .textSelection(.enabled)
         }
     }

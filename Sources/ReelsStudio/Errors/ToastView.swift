@@ -15,11 +15,11 @@ struct ToastView: View {
         // in palette roles, so it inverts correctly on the studio ground.
         VStack(alignment: .leading, spacing: 2) {
             Text(toast.message)
-                .font(.callout.weight(.semibold))
+                .font(Modernist.Typography.bodyEmphasis)
                 .foregroundStyle(palette.bg)
             if let detail = toast.detail {
                 Text(detail)
-                    .font(.caption)
+                    .font(Modernist.Typography.caption)
                     .foregroundStyle(palette.bg.opacity(0.85))
                     .lineLimit(2)
             }
@@ -114,11 +114,10 @@ private struct ResumableErrorSheet: View {
             // Decision 4 — no warning role; the accent is what flags a
             // problem in this scheme.
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
+                .font(.system(size: Modernist.Typography.Glyph.xl, weight: Modernist.Typography.headingWeight))
                 .foregroundStyle(palette.accent)
             Text(error.message)
-                .font(.headline)
-                .multilineTextAlignment(.center)
+                .font(Modernist.Typography.h5)
                 .padding(.horizontal, 32)
             HStack(spacing: 12) {
                 Button("Cancel", role: .cancel) {

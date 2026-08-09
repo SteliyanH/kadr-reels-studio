@@ -24,7 +24,7 @@ struct AddSFXSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Sound") {
+                Section(header: Text("Sound").modernistLabel()) {
                     Button {
                         showImporter = true
                     } label: {
@@ -34,25 +34,25 @@ struct AddSFXSheet: View {
                         }
                     }
                 }
-                Section("Timing") {
+                Section(header: Text("Timing").modernistLabel()) {
                     HStack {
                         Text("Pin at")
                         Slider(value: $pinTimeSeconds, in: 0...max(compositionDurationSeconds, 0.1))
                         Text(String(format: "%.1fs", pinTimeSeconds))
-                            .font(.caption.monospacedDigit())
+                            .font(Modernist.Typography.numeric)
                             .frame(width: 48, alignment: .trailing)
                     }
                     HStack {
                         Text("Volume")
                         Slider(value: $volume, in: 0...1)
                         Text(String(format: "%.2f", volume))
-                            .font(.caption.monospacedDigit())
+                            .font(Modernist.Typography.numeric)
                             .frame(width: 40, alignment: .trailing)
                     }
                 }
                 Section {
                     Text("SFX play once at the pinned time and don't loop. Total composition is \(String(format: "%.1fs", compositionDurationSeconds)).")
-                        .font(.footnote)
+                        .font(Modernist.Typography.caption)
                         .foregroundStyle(palette.textMuted)
                 }
             }

@@ -19,7 +19,7 @@ struct AddMusicSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Audio") {
+                Section(header: Text("Audio").modernistLabel()) {
                     Button {
                         showImporter = true
                     } label: {
@@ -29,19 +29,19 @@ struct AddMusicSheet: View {
                         }
                     }
                 }
-                Section("Mix") {
+                Section(header: Text("Mix").modernistLabel()) {
                     HStack {
                         Text("Volume")
                         Slider(value: $volume, in: 0...1)
                         Text(String(format: "%.2f", volume))
-                            .font(.caption.monospacedDigit())
+                            .font(Modernist.Typography.numeric)
                             .frame(width: 40, alignment: .trailing)
                     }
                     Toggle("Auto-duck during clip audio", isOn: $enableDucking)
                 }
                 Section {
                     Text("Music auto-fades in over 0.5s and out over 1.0s. Auto-ducking lowers music to 30% while clip audio plays.")
-                        .font(.footnote)
+                        .font(Modernist.Typography.caption)
                         .foregroundStyle(palette.textMuted)
                 }
             }

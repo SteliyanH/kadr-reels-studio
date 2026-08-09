@@ -200,7 +200,7 @@ struct EditorToolbar: View {
                 store.isMultiSelecting = false
             }
             Text("\(store.selectedClipIDs.count) selected")
-                .font(.caption.bold())
+                .font(Modernist.Typography.caption.weight(Modernist.Typography.emphasisWeight))
                 .foregroundStyle(palette.textMuted)
                 .padding(.leading, 4)
                 .accessibilityLabel("Selection")
@@ -290,9 +290,9 @@ private struct ToolbarButton: View {
         Button(role: role, action: action) {
             VStack(spacing: 2) {
                 Image(systemName: systemImage)
-                    .font(.title3)
+                    .font(Modernist.Typography.h4)
                 Text(label)
-                    .font(.caption2)
+                    .font(Modernist.Typography.caption)
             }
             .frame(minWidth: 56, minHeight: 44)
         }

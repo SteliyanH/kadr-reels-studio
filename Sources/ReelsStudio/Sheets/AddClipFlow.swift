@@ -84,7 +84,7 @@ private struct ResolvingOverlay: View {
                 ProgressView()
                     .controlSize(.large)
                 Text("Importing clips…")
-                    .font(.subheadline)
+                    .font(Modernist.Typography.body)
                     .foregroundStyle(palette.text)
             }
             .padding(Modernist.Space.s6)
