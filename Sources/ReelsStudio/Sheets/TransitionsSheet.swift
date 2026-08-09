@@ -65,6 +65,8 @@ struct TransitionsSheet: View {
                 }
             }
         }
+        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
+        .modernistSurface(.print)
     }
 
     // MARK: - Subviews
@@ -98,12 +100,12 @@ struct TransitionsSheet: View {
             .frame(maxWidth: .infinity, minHeight: 80)
             .padding(8)
             .background(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: Modernist.Radius.md)
                     .fill(isSelected ? Color.accentColor.opacity(0.2) : Color(.secondarySystemBackground))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isSelected ? Color.accentColor : .clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: Modernist.Radius.md)
+                    .stroke(isSelected ? Color.accentColor : .clear, lineWidth: Modernist.ruleWidth)
             )
         }
         .buttonStyle(.plain)

@@ -34,6 +34,8 @@ struct FiltersSheet: View {
                     ChromaKeySheet(store: store, clipID: clipID)
                 }
         }
+        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
+        .modernistSurface(.print)
     }
 
     // MARK: - Body

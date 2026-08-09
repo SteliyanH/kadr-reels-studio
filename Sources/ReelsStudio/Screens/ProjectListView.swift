@@ -66,6 +66,10 @@ struct ProjectListView: View {
                     Text(message)
                 }
         }
+        // v0.8 Tier 2 — the library is app chrome; chrome is the print
+        // ground. Set once, at the root. `EditorView` re-establishes
+        // `.studio` for its own subtree when pushed.
+        .modernistSurface(.print)
     }
 
     /// Skipped-project file selected for the JSON detail sheet.
@@ -353,6 +357,8 @@ struct SkippedProjectDetailSheet: View {
                 }
             }
         }
+        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
+        .modernistSurface(.print)
     }
 
     @ViewBuilder

@@ -114,11 +114,15 @@ struct EditorView: View {
             Spacer(minLength: 16)
         }
         .padding(.top)
-        .background(Color(.systemGray6).ignoresSafeArea())
         // v0.4 Tier 3: per-project accent threads through every `.tint`-aware
         // surface (inspector tabs, keyframe playhead, timeline selection
-        // ring). nil = follow the system tint, which is the v0.4 default.
-        .tint(store.project.accentColor ?? .accentColor)
+        // ring). kadr-ui exposes no theming API, so this `.tint` is the app's
+        // only channel into that package's internals — v0.8 Tier 2 keeps it
+        // and retargets the fallback from the system tint to the studio
+        // ground's accent token. It sits *inside* `.modernistSurface(.studio)`
+        // (which sets its own `.tint`) so the nearer value wins for the
+        // subtree.
+        .tint(store.project.accentColor ?? ModernistPalette.studio.accent)
         .addClipFlow(isPresented: $showPhotoPicker, store: store)
         .sheet(isPresented: $showOverlaySheet) {
             AddOverlaySheet(store: store)
@@ -244,6 +248,11 @@ struct EditorView: View {
                 autoSave()
             }
         }
+        // v0.8 Tier 2 — the editor's ground. Set once, at the root, outermost
+        // so the whole subtree (stage, timeline, inspector, the AddClipFlow
+        // overlay) reads `.studio` from the environment. Replaces the
+        // `Color(.systemGray6)` background.
+        .modernistSurface(.studio)
     }
 
     /// Re-apply scene-stored playhead / selection when re-entering the same

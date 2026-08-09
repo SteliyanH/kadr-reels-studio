@@ -23,7 +23,7 @@ struct ToastView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: Modernist.Radius.md)
                 .fill(Color.black.opacity(0.85))
         )
         .padding(.horizontal, 16)
@@ -126,5 +126,7 @@ private struct ResumableErrorSheet: View {
         }
         .padding(.vertical, 32)
         .presentationDetents([.medium])
+        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
+        .modernistSurface(.print)
     }
 }

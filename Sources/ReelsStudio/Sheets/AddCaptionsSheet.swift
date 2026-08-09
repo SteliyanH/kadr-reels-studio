@@ -21,6 +21,7 @@ struct AddCaptionsSheet: View {
     @Environment(ToastCenter.self) private var toasts
 
     @State private var selectedTab: Tab
+    @Environment(\.modernistPalette) private var palette
 
     init(store: ProjectStore) {
         self.store = store
@@ -44,8 +45,11 @@ struct AddCaptionsSheet: View {
                 .padding(.horizontal)
                 .padding(.top, 8)
 
-                Divider()
-                    .padding(.top, 8)
+                // v0.8 Tier 2 — the system's rule is 2pt, never a hairline.
+                Rectangle()
+                    .fill(palette.divider)
+                    .frame(height: Modernist.ruleWidth)
+                    .padding(.top, Modernist.Space.s2)
 
                 Group {
                     switch selectedTab {
@@ -62,6 +66,8 @@ struct AddCaptionsSheet: View {
                 }
             }
         }
+        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
+        .modernistSurface(.print)
     }
 
     // MARK: - Edit tab

@@ -26,6 +26,6 @@ struct PreviewArea: View {
         }
         .aspectRatio(aspect, contentMode: .fit)
         .background(Color.black)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
     }
 }

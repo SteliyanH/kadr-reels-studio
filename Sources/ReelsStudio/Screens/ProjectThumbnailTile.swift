@@ -16,6 +16,8 @@ struct ProjectThumbnailTile: View {
     /// `Image` = hit.
     @State private var image: Image?
 
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
         ZStack {
             if let image {
@@ -31,10 +33,10 @@ struct ProjectThumbnailTile: View {
                 }
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(.separator), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: Modernist.Radius.md)
+                .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
         )
         .onAppear { loadIfNeeded() }
     }

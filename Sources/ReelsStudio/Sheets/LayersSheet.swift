@@ -25,6 +25,8 @@ struct LayersSheet: View {
                     }
                 }
         }
+        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
+        .modernistSurface(.print)
     }
 
     @ViewBuilder
@@ -75,9 +77,9 @@ struct LayersSheet: View {
     private func row(for overlay: any Overlay, index: Int) -> some View {
         let (icon, kind) = LayersSheet.iconAndKind(for: overlay)
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: Modernist.Radius.md)
                 .fill(.tint.opacity(0.2))
-                .frame(width: 44, height: 44)
+                .frame(width: Modernist.minHitTarget, height: Modernist.minHitTarget)
                 .overlay(
                     Image(systemName: icon)
                         .font(.title3)

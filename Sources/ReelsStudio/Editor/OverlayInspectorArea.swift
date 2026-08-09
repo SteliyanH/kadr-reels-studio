@@ -10,6 +10,7 @@ import KadrUI
 struct OverlayInspectorArea: View {
 
     var store: ProjectStore
+    @Environment(\.modernistPalette) private var palette
 
     var body: some View {
         VStack(spacing: 8) {
@@ -48,7 +49,8 @@ struct OverlayInspectorArea: View {
             // locally instead. Auto-hides for non-text overlays.
             TextEffectsSection(store: store)
         }
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        // v0.8 Tier 2 — flat raised surface; see `InspectorArea`.
+        .background(palette.surfaceRaised)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Overlay inspector")
     }

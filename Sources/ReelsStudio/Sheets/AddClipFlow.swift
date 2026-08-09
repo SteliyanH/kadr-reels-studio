@@ -73,18 +73,23 @@ extension View {
 /// Loading overlay shown while `clips(from:)` is in flight. Dimmed background +
 /// progress indicator + label.
 private struct ResolvingOverlay: View {
+    @Environment(\.modernistPalette) private var palette
+
     var body: some View {
         ZStack {
-            Color.black.opacity(0.4).ignoresSafeArea()
-            VStack(spacing: 12) {
+            // v0.8 Tier 2 — the modal scrim is the approved design's 55%
+            // black over the live editor, not an ad-hoc 40%.
+            Modernist.stageInk.opacity(Modernist.scrimOpacity).ignoresSafeArea()
+            VStack(spacing: Modernist.Space.s3) {
                 ProgressView()
                     .controlSize(.large)
                 Text("Importing clips…")
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(palette.text)
             }
-            .padding(24)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .padding(Modernist.Space.s6)
+            // Nothing floats: the card is a flat surface block, square.
+            .background(palette.surface)
         }
     }
 }

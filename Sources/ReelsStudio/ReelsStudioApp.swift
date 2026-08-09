@@ -88,6 +88,11 @@ struct LibraryHostView: View {
                         .padding(.horizontal)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // v0.8 Tier 2 — the library-failure screen is app chrome; chrome
+            // is the print ground. The happy path is `ProjectListView`, which
+            // establishes the same ground at its own root.
+            .modernistSurface(.print)
         }
     }
 }

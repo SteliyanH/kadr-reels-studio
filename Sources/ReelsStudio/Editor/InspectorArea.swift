@@ -11,6 +11,7 @@ struct InspectorArea: View {
 
     var store: ProjectStore
     @State private var showSpeedCurveSheet = false
+    @Environment(\.modernistPalette) private var palette
 
     var body: some View {
         VStack(spacing: 8) {
@@ -35,7 +36,9 @@ struct InspectorArea: View {
             }
         }
         .frame(maxHeight: 320)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        // v0.8 Tier 2 — nothing floats in this system, so the blur is off-
+        // message; the panel is a flat raised surface on the studio ground.
+        .background(palette.surfaceRaised)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Clip inspector")
         .sheet(isPresented: $showSpeedCurveSheet) {

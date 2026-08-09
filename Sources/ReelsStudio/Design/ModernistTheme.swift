@@ -51,6 +51,30 @@ enum Modernist {
     /// interactive controls pad out to this.
     static let minHitTarget: CGFloat = 44
 
+    /// A non-interactive colour swatch block — the chroma-key sheet's key
+    /// preview. Bigger than the hit target because it's read, not tapped.
+    /// Added by the v0.8 Tier 2 sweep, which had no token for the existing
+    /// 64pt block.
+    static let swatchSize: CGFloat = 64
+
+    // MARK: - Stage & scrim
+    //
+    // Two values the CSS never had to carry: it never letterboxed video and
+    // never dimmed a modal backdrop. Both are reference surfaces rather than
+    // UI grounds, so neither may take a ground-tinted neutral.
+
+    /// True black. The preview stage's letterbox is the field the user grades
+    /// colour against — tinting it with `bg` (`#0C0C0E`) would bias that
+    /// judgement, which is the same functional regression Decision 5 forbids
+    /// for grayscale. Added by the v0.8 Tier 2 sweep so the stage stops
+    /// writing `Color.black` at the call site.
+    static let stageInk = Color(hex: 0x000000)
+
+    /// The approved design dims the editor to 55% black behind a modal.
+    /// Added by the v0.8 Tier 2 sweep — the loading scrim was an inline
+    /// `Color.black.opacity(0.4)`.
+    static let scrimOpacity: Double = 0.55
+
     // MARK: - Tonal ramps
     //
     // Generated in OKLCH on one shared lightness scale, so the same step of any

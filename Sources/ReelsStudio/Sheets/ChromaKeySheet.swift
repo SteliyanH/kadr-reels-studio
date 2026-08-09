@@ -18,6 +18,7 @@ struct ChromaKeySheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
 
     @State private var keyColor: Color = .green
     @State private var threshold: Double = 0.4
@@ -52,6 +53,8 @@ struct ChromaKeySheet: View {
                 }
             }
         }
+        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
+        .modernistSurface(.print)
     }
 
     // MARK: - Subviews
@@ -63,12 +66,12 @@ struct ChromaKeySheet: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: Modernist.Radius.md)
                     .fill(keyColor)
-                    .frame(width: 64, height: 64)
+                    .frame(width: Modernist.swatchSize, height: Modernist.swatchSize)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(.separator), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: Modernist.Radius.md)
+                            .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
                     )
                 ColorPicker("Pick color", selection: $keyColor, supportsOpacity: false)
                     .labelsHidden()
