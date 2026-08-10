@@ -4,6 +4,80 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Modernist design-system migration
+
+Visual design system overhaul — zero feature changes, zero state mutations. Every hardcoded colour, radius, material and font across ~25 view files migrates onto a published token layer. The app now ships with two palettes of the same design system (print chrome + dark studio editor ground), Archivo variable font (400/600/800 weight), and a constrained accent picker.
+
+### Added — design tokens + theme layer
+
+- **`ModernistTheme.swift`** — token definitions (two palettes: print / studio), colour ramps (Neutral.n100–n900 / Accent.a100–a900 in OKLCH), spacing (4–32pt), typography (h1–h6 / body / caption / numeric), rules (2pt dividers), elevation (three levels, ink-tinted).
+- **`ModernistStyles.swift`** — reusable button styles (`ModernistButtonStyle` / `ModernistSecondaryButtonStyle` / `ModernistIconButtonStyle`), tag, card, rule, elevation, grayscale, label, segmented control, slider. All styles read `\.modernistSurface` from the environment and adapt colours to the active palette.
+- **Environment key.** `.modernistSurface(_:)` modifier sets the palette (print / studio) once per screen; all descendant styles inherit.
+
+### Added — Archivo font + typography
+
+- **Font bundling.** Google Fonts Archivo instanced at weights 400 / 600 / 800 using fontTools; name tables rebuilt (ID 16 family grouping); static `.ttf` files ship in `Resources/Fonts/`.
+- **`UIAppFonts` registration.** Font instances declared in `Info.plist` for SwiftUI resolution. Weight-trait resolution proven on-simulator (ExtraBold/SemiBold via family+trait path); guarded by `ModernistTypographyTests`.
+- **OFL 1.1 licensing.** `OFL.txt` ships in `Resources/Fonts/`; attribution added to root `LICENSE`.
+
+### Changed — screen rebuilds (call-site migration)
+
+- **`ProjectListView`** (app chrome, `.modernistSurface(.print)`) — project rows now show 80×80 grayscale thumbnail + preset tag + metadata, with swipe-to-delete on existing behaviour; skipped-file section with warning glyph; empty state with centred layout and primary / secondary CTAs.
+- **`EditorView`** (studio editor, `.modernistSurface(.studio)`) — nav bar with project name, status line (auto-save dot, duration, time), undo/redo pair, settings gear; stage remains colour-graded (no grayscale); transport band with play/skip-back/skip-forward/time-display/loop/fullscreen; three-lane timeline (video/overlay/audio) with filmstrips (grayscale), tick row (zoom legend), playhead (white 2pt); toolbar with six root-mode cells and context-sensitive swap to clip/overlay/multi-select rows.
+- **Inspector / Keyframe areas** (studio ground) — keyframe diamonds now accent-filled; playhead continues through as white 2pt; all sliders adopt `ModernistSlider`.
+- **Sheets** (`Print` ground) — Export / Add Overlay / Layers / Settings now use rounded-top-corners bottom sheet with 36×5 grabber and `.modernistElevation(.lg)`. Accent ramp colour swatches replace iOS system colours. Buttons adopt `ModernistButtonStyle` / `ModernistSecondaryButtonStyle`.
+
+### Changed — accent picker constraint
+
+- **v0.5 `ColorPicker` replacement.** `setAccentColor(_:)` mutation and `ProjectDocument` schema v4 unchanged. UI narrowed: replaced free `ColorPicker` with `ModernistSegmentedControl` over three accent ramp steps (`a500` / `a600` / `a700`) plus "System" option (clears to `nil`).
+
+### Changed — semantic colour collapse
+
+- **Delete buttons.** Changed from solid red fill to `ModernistSecondaryButtonStyle` (accent outline + trash icon); red is already the accent, so a second red fill reads as undifferentiated.
+- **Auto-save status.** Neutral `n400` dot instead of green.
+- **Keyframe authors.** Accent-filled diamonds (no longer amber).
+- **Selection rings.** Already white 2pt in v0.7 (accidental alignment); Modernist codifies this.
+- **Playhead.** Remains white 2pt (sits over accent-tinted footage; white reads on any frame and stops competing with the accent). Only place design deviates from "red = accent."
+
+### Changed — footage grayscale
+
+- **Apply `.modernistGrayscale()` to:** project thumbnails, timeline filmstrips, layer/overlay thumbnails.
+- **Do not apply to:** preview stage (user is colour-grading there; grayscale would be a functional regression).
+
+### Changed — corner radius everywhere
+
+- **Zero radius on all elements.** Sheets, buttons, cards, tags, sliders — none have rounded corners. Square is the Modernist baseline.
+
+### Compatibility
+
+- **No schema changes.** `ProjectDocument` v4 persists identically; `Project.accentColor` hex round-trip works as before.
+- **iOS 16 compatible.** Design layer is orthogonal to v0.7.1's iOS 17 floor bump. SwiftUI weight-trait resolution works on iOS 16+.
+- **Font assets required.** Archivo static instances must be in `Info.plist` `UIAppFonts`. Fallback to system face at same size/weight means nothing breaks, but intended look requires the font.
+- **kadr-ui 0.12.0 ceiling.** The design exposed hard limits in kadr-ui's customization API (zero-theming by policy). Unreachable: red playhead, clip-cell colours/radii/hues, waveform colour, keyframe marks, lane backgrounds, per-lane heights, unhiddable 14pt scrub strip, AVKit transport chrome, time ruler, filmstrips in clip cells. Proposed upstream RFC: EnvironmentValues-based appearance modifier through existing private helpers.
+- **Package.resolved stale.** Root `Package.resolved` points to kadr-ui 0.6.0 (SPM residue); `.xcodeproj` resolves 0.12.0 correctly. Technical debt; regenerate or accept as-is.
+
+### Fixed
+
+- **Interactive pop gesture.** Hiding the system nav bar during design work broke swipe-from-left-edge to go back. Restored via `UIGestureRecognizerDelegate` shim in the nav stack. Witness: edge-swipe UI test now guards the affordance.
+- **ModernistStyles.swift `Body` → `StyleBody`.** Renamed nested view to avoid `ButtonStyle` associated-type witness collision (compile blocker, zero visual change).
+
+### Dropped by ruling
+
+- **Transport band UI** (play/skip/loop/fullscreen controls) — deferred. Open feature request for v0.8+.
+- **Real eyedropper tool** — "Pick from preview" for chroma key / colour overlays. Pre-existing `ColorPicker` stands in; needs `VideoPreview` tap-coordinate API.
+- **Editor rename affordance** — navigation pencil glyph was decorative, a11y-hidden. Dropped.
+
+### Deferred
+
+- **Dynamic Type audit.** Fixed Modernist scale makes DT audit *more* necessary for v1.0, not less. Deferred to v1.0 prep.
+- **Snapshot test baselines.** None existed. Re-recording skipped (UIImage baselines drift between contributor laptops and CI runners; deferred until pinned-Xcode re-record job).
+
+### Tests
+
+No new tests; migration is visual. Existing suite (291 unit + 5 UI) passes unchanged. `ModernistTypographyTests` guards font weight resolution.
+
+---
+
 ## [0.7.1] - 2026-07-17
 
 Platform modernization — raises the deployment floor to **iOS 17** and migrates the app's stores from `ObservableObject` to the `@Observable` macro. The payoff of the coordinated ecosystem iOS 17 move (kadr v0.15 / kadr-ui v0.12 / kadr-captions v0.8 / kadr-photos v0.7 / **this**). No user-facing feature change.
