@@ -113,7 +113,7 @@ final class ReelsStudioUITests: XCTestCase {
         // the control being tapped changed.
         app.buttons["Back"].tap()
         XCTAssertTrue(
-            app.navigationBars["Projects"].waitForExistence(timeout: 5),
+            app.staticTexts["Projects"].waitForExistence(timeout: 5),
             "Back navigation should return to the project list"
         )
     }
