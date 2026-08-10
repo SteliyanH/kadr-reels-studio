@@ -478,6 +478,7 @@ private struct EditorNavBar: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Project status")
+            .accessibilityValue(NSLocalizedString("Auto-saved", comment: "") + statusMetrics)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -494,6 +495,7 @@ private struct EditorNavBar: View {
             .buttonStyle(NavPairCellStyle())
             .disabled(!canUndo)
             .accessibilityLabel("Undo")
+            .accessibilityHint(canUndo ? "Undo last action" : "Nothing to undo")
             .help(canUndo ? "Undo last action" : "Nothing to undo")
 
             Rectangle()
@@ -506,6 +508,7 @@ private struct EditorNavBar: View {
             .buttonStyle(NavPairCellStyle())
             .disabled(!canRedo)
             .accessibilityLabel("Redo")
+            .accessibilityHint(canRedo ? "Redo last undone action" : "Nothing to redo")
             .help(canRedo ? "Redo last undone action" : "Nothing to redo")
         }
         .fixedSize()
