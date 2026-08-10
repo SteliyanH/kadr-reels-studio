@@ -41,43 +41,44 @@ struct TransitionsSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ModernistSheetHeader("Transition") {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(ModernistGhostButtonStyle())
+                Button("Apply") {
+                    apply()
+                    dismiss()
+                }
+                .buttonStyle(ModernistPrimaryButtonStyle())
+            }
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
                     kindGrid
                     durationSection
                     if existingTransitionPresent {
                         removeButton
                     }
                 }
-                .padding()
-            }
-            .navigationTitle("Transition")
-            .navigationBarTitleDisplayModeInline()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
-                        apply()
-                        dismiss()
-                    }
-                }
+                .padding(Modernist.Space.s4)
             }
         }
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        .modernistSheet(Modernist.SheetDetent.settings)
     }
 
     // MARK: - Subviews
 
     @ViewBuilder
     private var kindGrid: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
             Text("Kind")
                 .modernistLabel()
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 110, maximum: 160), spacing: 12)], spacing: 12) {
+            LazyVGrid(
+                columns: Array(
+                    repeating: GridItem(.flexible(), spacing: Modernist.Space.s2),
+                    count: Modernist.presetGridColumns
+                ),
+                spacing: Modernist.Space.s2
+            ) {
                 ForEach(TransitionKind.allCases, id: \.self) { kind in
                     transitionTile(kind: kind)
                 }
@@ -91,25 +92,25 @@ struct TransitionsSheet: View {
         Button {
             selectedKind = kind
         } label: {
-            VStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: Modernist.Space.s2) {
                 Image(systemName: kind.systemImage)
                     .font(.system(size: Modernist.Typography.Glyph.md, weight: Modernist.Typography.headingWeight))
                 Text(kind.displayLabel)
-                    .font(Modernist.Typography.caption)
+                    .font(Modernist.Typography.bodyEmphasis)
             }
-            .frame(maxWidth: .infinity, minHeight: 80)
-            .padding(8)
+            // Icon over label, both flush left — the system's alignment rule.
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: Modernist.minHitTarget + Modernist.Space.s6)
+            .padding(Modernist.Space.s3)
             // v0.8 Tier 3 — the selected-cell pattern for the whole app: a
             // named `accentTint` fill (never an ad-hoc accent opacity) and a
             // 2pt accent rule.
-            .background(
-                RoundedRectangle(cornerRadius: Modernist.Radius.md)
-                    .fill(isSelected ? palette.accentTint : palette.surface)
-            )
+            .background(isSelected ? palette.accentTint : palette.surface)
             .overlay(
                 RoundedRectangle(cornerRadius: Modernist.Radius.md)
                     .stroke(isSelected ? palette.accent : .clear, lineWidth: Modernist.ruleWidth)
             )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -118,17 +119,19 @@ struct TransitionsSheet: View {
 
     @ViewBuilder
     private var durationSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Duration")
-                    .modernistLabel()
-                Spacer()
-                Text(String(format: "%.2fs", durationSeconds))
-                    .font(Modernist.Typography.numeric)
-                    .foregroundStyle(palette.textMuted)
-            }
-            Slider(value: $durationSeconds, in: Self.minDuration...Self.maxDuration)
-                .accessibilityValue(String(format: "%.2f seconds", durationSeconds))
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+            Text("Duration")
+                .modernistLabel()
+            ModernistSlider(
+                label: NSLocalizedString("Duration", comment: "Transition duration"),
+                value: $durationSeconds,
+                range: Self.minDuration...Self.maxDuration,
+                valueText: String(format: "%.2fs", durationSeconds)
+            )
+            // The v0.7 spoken value survives the control swap verbatim: the
+            // slider's own combined value would read "0.50s", and VoiceOver
+            // has always said "0.50 seconds" here.
+            .accessibilityValue(String(format: "%.2f seconds", durationSeconds))
         }
     }
 
@@ -145,6 +148,7 @@ struct TransitionsSheet: View {
         }
         .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
         .padding(.top, Modernist.Space.s1)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - State
@@ -162,15 +166,7 @@ struct TransitionsSheet: View {
     }
 }
 
-/// `.navigationBarTitleDisplayMode(.inline)` is iOS-only. Same shim pattern
-/// the editor uses.
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
-    }
-}
+// v0.8 Tier 5a — the `navigationBarTitleDisplayModeInline()` shim went with
+// the `NavigationStack` this sheet no longer wraps itself in. The sheet's
+// title is drawn by `ModernistSheetHeader`, so there is no system navigation
+// bar left to configure.

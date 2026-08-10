@@ -13,6 +13,11 @@ import Photos
 /// Image / sticker source uses kadr-photos' `PhotoPicker`; the picked
 /// `PHAsset` resolves through `PhotosClipResolver.image(asset:duration:...)`
 /// and the resulting `PlatformImage` powers the overlay constructor.
+///
+/// v0.8 Tier 5a rebuilds the chrome to the approved design (Screens §7):
+/// canvas preview with a 2pt dashed selection frame, a Modernist segmented
+/// control, a text row on `surfaceRaised`, and SIZE / WEIGHT / COLOR blocks.
+/// Every mutation is the one v0.2 shipped.
 struct AddOverlaySheet: View {
 
     var store: ProjectStore
@@ -25,41 +30,29 @@ struct AddOverlaySheet: View {
     enum Tab: Hashable { case text, image, sticker }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                Picker("Kind", selection: $selectedTab) {
-                    Text("Text").tag(Tab.text)
-                    Text("Image").tag(Tab.image)
-                    Text("Sticker").tag(Tab.sticker)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.top, 8)
-
-                // v0.8 Tier 2 — the system's rule is 2pt, never a hairline.
-                Rectangle()
-                    .fill(palette.divider)
-                    .frame(height: Modernist.ruleWidth)
-                    .padding(.top, Modernist.Space.s2)
-
-                Group {
-                    switch selectedTab {
-                    case .text:    TextOverlayTab(store: store, dismiss: dismiss)
-                    case .image:   PhotoOverlayTab(store: store, kind: .image, dismiss: dismiss)
-                    case .sticker: PhotoOverlayTab(store: store, kind: .sticker, dismiss: dismiss)
-                    }
-                }
+        VStack(spacing: 0) {
+            ModernistSheetHeader("Add Overlay") {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(ModernistGhostButtonStyle())
             }
-            .navigationTitle("Add Overlay")
-            .navigationBarTitleDisplayModeInline()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
+
+            ModernistSegmentedControl(
+                options: [
+                    (Tab.text, NSLocalizedString("Text", comment: "Text overlay tab")),
+                    (Tab.image, NSLocalizedString("Image", comment: "Image overlay tab")),
+                    (Tab.sticker, NSLocalizedString("Sticker", comment: "Sticker overlay tab")),
+                ],
+                selection: $selectedTab
+            )
+            .padding(Modernist.Space.s4)
+
+            switch selectedTab {
+            case .text:    TextOverlayTab(store: store, dismiss: dismiss)
+            case .image:   PhotoOverlayTab(store: store, kind: .image, dismiss: dismiss)
+            case .sticker: PhotoOverlayTab(store: store, kind: .sticker, dismiss: dismiss)
             }
         }
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        .modernistSheet(Modernist.SheetDetent.addOverlay)
     }
 }
 
@@ -106,76 +99,146 @@ private struct TextOverlayTab: View {
             case .bold:    return .bold
             }
         }
+        /// Segment content. The three weight names are typographic
+        /// identifiers rather than prose; they read the same everywhere the
+        /// Latin scale is used, so they aren't routed through the bundle —
+        /// same call the accent ramp's "500 / 600 / 700" makes.
+        var label: String { rawValue.capitalized }
     }
 
     var body: some View {
-        Form {
-            Section(header: Text("Text").modernistLabel()) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                canvasPreview
+                textRow
+                sizeRow
+                weightRow
+                colorRow
+                Button("Add Text Overlay") { addTextOverlay() }
+                    .buttonStyle(ModernistPrimaryButtonStyle(isBlock: true))
+                    .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .padding(.horizontal, Modernist.Space.s4)
+            .padding(.bottom, Modernist.Space.s6)
+        }
+    }
+
+    /// The design's 104×185 stage stand-in: the overlay drawn in place, with a
+    /// 2pt dashed selection frame around the text box. Flat `surfaceRaised`
+    /// rather than the prototype's gradient — a generated hue is exactly what
+    /// the mono scheme forbids.
+    @ViewBuilder
+    private var canvasPreview: some View {
+        ZStack {
+            palette.surfaceRaised
+            Text(text.isEmpty ? "New text" : text)
+                // Not chrome: this renders the overlay at the size and weight
+                // the user authored, so it stays off the app's type scale by
+                // design.
+                .font(.system(size: CGFloat(fontSize), weight: swiftUIWeight))
+                .foregroundStyle(color)
+                .minimumScaleFactor(0.1)
+                .lineLimit(3)
+                .padding(.horizontal, Modernist.Space.s2)
+                .frame(maxWidth: .infinity)
+                .overlay(
+                    Rectangle()
+                        .strokeBorder(
+                            palette.accent,
+                            style: StrokeStyle(
+                                lineWidth: Modernist.ruleWidth,
+                                dash: [Modernist.Space.s1, Modernist.Space.s1]
+                            )
+                        )
+                )
+        }
+        .frame(
+            width: Modernist.overlayCanvasWidth,
+            height: Modernist.overlayCanvasHeight
+        )
+        .overlay(
+            Rectangle()
+                .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
+        )
+        .frame(maxWidth: .infinity)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var textRow: some View {
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+            Text("Text").modernistLabel()
+            HStack(spacing: Modernist.Space.s3) {
+                Image(systemName: "textformat")
+                    .foregroundStyle(palette.textMuted)
                 TextField("Caption", text: $text, axis: .vertical)
+                    .font(Modernist.Typography.body)
                     .lineLimit(1...3)
             }
-            Section(header: Text("Style").modernistLabel()) {
-                HStack {
-                    Text("Size")
-                    Slider(value: $fontSize, in: 24...96, step: 2)
-                    Text("\(Int(fontSize))")
-                        .font(Modernist.Typography.numeric)
-                        .frame(width: 32, alignment: .trailing)
-                }
-                Picker("Weight", selection: $weight) {
-                    ForEach(TextWeight.allCases) { w in
-                        Text(w.rawValue.capitalized).tag(w)
-                    }
-                }
-                swatchRow
-                ColorPicker("Color", selection: $color)
-            }
-            Section(header: Text("Preview").modernistLabel()) {
-                Text(text.isEmpty ? "New text" : text)
-                    // Not chrome: this renders the overlay at the size and
-                    // weight the user authored, so it stays off the app's type
-                    // scale by design. v0.8 Tier 4.
-                    .font(.system(size: CGFloat(fontSize), weight: swiftUIWeight))
-                    .foregroundStyle(color)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 8)
-            }
-            Section {
-                Button("Add Text Overlay") {
-                    addTextOverlay()
-                }
-                .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
+            .padding(Modernist.Space.s3)
+            .frame(minHeight: Modernist.minHitTarget)
+            .background(palette.surfaceRaised)
         }
     }
 
     @ViewBuilder
-    private var swatchRow: some View {
-        HStack(spacing: Modernist.Space.s2) {
-            ForEach(Array(swatches.enumerated()), id: \.offset) { _, swatch in
-                Button {
-                    color = swatch
-                } label: {
-                    Rectangle()
-                        .fill(swatch)
-                        .frame(
-                            width: Modernist.minHitTarget,
-                            height: Modernist.minHitTarget
-                        )
-                        .overlay(
-                            Rectangle()
-                                .strokeBorder(
-                                    color == swatch ? palette.text : palette.divider,
-                                    lineWidth: Modernist.ruleWidth
-                                )
-                        )
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(color == swatch ? [.isSelected] : [])
-            }
+    private var sizeRow: some View {
+        ModernistSlider(
+            label: NSLocalizedString("Size", comment: "Overlay text size"),
+            value: $fontSize,
+            range: 24...96,
+            valueText: "\(Int(fontSize)) pt"
+        )
+    }
+
+    @ViewBuilder
+    private var weightRow: some View {
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+            Text("Weight").modernistLabel()
+            // Three cells, the active one accent-filled — which is exactly
+            // what the segmented control already draws.
+            ModernistSegmentedControl(
+                options: TextWeight.allCases.map { ($0, $0.label) },
+                selection: $weight
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var colorRow: some View {
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+            Text("Color").modernistLabel()
+            HStack(spacing: Modernist.Space.s2) {
+                ForEach(Array(swatches.enumerated()), id: \.offset) { _, swatch in
+                    Button {
+                        color = swatch
+                    } label: {
+                        Rectangle()
+                            .fill(swatch)
+                            .frame(
+                                width: Modernist.minHitTarget,
+                                height: Modernist.minHitTarget
+                            )
+                            .overlay(
+                                Rectangle()
+                                    .strokeBorder(
+                                        color == swatch ? palette.text : palette.divider,
+                                        lineWidth: Modernist.ruleWidth
+                                    )
+                            )
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(color == swatch ? [.isSelected] : [])
+                }
+                // The eyedropper cell at the end of the row. Preserved
+                // verbatim from v0.5: narrowing the swatches is a style call,
+                // removing arbitrary colour would be a functional one.
+                ColorPicker("Color", selection: $color)
+                    .labelsHidden()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private var swiftUIWeight: Font.Weight {
@@ -209,8 +272,8 @@ private struct PhotoOverlayTab: View {
         case image, sticker
         var label: String {
             switch self {
-            case .image: return "Image Overlay"
-            case .sticker: return "Sticker"
+            case .image: return NSLocalizedString("Image Overlay", comment: "Image overlay kind")
+            case .sticker: return NSLocalizedString("Sticker", comment: "Sticker overlay kind")
             }
         }
         var iconSystemName: String {
@@ -225,6 +288,7 @@ private struct PhotoOverlayTab: View {
     let kind: Kind
     let dismiss: DismissAction
     @Environment(ToastCenter.self) private var toasts
+    @Environment(\.modernistPalette) private var palette
 
     @State private var picked: [PhotoPickerResult] = []
     @State private var pickedImage: PlatformImage?
@@ -233,35 +297,40 @@ private struct PhotoOverlayTab: View {
     @State private var opacity: Double = 1.0
 
     var body: some View {
-        Form {
-            Section(header: Text("Source").modernistLabel()) {
-                Button {
-                    showPicker = true
-                } label: {
-                    HStack {
-                        Image(systemName: kind.iconSystemName)
-                        Text(pickedImage == nil ? "Pick image…" : "Picked")
+        ScrollView {
+            VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+                    Text("Source").modernistLabel()
+                    Button {
+                        showPicker = true
+                    } label: {
+                        Label(
+                            pickedImage == nil ? "Pick image…" : "Picked",
+                            systemImage: kind.iconSystemName
+                        )
+                    }
+                    .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+                    if let pickedImage {
+                        pickedThumbnail(pickedImage)
                     }
                 }
-                if let pickedImage {
-                    pickedThumbnail(pickedImage)
+                VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+                    Text("Style").modernistLabel()
+                    ModernistSlider(
+                        label: NSLocalizedString("Opacity", comment: "Overlay opacity"),
+                        value: $opacity,
+                        range: 0...1,
+                        valueText: String(format: "%.0f%%", opacity * 100)
+                    )
                 }
-            }
-            Section(header: Text("Style").modernistLabel()) {
-                HStack {
-                    Text("Opacity")
-                    Slider(value: $opacity, in: 0...1)
-                    Text(String(format: "%.0f%%", opacity * 100))
-                        .font(Modernist.Typography.numeric)
-                        .frame(width: 44, alignment: .trailing)
-                }
-            }
-            Section {
-                Button("Add \(kind.label)") {
+                Button(String(format: NSLocalizedString("overlay.add.kind", comment: "Add <kind>"), kind.label)) {
                     addPhotoOverlay()
                 }
+                .buttonStyle(ModernistPrimaryButtonStyle(isBlock: true))
                 .disabled(pickedImage == nil)
             }
+            .padding(.horizontal, Modernist.Space.s4)
+            .padding(.bottom, Modernist.Space.s6)
         }
         .overlay {
             if isResolving { ProgressView().controlSize(.large) }
@@ -286,14 +355,22 @@ private struct PhotoOverlayTab: View {
         Image(uiImage: image)
             .resizable()
             .scaledToFit()
-            .frame(maxHeight: 96)
-            .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
+            .frame(maxHeight: Modernist.overlayCanvasWidth)
+            .modernistGrayscale()
+            .overlay(
+                Rectangle()
+                    .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
+            )
         #else
         Image(nsImage: image)
             .resizable()
             .scaledToFit()
-            .frame(maxHeight: 96)
-            .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
+            .frame(maxHeight: Modernist.overlayCanvasWidth)
+            .modernistGrayscale()
+            .overlay(
+                Rectangle()
+                    .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
+            )
         #endif
     }
 
@@ -374,16 +451,3 @@ extension PlatformColor {
     }
 }
 #endif
-
-// MARK: - Inline navigation-bar shim
-
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
-    }
-}

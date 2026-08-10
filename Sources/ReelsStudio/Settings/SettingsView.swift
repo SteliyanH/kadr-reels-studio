@@ -2,22 +2,27 @@ import SwiftUI
 import Kadr
 
 /// Per-project + app-level preferences. Pushed from the editor's top-toolbar
-/// gear icon. Three sections:
+/// gear icon. Three sections, per the approved design (Screens §9):
 ///
-/// - **Appearance** — accent color, constrained to the Modernist accent ramp
-///   (System / 500 / 600 / 700). Per-project (writes to `Project.accentColor`).
-/// - **Playback** — fixed-center playhead toggle. Per-project.
-/// - **Haptics** — strength segmented (Off / Light / Medium). App-level
-///   (writes to ``AppSettings/hapticIntensity``).
+/// - **ACCENT · THIS PROJECT** — accent color, constrained to the Modernist
+///   accent ramp (System / 500 / 600 / 700). Per-project (writes to
+///   `Project.accentColor`).
+/// - **PLAYBACK** — fixed-center playhead toggle, in a card with its own
+///   explanation. Per-project.
+/// - **HAPTICS · ALL PROJECTS** — strength segmented (Off / Light / Medium).
+///   App-level (writes to ``AppSettings/hapticIntensity``).
 ///
 /// v0.5 Tier 1. The picker UI is reels-studio's only entry point for the
 /// preferences v0.4 introduced — before this, the only way to set a custom
 /// accent or disable the fixed-center playhead was editing JSON on disk.
+/// v0.8 Tier 5a moves it off `Form` onto the design's ruled block layout;
+/// every mutation is the one v0.5 shipped.
 struct SettingsView: View {
 
     var store: ProjectStore
     @Environment(AppSettings.self) private var settings
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
 
     /// Which segment of the accent ramp is showing. Local state because
     /// seeding it must not fire a mutation — the `.onChange` below is what
@@ -83,30 +88,29 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                appearanceSection
-                playbackSection
-                hapticsSection
+        VStack(spacing: 0) {
+            ModernistSheetHeader("Settings") {
+                Button("Done") { dismiss() }
+                    .buttonStyle(ModernistGhostButtonStyle())
             }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayModeInline()
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+            ScrollView {
+                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                    accentSection
+                    playbackSection
+                    hapticsSection
                 }
+                .padding(Modernist.Space.s4)
             }
         }
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        .modernistSheet(Modernist.SheetDetent.settings)
     }
 
-    // MARK: - Appearance
+    // MARK: - Accent
 
     @ViewBuilder
-    private var appearanceSection: some View {
-        Section(header: Text("Appearance").modernistLabel()) {
-            Text("Accent")
+    private var accentSection: some View {
+        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
+            Text("Accent · This project").modernistLabel()
             ModernistSegmentedControl(
                 options: AccentChoice.allCases.map { ($0, $0.label) },
                 selection: $accentChoice
@@ -116,6 +120,10 @@ struct SettingsView: View {
                 // hex round-trip all inherit unchanged.
                 store.setAccentColor(newValue.color)
             }
+            // Deliberately *no* `.accessibilityLabel` on the control: a label
+            // on a container of buttons relabels or swallows the segments,
+            // and each segment's own label ("System", "500"…) is the thing
+            // VoiceOver — and the XCUITest below — needs to reach.
         }
     }
 
@@ -123,14 +131,26 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var playbackSection: some View {
-        Section(header: Text("Playback").modernistLabel()) {
+        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
+            Text("Playback").modernistLabel()
             Toggle(
-                "Fixed-center playhead",
                 isOn: Binding(
                     get: { store.project.fixedCenterPlayhead },
                     set: { store.setFixedCenterPlayhead($0) }
                 )
-            )
+            ) {
+                VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+                    Text("Fixed-center playhead")
+                        .font(Modernist.Typography.bodyEmphasis)
+                    Text("The timeline scrolls under a pinned playhead instead of letting it drift.")
+                        .font(Modernist.Typography.caption)
+                        .foregroundStyle(palette.textMuted)
+                }
+            }
+            // Decision 4 — the scheme has no success role, so the switch's
+            // "on" fill is the accent, never the system green.
+            .tint(palette.accent)
+            .modernistCard()
         }
     }
 
@@ -141,24 +161,15 @@ struct SettingsView: View {
         // local @Bindable (the replacement for `@ObservedObject` / `@EnvironmentObject`
         // bindings).
         @Bindable var settings = settings
-        return Section(header: Text("Haptics").modernistLabel()) {
-            Picker("Strength", selection: $settings.hapticIntensity) {
-                ForEach(HapticIntensity.allCases, id: \.self) { intensity in
-                    Text(intensity.displayName).tag(intensity)
-                }
-            }
-            .pickerStyle(.segmented)
+        return VStack(alignment: .leading, spacing: Modernist.Space.s3) {
+            Text("Haptics · All projects").modernistLabel()
+            // Each segment is a real `Button` whose label is the intensity's
+            // display name, so `app.buttons["Medium"]` — the XCUITest's proof
+            // that this sheet presented — keeps resolving.
+            ModernistSegmentedControl(
+                options: HapticIntensity.allCases.map { ($0, $0.displayName) },
+                selection: $settings.hapticIntensity
+            )
         }
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
     }
 }

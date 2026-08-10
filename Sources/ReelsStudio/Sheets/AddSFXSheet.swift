@@ -6,6 +6,9 @@ import Kadr
 /// Sheet for adding a time-pinned sound effect. User picks an audio file, drags a
 /// slider to set the composition time at which the SFX fires, taps **Add** →
 /// appends an `AudioTrack` pinned via `.at(time:)`.
+///
+/// v0.8 Tier 5a wears the app's sheet chrome and the design's block layout;
+/// the import, the pinning and the mutation are v0.3's.
 struct AddSFXSheet: View {
 
     var store: ProjectStore
@@ -22,63 +25,76 @@ struct AddSFXSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("Sound").modernistLabel()) {
-                    Button {
-                        showImporter = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "speaker.wave.2")
-                            Text(pickedURL?.lastPathComponent ?? "Pick audio file")
-                        }
-                    }
-                }
-                Section(header: Text("Timing").modernistLabel()) {
-                    HStack {
-                        Text("Pin at")
-                        Slider(value: $pinTimeSeconds, in: 0...max(compositionDurationSeconds, 0.1))
-                        Text(String(format: "%.1fs", pinTimeSeconds))
-                            .font(Modernist.Typography.numeric)
-                            .frame(width: 48, alignment: .trailing)
-                    }
-                    HStack {
-                        Text("Volume")
-                        Slider(value: $volume, in: 0...1)
-                        Text(String(format: "%.2f", volume))
-                            .font(Modernist.Typography.numeric)
-                            .frame(width: 40, alignment: .trailing)
-                    }
-                }
-                Section {
-                    Text("SFX play once at the pinned time and don't loop. Total composition is \(String(format: "%.1fs", compositionDurationSeconds)).")
-                        .font(Modernist.Typography.caption)
-                        .foregroundStyle(palette.textMuted)
-                }
+        VStack(spacing: 0) {
+            ModernistSheetHeader("Add SFX") {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(ModernistGhostButtonStyle())
+                Button("Add") { addTrack() }
+                    .buttonStyle(ModernistPrimaryButtonStyle())
+                    .disabled(pickedURL == nil)
             }
-            .navigationTitle("Add SFX")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+            ScrollView {
+                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                    soundSection
+                    timingSection
+                    Text(
+                        String(
+                            format: NSLocalizedString("sfx.composition.footer", comment: "SFX footer"),
+                            compositionDurationSeconds
+                        )
+                    )
+                    .font(Modernist.Typography.caption)
+                    .foregroundStyle(palette.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") { addTrack() }
-                        .disabled(pickedURL == nil)
-                }
-            }
-            .fileImporter(
-                isPresented: $showImporter,
-                allowedContentTypes: [.audio, .mp3, .mpeg4Audio, .wav],
-                allowsMultipleSelection: false
-            ) { result in
-                if case .success(let urls) = result {
-                    pickedURL = urls.first
-                }
+                .padding(Modernist.Space.s4)
             }
         }
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: [.audio, .mp3, .mpeg4Audio, .wav],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result {
+                pickedURL = urls.first
+            }
+        }
+        .modernistSheet(Modernist.SheetDetent.settings)
+    }
+
+    @ViewBuilder
+    private var soundSection: some View {
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+            Text("Sound").modernistLabel()
+            Button {
+                showImporter = true
+            } label: {
+                Label(
+                    pickedURL?.lastPathComponent ?? NSLocalizedString("Pick audio file", comment: "Audio file importer"),
+                    systemImage: "speaker.wave.2"
+                )
+            }
+            .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+        }
+    }
+
+    @ViewBuilder
+    private var timingSection: some View {
+        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
+            Text("Timing").modernistLabel()
+            ModernistSlider(
+                label: NSLocalizedString("Pin at", comment: "SFX pin time"),
+                value: $pinTimeSeconds,
+                range: 0...max(compositionDurationSeconds, 0.1),
+                valueText: String(format: "%.1fs", pinTimeSeconds)
+            )
+            ModernistSlider(
+                label: NSLocalizedString("Volume", comment: "SFX volume"),
+                value: $volume,
+                range: 0...1,
+                valueText: String(format: "%.2f", volume)
+            )
+        }
     }
 
     private func addTrack() {

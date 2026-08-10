@@ -7,6 +7,9 @@ import Kadr
 /// kadr exposes. Reorder is deferred — list order matches kadr's render
 /// order (declaration order), but the v0.4 surface is tap-to-select, so
 /// drag-to-reorder isn't a primitive yet.
+///
+/// v0.8 Tier 5a wears the app's sheet chrome: grabber, `h3` title, square
+/// corners, print ground. Behaviour is v0.4's, untouched.
 struct FiltersSheet: View {
 
     var store: ProjectStore
@@ -19,24 +22,18 @@ struct FiltersSheet: View {
     @State private var showChromaKey = false
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ModernistSheetHeader("Filters") {
+                addMenu
+                Button("Done") { dismiss() }
+                    .buttonStyle(ModernistGhostButtonStyle())
+            }
             content
-                .navigationTitle("Filters")
-                .navigationBarTitleDisplayModeInline()
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { dismiss() }
-                    }
-                    ToolbarItem(placement: .topBarLeading) {
-                        addMenu
-                    }
-                }
-                .sheet(isPresented: $showChromaKey) {
-                    ChromaKeySheet(store: store, clipID: clipID)
-                }
         }
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        .sheet(isPresented: $showChromaKey) {
+            ChromaKeySheet(store: store, clipID: clipID)
+        }
+        .modernistSheet(detents: [.fraction(Modernist.SheetDetent.layers), .large])
     }
 
     // MARK: - Body
@@ -47,6 +44,9 @@ struct FiltersSheet: View {
             if clip.filters.isEmpty {
                 emptyState
             } else {
+                // Still a `List`: swipe-to-delete is a `List` primitive, so
+                // the design's row block is reached by stripping the list's
+                // chrome rather than by dropping the container.
                 List {
                     ForEach(Array(clip.filters.enumerated()), id: \.offset) { index, filter in
                         FilterRow(
@@ -55,6 +55,9 @@ struct FiltersSheet: View {
                                 store.applyFilterIntensity(id: clipID, filterIndex: index, value: value)
                             }
                         )
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                     .onDelete { offsets in
                         // Walk from highest to lowest so earlier deletes don't
@@ -64,9 +67,11 @@ struct FiltersSheet: View {
                         }
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         } else {
-            VStack(spacing: 12) {
+            VStack(spacing: Modernist.Space.s3) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
                     .foregroundStyle(palette.textMuted)
@@ -79,7 +84,7 @@ struct FiltersSheet: View {
 
     @ViewBuilder
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Modernist.Space.s3) {
             Image(systemName: "camera.filters")
                 .font(.system(size: Modernist.Typography.Glyph.xl, weight: Modernist.Typography.headingWeight))
                 .foregroundStyle(palette.textMuted)
@@ -88,8 +93,10 @@ struct FiltersSheet: View {
             Text("Add a filter from the menu above.")
                 .font(Modernist.Typography.body)
                 .foregroundStyle(palette.textMuted)
+                .frame(maxWidth: Modernist.emptyStateMeasure)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(Modernist.Space.s4)
     }
 
     // MARK: - Add menu
@@ -114,6 +121,9 @@ struct FiltersSheet: View {
             Button("Chroma Key…") { showChromaKey = true }
         } label: {
             Image(systemName: "plus")
+                .frame(width: Modernist.minHitTarget, height: Modernist.minHitTarget)
+                .background(palette.surface)
+                .contentShape(Rectangle())
         }
     }
 
@@ -131,25 +141,28 @@ private struct FilterRow: View {
     @Environment(\.modernistPalette) private var palette
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(label)
-                    .font(Modernist.Typography.body)
-                Spacer()
-                if let scalar = scalarValue {
-                    Text(String(format: "%.2f", scalar))
-                        .font(Modernist.Typography.numeric)
-                        .foregroundStyle(palette.textMuted)
-                }
-            }
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
             if let scalar = scalarValue, let range = scalarRange {
-                Slider(
+                // The slider ships its own label + readout row, which is
+                // exactly the "Scale … 1.24×" shape the design asks for — so
+                // the separate title line the `Form` version needed is gone.
+                ModernistSlider(
+                    label: label,
                     value: Binding(get: { scalar }, set: { onIntensityChange($0) }),
-                    in: range
+                    range: range,
+                    valueText: String(format: "%.2f", scalar)
                 )
+            } else {
+                Text(label)
+                    .font(Modernist.Typography.bodyEmphasis)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, Modernist.Space.s4)
+        .padding(.vertical, Modernist.Space.s2)
+        .frame(minHeight: Modernist.minHitTarget)
+        .background(palette.surface)
+        .modernistRule()
     }
 
     private var label: String {
@@ -199,16 +212,5 @@ private struct FilterRow: View {
         case .zoomBlur:                        return 0.0 ... 100.0
         case .mono, .lut, .chromaKey:          return nil
         }
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
     }
 }

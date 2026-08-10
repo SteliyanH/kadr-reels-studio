@@ -5,6 +5,9 @@ import Kadr
 /// Sheet for adding a background music track. User picks an audio file via
 /// `.fileImporter`, sets volume + ducking, taps **Add** → appends an `AudioTrack`
 /// with sensible defaults (fade-in 0.5s, fade-out 1.0s, optional ducking 0.3).
+///
+/// v0.8 Tier 5a wears the app's sheet chrome and the design's block layout;
+/// the import, the defaults and the mutation are v0.3's.
 struct AddMusicSheet: View {
 
     var store: ProjectStore
@@ -17,57 +20,70 @@ struct AddMusicSheet: View {
     @State private var enableDucking: Bool = true
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("Audio").modernistLabel()) {
-                    Button {
-                        showImporter = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "music.note")
-                            Text(pickedURL?.lastPathComponent ?? "Pick audio file")
-                        }
-                    }
-                }
-                Section(header: Text("Mix").modernistLabel()) {
-                    HStack {
-                        Text("Volume")
-                        Slider(value: $volume, in: 0...1)
-                        Text(String(format: "%.2f", volume))
-                            .font(Modernist.Typography.numeric)
-                            .frame(width: 40, alignment: .trailing)
-                    }
-                    Toggle("Auto-duck during clip audio", isOn: $enableDucking)
-                }
-                Section {
+        VStack(spacing: 0) {
+            ModernistSheetHeader("Add Music") {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(ModernistGhostButtonStyle())
+                Button("Add") { addTrack() }
+                    .buttonStyle(ModernistPrimaryButtonStyle())
+                    .disabled(pickedURL == nil)
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                    audioSection
+                    mixSection
                     Text("Music auto-fades in over 0.5s and out over 1.0s. Auto-ducking lowers music to 30% while clip audio plays.")
                         .font(Modernist.Typography.caption)
                         .foregroundStyle(palette.textMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            }
-            .navigationTitle("Add Music")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") { addTrack() }
-                        .disabled(pickedURL == nil)
-                }
-            }
-            .fileImporter(
-                isPresented: $showImporter,
-                allowedContentTypes: [.audio, .mp3, .mpeg4Audio, .wav],
-                allowsMultipleSelection: false
-            ) { result in
-                if case .success(let urls) = result {
-                    pickedURL = urls.first
-                }
+                .padding(Modernist.Space.s4)
             }
         }
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: [.audio, .mp3, .mpeg4Audio, .wav],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result {
+                pickedURL = urls.first
+            }
+        }
+        .modernistSheet(Modernist.SheetDetent.settings)
+    }
+
+    @ViewBuilder
+    private var audioSection: some View {
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+            Text("Audio").modernistLabel()
+            Button {
+                showImporter = true
+            } label: {
+                Label(
+                    pickedURL?.lastPathComponent ?? NSLocalizedString("Pick audio file", comment: "Audio file importer"),
+                    systemImage: "music.note"
+                )
+            }
+            .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+        }
+    }
+
+    @ViewBuilder
+    private var mixSection: some View {
+        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
+            Text("Mix").modernistLabel()
+            ModernistSlider(
+                label: NSLocalizedString("Volume", comment: "Music volume"),
+                value: $volume,
+                range: 0...1,
+                valueText: String(format: "%.2f", volume)
+            )
+            Toggle("Auto-duck during clip audio", isOn: $enableDucking)
+                .font(Modernist.Typography.body)
+                // Decision 4 — no success role; the switch's "on" fill is the
+                // one accent, never the system green.
+                .tint(palette.accent)
+        }
     }
 
     private func addTrack() {

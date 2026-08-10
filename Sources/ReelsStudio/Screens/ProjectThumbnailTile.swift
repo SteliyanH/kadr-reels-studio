@@ -5,9 +5,13 @@ import SwiftUI
 /// Reads the cached JPEG synchronously in `body` for the hot path; on cache
 /// miss kicks off `ProjectThumbnailRenderer.render(_:)` from `.onAppear` so
 /// the row renders something immediately rather than blocking on
-/// AVAssetImageGenerator. Empty / unrenderable projects fall back to a flat
-/// `surface` block inside a 2pt dashed rule (v0.8 Tier 3 — the hue-derived
-/// gradient this used to draw can't survive a mono scheme).
+/// AVAssetImageGenerator.
+///
+/// v0.8 Tier 5a: per the approved design, an *empty* project's tile is a 2pt
+/// dashed `divider` frame on `surface` — nothing else — and a tile that can
+/// name the project's length carries a `numeric` duration chip along its
+/// bottom edge. Real thumbnails still go through `.modernistGrayscale()`
+/// (Decision 5).
 struct ProjectThumbnailTile: View {
 
     let document: ProjectDocument
@@ -31,16 +35,18 @@ struct ProjectThumbnailTile: View {
             } else {
                 // v0.8 Tier 3 — the placeholder was a hue-derived gradient
                 // keyed off the project id. A generated hue is the opposite
-                // of a mono scheme, so an empty project reads as a flat
-                // surface inside a 2pt dashed rule instead.
+                // of a mono scheme, so an unrendered tile reads as a flat
+                // surface, and an *empty* project as nothing but the dashed
+                // frame below.
                 palette.surface
-                if document.clips.isEmpty {
+                if !document.clips.isEmpty {
                     Image(systemName: "film")
                         .font(.system(size: Modernist.Typography.Glyph.sm, weight: Modernist.Typography.headingWeight))
                         .foregroundStyle(palette.textMuted)
                 }
             }
         }
+        .overlay(alignment: .bottom) { durationChip }
         .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
         .overlay(
             RoundedRectangle(cornerRadius: Modernist.Radius.md)
@@ -49,17 +55,66 @@ struct ProjectThumbnailTile: View {
         .onAppear { loadIfNeeded() }
     }
 
-    /// A rendered frame sits inside a solid 2pt rule; a placeholder sits
+    /// The design's chip along the tile's bottom edge, in tabular figures.
+    /// Hidden when the document can't name its own length — a video clip
+    /// persists no duration until it has been trimmed, and inventing one
+    /// would be worse than omitting it.
+    @ViewBuilder
+    private var durationChip: some View {
+        if let label = ProjectThumbnailTile.durationLabel(for: document) {
+            Text(label)
+                .font(Modernist.Typography.numeric)
+                .foregroundStyle(palette.onAccent)
+                .frame(maxWidth: .infinity)
+                .frame(height: Modernist.thumbnailChipHeight)
+                .background(palette.text)
+                .accessibilityHidden(true)
+        }
+    }
+
+    /// A rendered frame sits inside a solid 2pt rule; an empty project sits
     /// inside a dashed one, which is how the approved design distinguishes
     /// "nothing here yet" from "a frame that happens to be dark".
     private var frameStroke: StrokeStyle {
-        image == nil
+        document.clips.isEmpty
             ? StrokeStyle(
                 lineWidth: Modernist.ruleWidth,
                 dash: [Modernist.Space.s1, Modernist.Space.s1]
               )
             : StrokeStyle(lineWidth: Modernist.ruleWidth)
     }
+
+    // MARK: - Duration
+
+    /// `m:ss` for the tile's chip, or `nil` when the document carries no
+    /// usable duration. Pure so it's testable.
+    nonisolated static func durationLabel(for document: ProjectDocument) -> String? {
+        let seconds = durationSeconds(of: document.clips)
+        guard seconds > 0 else { return nil }
+        let total = Int(seconds.rounded())
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    /// Best-effort composition length straight off the persisted shape.
+    ///
+    /// Image, title and track clips all persist their own length. A video
+    /// clip only does once it has been trimmed (`trimDurationSeconds`);
+    /// before that its length lives in the asset, which a list row must not
+    /// open. Transitions are skipped deliberately — kadr overlaps them into
+    /// their neighbours, so adding them would over-count.
+    nonisolated static func durationSeconds(of clips: [ProjectClip]) -> Double {
+        clips.reduce(into: 0) { total, clip in
+            switch clip {
+            case .video(let data):      total += data.trimDurationSeconds ?? 0
+            case .image(let data):      total += data.durationSeconds
+            case .title(let data):      total += data.durationSeconds
+            case .transition:           break
+            case .track(let data):      total += durationSeconds(of: data.clips)
+            }
+        }
+    }
+
+    // MARK: - Loading
 
     /// Sync cache-only lookup + async render fallback. Runs from
     /// `.onAppear` so the cost is amortized across scroll; no eager render
@@ -77,26 +132,6 @@ struct ProjectThumbnailTile: View {
                 await MainActor.run { self.image = image }
             }
         }
-    }
-
-    /// The placeholder fill, as a `LinearGradient`.
-    ///
-    /// v0.7 Tier 5 derived two hues from a hash of the project id so empty
-    /// projects looked distinct. v0.8 Tier 3 collapsed that into the mono
-    /// scheme — a generated hue is exactly what the system forbids — so the
-    /// "gradient" is now one flat print `surface` stop, and the tile paints
-    /// `palette.surface` from the environment directly.
-    ///
-    /// Kept, with its original signature, because it is public API pinned by
-    /// `ProjectThumbnailRendererTests`. It is still deterministic per id
-    /// (trivially so). Retire it with that test, not before.
-    nonisolated static func placeholderGradient(for projectID: UUID) -> LinearGradient {
-        let fill = ModernistPalette.print.surface
-        return LinearGradient(
-            gradient: Gradient(colors: [fill, fill]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 }
 

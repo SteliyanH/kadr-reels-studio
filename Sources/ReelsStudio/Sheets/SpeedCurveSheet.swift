@@ -17,45 +17,42 @@ struct SpeedCurveSheet: View {
     @Environment(\.modernistPalette) private var palette
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ModernistSheetHeader("Speed Curve") {
+                Button("Done") { dismiss() }
+                    .buttonStyle(ModernistGhostButtonStyle())
+            }
             content
-                .navigationTitle("Speed Curve")
-                .navigationBarTitleDisplayModeInline()
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { dismiss() }
-                    }
-                }
         }
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        // The design gives no fixed height for this one; the log-scaled
+        // multiplier axis needs every point it can get, so it takes the
+        // full-height stop.
+        .modernistSheet(detents: [.large])
     }
 
     @ViewBuilder
     private var content: some View {
         if let clip = videoClip(matching: clipID) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Modernist.Space.s3) {
                 Text(headerText(for: clip))
                     .font(Modernist.Typography.body)
                     .foregroundStyle(palette.textMuted)
-                    .padding(.horizontal)
                 SpeedCurveEditor(
                     clip: clip,
                     currentTime: Binding(
                         get: { store.currentTime },
                         set: { store.currentTime = $0 }
                     ),
-                    height: 240,
+                    height: Modernist.speedCurveEditorHeight,
                     onUpdate: { newCurve in
                         store.applySpeedCurve(id: clipID, newCurve)
                     }
                 )
-                .padding(.horizontal)
                 Spacer()
             }
-            .padding(.top)
+            .padding(Modernist.Space.s4)
         } else {
-            VStack(spacing: 12) {
+            VStack(spacing: Modernist.Space.s3) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
                     .foregroundStyle(palette.textMuted)
@@ -64,9 +61,10 @@ struct SpeedCurveSheet: View {
                 Text("This clip is no longer in the project. Close this sheet and reselect.")
                     .font(Modernist.Typography.body)
                     .foregroundStyle(palette.textMuted)
-                    .padding(.horizontal)
+                    .frame(maxWidth: Modernist.emptyStateMeasure)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(Modernist.Space.s4)
         }
     }
 
@@ -82,13 +80,5 @@ struct SpeedCurveSheet: View {
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
-    }
-}
+// v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
+// sheet no longer wraps itself in; `ModernistSheetHeader` draws the title.

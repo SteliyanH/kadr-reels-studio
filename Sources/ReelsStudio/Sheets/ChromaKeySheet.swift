@@ -36,48 +36,46 @@ struct ChromaKeySheet: View {
     private static let defaultThreshold: Double = 0.4
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ModernistSheetHeader("Chroma Key") {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(ModernistGhostButtonStyle())
+                Button("Apply") {
+                    apply()
+                    dismiss()
+                }
+                .buttonStyle(ModernistPrimaryButtonStyle())
+            }
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
                     colorPreviewSection
                     thresholdSection
                     helpText
                 }
-                .padding()
-            }
-            .navigationTitle("Chroma Key")
-            .navigationBarTitleDisplayModeInline()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
-                        apply()
-                        dismiss()
-                    }
-                }
+                .padding(Modernist.Space.s4)
             }
         }
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        .modernistSheet(Modernist.SheetDetent.layers)
     }
 
     // MARK: - Subviews
 
     @ViewBuilder
     private var colorPreviewSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
             Text("Key color")
                 .modernistLabel()
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: Modernist.Radius.md)
+            HStack(spacing: Modernist.Space.s3) {
+                Rectangle()
                     .fill(keyColor)
                     .frame(width: Modernist.swatchSize, height: Modernist.swatchSize)
                     .overlay(
-                        RoundedRectangle(cornerRadius: Modernist.Radius.md)
+                        Rectangle()
                             .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
                     )
+                // Commander's ruling: this picker is functional, not chrome.
+                // The sheet around it is restyled; the control itself is left
+                // whole so arbitrary key colours stay reachable.
                 ColorPicker("Pick color", selection: $keyColor, supportsOpacity: false)
                     .labelsHidden()
                 Spacer()
@@ -87,17 +85,16 @@ struct ChromaKeySheet: View {
 
     @ViewBuilder
     private var thresholdSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Threshold")
-                    .modernistLabel()
-                Spacer()
-                Text(String(format: "%.2f", threshold))
-                    .font(Modernist.Typography.numeric)
-                    .foregroundStyle(palette.textMuted)
-            }
-            Slider(value: $threshold, in: 0...1)
-                .accessibilityValue(String(format: "%.2f", threshold))
+        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+            Text("Threshold")
+                .modernistLabel()
+            ModernistSlider(
+                label: NSLocalizedString("Threshold", comment: "Chroma key tolerance"),
+                value: $threshold,
+                range: 0...1,
+                valueText: String(format: "%.2f", threshold)
+            )
+            .accessibilityValue(String(format: "%.2f", threshold))
         }
     }
 
@@ -121,16 +118,8 @@ struct ChromaKeySheet: View {
 
 // MARK: - Bridges
 
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
-    }
-}
+// v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
+// sheet no longer wraps itself in; `ModernistSheetHeader` draws the title.
 
 private extension PlatformColor {
     convenience init(_ color: Color) {

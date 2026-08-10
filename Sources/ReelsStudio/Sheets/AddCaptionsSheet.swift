@@ -35,39 +35,29 @@ struct AddCaptionsSheet: View {
     enum Tab: Hashable { case edit, `import` }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                Picker("Mode", selection: $selectedTab) {
-                    Text("Edit").tag(Tab.edit)
-                    Text("Import").tag(Tab.import)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.top, 8)
-
-                // v0.8 Tier 2 — the system's rule is 2pt, never a hairline.
-                Rectangle()
-                    .fill(palette.divider)
-                    .frame(height: Modernist.ruleWidth)
-                    .padding(.top, Modernist.Space.s2)
-
-                Group {
-                    switch selectedTab {
-                    case .edit:    editTab
-                    case .import:  importTab
-                    }
-                }
+        VStack(spacing: 0) {
+            ModernistSheetHeader("Captions") {
+                Button("Done") { dismiss() }
+                    .buttonStyle(ModernistGhostButtonStyle())
             }
-            .navigationTitle("Captions")
-            .navigationBarTitleDisplayModeInline()
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+
+            ModernistSegmentedControl(
+                options: [
+                    (Tab.edit, NSLocalizedString("Edit", comment: "Caption edit tab")),
+                    (Tab.import, NSLocalizedString("Import", comment: "Caption import tab")),
+                ],
+                selection: $selectedTab
+            )
+            .padding(Modernist.Space.s4)
+
+            switch selectedTab {
+            case .edit:    editTab
+            case .import:  importTab
             }
         }
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        // The design gives no fixed height for this one; the cue editor is a
+        // full working surface, so it takes the full-height stop.
+        .modernistSheet(detents: [.large])
     }
 
     // MARK: - Edit tab
@@ -86,8 +76,7 @@ struct AddCaptionsSheet: View {
                     store.setCaptions(newCaptions)
                 }
             )
-            .padding(.horizontal)
-            .padding(.top, 12)
+            .padding(.horizontal, Modernist.Space.s4)
         }
     }
 
@@ -112,41 +101,48 @@ struct AddCaptionsSheet: View {
 
     @ViewBuilder
     private var importTab: some View {
-        Form {
-            Section(header: Text("Caption file").modernistLabel()) {
-                Button {
-                    showImporter = true
-                } label: {
-                    HStack {
-                        Image(systemName: "captions.bubble")
-                        Text(pickedURL?.lastPathComponent ?? "Pick caption file")
+        ScrollView {
+            VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+                    Text("Caption file").modernistLabel()
+                    Button {
+                        showImporter = true
+                    } label: {
+                        Label(
+                            pickedURL?.lastPathComponent
+                                ?? NSLocalizedString("Pick caption file", comment: "Caption importer"),
+                            systemImage: "captions.bubble"
+                        )
+                    }
+                    .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+                    if let pickedURL {
+                        Text(pickedURL.pathExtension.uppercased())
+                            .font(Modernist.Typography.numeric)
+                            .foregroundStyle(palette.textMuted)
                     }
                 }
-                if let pickedURL {
-                    Text(pickedURL.pathExtension.uppercased())
-                        .font(Modernist.Typography.numeric)
-                        .foregroundStyle(palette.textMuted)
-                }
-            }
-            if lastImportedCount > 0 {
-                Section(header: Text("Imported").modernistLabel()) {
-                    Label(
-                        "\(lastImportedCount) cue\(lastImportedCount == 1 ? "" : "s") appended",
-                        systemImage: "checkmark.circle"
-                    )
-                    // Decision 4 — no success role; a confirmation is ink.
-                    .foregroundStyle(palette.text)
-                    Button("Switch to Edit") {
-                        selectedTab = .edit
+                if lastImportedCount > 0 {
+                    VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+                        Text("Imported").modernistLabel()
+                        Label(
+                            importedCountText,
+                            systemImage: "checkmark.circle"
+                        )
+                        .font(Modernist.Typography.body)
+                        // Decision 4 — no success role; a confirmation is ink.
+                        .foregroundStyle(palette.text)
+                        Button("Switch to Edit") {
+                            selectedTab = .edit
+                        }
+                        .buttonStyle(ModernistGhostButtonStyle())
                     }
-                    .font(Modernist.Typography.body)
                 }
-            }
-            Section {
                 Text("Supported formats: SRT, VTT, iTT, ASS, SSA. Cues append to the project's caption list — switch to Edit to retime / rename / delete.")
                     .font(Modernist.Typography.caption)
                     .foregroundStyle(palette.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(Modernist.Space.s4)
         }
         .fileImporter(
             isPresented: $showImporter,
@@ -168,6 +164,18 @@ struct AddCaptionsSheet: View {
         }
     }
 
+    /// "1 cue appended" / "12 cues appended", through the keys the bundle
+    /// already carries — the `Form` version interpolated the count into an
+    /// unlocalizable literal.
+    private var importedCountText: String {
+        lastImportedCount == 1
+            ? NSLocalizedString("captions.imported.singular", comment: "One cue imported")
+            : String(
+                format: NSLocalizedString("captions.imported.plural", comment: "Many cues imported"),
+                lastImportedCount
+              )
+    }
+
     @MainActor
     private func loadCaptions(from url: URL) async {
         isLoading = true
@@ -185,13 +193,5 @@ struct AddCaptionsSheet: View {
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
-    }
-}
+// v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
+// sheet no longer wraps itself in; `ModernistSheetHeader` draws the title.

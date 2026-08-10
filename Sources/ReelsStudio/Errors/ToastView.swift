@@ -13,7 +13,7 @@ struct ToastView: View {
         // v0.8 Tier 3 — the banner is an inverted block: ink ground, ground-
         // coloured type. Same read as the old black-at-85% panel, but stated
         // in palette roles, so it inverts correctly on the studio ground.
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Modernist.Space.s1) {
             Text(toast.message)
                 .font(Modernist.Typography.bodyEmphasis)
                 .foregroundStyle(palette.bg)
@@ -25,13 +25,14 @@ struct ToastView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Modernist.Space.s4)
+        .padding(.vertical, Modernist.Space.s3)
         .background(
             RoundedRectangle(cornerRadius: Modernist.Radius.md)
                 .fill(palette.text)
         )
-        .padding(.horizontal, 16)
+        .modernistElevation(.md)
+        .padding(.horizontal, Modernist.Space.s4)
         .onTapGesture { onTap?() }
         .transition(.move(edge: .top).combined(with: .opacity))
     }
@@ -62,7 +63,7 @@ private struct ToastHostModifier: ViewModifier {
                     ToastView(toast: toast) {
                         center.dismissTransient()
                     }
-                    .padding(.top, 8)
+                    .padding(.top, Modernist.Space.s2)
                     .zIndex(100)
                     // Collapse the toast content into one VoiceOver element so
                     // message + detail read together instead of as siblings.
@@ -110,31 +111,31 @@ private struct ResumableErrorSheet: View {
     @Environment(\.modernistPalette) private var palette
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: Modernist.Space.s4) {
+            ModernistSheetGrabber()
             // Decision 4 — no warning role; the accent is what flags a
             // problem in this scheme.
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: Modernist.Typography.Glyph.xl, weight: Modernist.Typography.headingWeight))
                 .foregroundStyle(palette.accent)
             Text(error.message)
-                .font(Modernist.Typography.h5)
-                .padding(.horizontal, 32)
-            HStack(spacing: 12) {
+                .modernistHeading(Modernist.Typography.h4)
+            HStack(spacing: Modernist.Space.s2) {
                 Button("Cancel", role: .cancel) {
                     center.dismissResumable()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(ModernistGhostButtonStyle())
                 Button("Retry") {
                     let retry = error.retry
                     center.dismissResumable()
                     Task { await retry() }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(ModernistPrimaryButtonStyle())
             }
         }
-        .padding(.vertical, 32)
-        .presentationDetents([.medium])
-        // v0.8 Tier 2 — sheets are chrome; chrome is the print ground.
-        .modernistSurface(.print)
+        .padding(Modernist.Space.s4)
+        // No documented detent for this one — `.medium` is what v0.5 shipped
+        // and the sheet's content hasn't changed size.
+        .modernistSheet(detents: [.medium])
     }
 }

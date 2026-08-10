@@ -76,20 +76,25 @@ struct LibraryHostView: View {
         if let library = host.library {
             ProjectListView(library: library)
         } else {
-            VStack(spacing: 12) {
+            // Same centred column the library's empty state uses: glyph,
+            // heading, explainer — leading-aligned inside a measured column.
+            VStack(alignment: .leading, spacing: Modernist.Space.s4) {
+                // Decision 4 — the scheme has no warning role; the accent is
+                // the one thing that flags a problem.
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
-                    .foregroundStyle(palette.textMuted)
+                    .foregroundStyle(palette.accent)
                 Text("Couldn't open project library")
-                    .font(Modernist.Typography.h5)
+                    .modernistHeading(Modernist.Typography.h4)
                 if let message = host.setupError {
                     Text(message)
-                        .font(Modernist.Typography.body)
+                        .modernistBody()
                         .foregroundStyle(palette.textMuted)
-                        .padding(.horizontal)
                 }
             }
+            .frame(maxWidth: Modernist.emptyStateMeasure, alignment: .leading)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(Modernist.Space.s4)
             // v0.8 Tier 2 — the library-failure screen is app chrome; chrome
             // is the print ground. The happy path is `ProjectListView`, which
             // establishes the same ground at its own root.

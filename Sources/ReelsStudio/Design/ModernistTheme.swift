@@ -315,3 +315,106 @@ extension Color {
         )
     }
 }
+
+// MARK: - Tier 5 additions (print squad)
+//
+// Metrics the approved design names for the *print-ground* screens — the
+// project library and every sheet. Every one of these is a number the CSS
+// never had to carry (it describes a print system; a bottom sheet and a video
+// duration chip do not exist there) and that a call site would otherwise
+// write as a literal. Appended at the very end of the file so this tier's
+// parallel sections never collide.
+
+extension Modernist {
+
+    // MARK: Project library
+
+    /// The library nav's top inset, as the design measures it: from the top of
+    /// the screen, not from the safe area. On every device we ship to, the
+    /// status-bar safe-area inset already spends this budget (47–59pt), so the
+    /// library renders flush to the safe-area top and this token exists to
+    /// document the intent rather than to be added on top of it. Named so a
+    /// future edge-to-edge layout that *does* ignore the safe area has the
+    /// number to reach for.
+    static let libraryTopInset: CGFloat = 52
+
+    /// Edge of a project row's leading thumbnail. Square, per the design.
+    static let projectThumbnailSize: CGFloat = 56
+
+    /// The duration chip strip laid across the bottom of a project thumbnail.
+    /// Sized to the `numeric` cap height plus its padding; nothing on the
+    /// 4/8/12/16/24/32 spacing scale lands there without either clipping the
+    /// digits or eating a quarter of the tile.
+    static let thumbnailChipHeight: CGFloat = 14
+
+    /// Measure ceiling for a centred empty-state paragraph. Body copy past
+    /// ~60 characters per line stops being readable in a centred column.
+    static let emptyStateMeasure: CGFloat = 280
+
+    // MARK: Sheets
+
+    /// The sheet grabber — 36×5, drawn by the app rather than by
+    /// `presentationDragIndicator`, whose capsule can't be squared off.
+    static let sheetGrabberWidth: CGFloat = 36
+    static let sheetGrabberHeight: CGFloat = 5
+
+    /// The design's documented bottom-sheet heights.
+    ///
+    /// The spec gives each sheet a *top inset* measured from the top of a
+    /// 430×880 frame. Those are proportions, not absolutes, so each converts
+    /// to the fraction of the screen the sheet actually occupies —
+    /// `(880 - inset) / 880` — and lands as a `.fraction` detent, which
+    /// scales correctly on every device instead of pinning a 430×880 phone.
+    enum SheetDetent {
+        /// The design's reference frame height.
+        private static let referenceHeight: CGFloat = 880
+
+        private static func height(topInset: CGFloat) -> CGFloat {
+            (referenceHeight - topInset) / referenceHeight
+        }
+
+        /// Export — top inset 250.
+        static let export = height(topInset: 250)
+        /// Add overlay — top inset 120.
+        static let addOverlay = height(topInset: 120)
+        /// Layers — top inset 400.
+        static let layers = height(topInset: 400)
+        /// Settings — top inset 330.
+        static let settings = height(topInset: 330)
+    }
+
+    // MARK: Export sheet
+
+    /// The preset picker is a 2-up grid.
+    static let presetGridColumns = 2
+
+    /// Longest edge of a preset's aspect-ratio glyph — a 2pt-outlined
+    /// rectangle drawn at the format's real proportion, so the short edge is
+    /// derived from the ratio rather than named here.
+    static let aspectGlyphExtent: CGFloat = 26
+
+    /// The render card's progress bar. Square, flat accent, no gradient.
+    static let progressBarHeight: CGFloat = 6
+
+    // MARK: Add-overlay sheet
+
+    /// The overlay sheet's canvas preview — the design's 104×185 block, which
+    /// is 9:16 to within half a point.
+    static let overlayCanvasWidth: CGFloat = 104
+    static let overlayCanvasHeight: CGFloat = 185
+
+    // MARK: Layers sheet
+
+    /// The 40pt square icon tile leading each layer row. Deliberately below
+    /// `minHitTarget`: the tile is decoration inside a row-sized hit area, not
+    /// a control of its own.
+    static let layerIconTileSize: CGFloat = 40
+
+    // MARK: Speed-curve sheet
+
+    /// Drawing height handed to `KadrUI.SpeedCurveEditor`. The multiplier axis
+    /// is log-scaled over 0.25×…4×; below roughly this the low end compresses
+    /// into an unusable sliver. Tokenises the literal `240` the sheet has
+    /// carried since v0.4.
+    static let speedCurveEditorHeight: CGFloat = 240
+}

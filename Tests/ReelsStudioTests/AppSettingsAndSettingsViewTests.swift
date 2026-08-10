@@ -73,6 +73,34 @@ final class SettingsViewTests: XCTestCase {
         _ = SettingsView(store: store)
         XCTAssertNil(store.project.accentColor)
     }
+
+    // MARK: - Haptics segment labels (v0.8 Tier 5a)
+
+    /// The `Form` picker became a `ModernistSegmentedControl`, whose segments
+    /// are real `Button`s labelled with each intensity's display name.
+    /// `ReelsStudioUITests.testEditorSettingsGearOpensSheet` proves the sheet
+    /// presented by finding `app.buttons["Medium"]`, so the exact three
+    /// labels — casing included — are a contract, not a detail.
+    func testHapticSegmentLabelsAreTheOnesTheUITestReachesFor() {
+        XCTAssertEqual(
+            HapticIntensity.allCases.map(\.displayName),
+            ["Off", "Light", "Medium"]
+        )
+    }
+
+    /// The accent control's segments carry the ramp's own token numbers plus
+    /// a localized "System" — Decision 3's constrained input.
+    func testAccentChoiceLabelsCoverTheRampAndSystem() {
+        XCTAssertEqual(
+            SettingsView.AccentChoice.allCases.map(\.label),
+            ["System", "500", "600", "700"]
+        )
+    }
+
+    func testAccentChoiceSystemClearsTheColor() {
+        XCTAssertNil(SettingsView.AccentChoice.system.color)
+        XCTAssertNotNil(SettingsView.AccentChoice.a500.color)
+    }
 }
 
 @MainActor
