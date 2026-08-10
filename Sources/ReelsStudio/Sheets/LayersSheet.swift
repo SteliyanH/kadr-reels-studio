@@ -99,6 +99,7 @@ struct LayersSheet: View {
     @ViewBuilder
     private func row(for overlay: any Overlay, index: Int) -> some View {
         let (icon, kind) = LayersSheet.iconAndKind(for: overlay)
+        let title = LayersSheet.title(for: overlay, index: index)
         let isSelected = overlay.layerID != nil && store.selectedOverlayID == overlay.layerID
         HStack(spacing: Modernist.Space.s3) {
             // The icon tile is an accent-tinted block with an accent glyph;
@@ -112,7 +113,7 @@ struct LayersSheet: View {
                         .foregroundStyle(palette.accent)
                 )
             VStack(alignment: .leading, spacing: Modernist.Space.s1) {
-                Text(LayersSheet.title(for: overlay, index: index))
+                Text(title)
                     .font(Modernist.Typography.bodyEmphasis)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -142,6 +143,16 @@ struct LayersSheet: View {
                 )
         )
         .contentShape(Rectangle())
+        // Collapse the icon tile, checkmark and chevron into a single
+        // VoiceOver element with a composed label — the ProjectRow /
+        // SkippedProjectRow pattern (`accessibilityElement(children: .combine)`
+        // + an explicit composed `accessibilityLabel`). Without this, the
+        // row's decorative SF Symbols ("textformat"/"face.smiling"/"photo",
+        // "checkmark", "chevron.right") each leak their own symbol name into
+        // VoiceOver as separate stops instead of one row announcement.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(LayersSheet.accessibilityDescription(title: title, kind: kind))
+        .accessibilityHint("Selects this layer for editing")
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
@@ -163,5 +174,14 @@ struct LayersSheet: View {
         if overlay is StickerOverlay { return "Sticker \(index + 1)" }
         if overlay is ImageOverlay { return "Image \(index + 1)" }
         return "Overlay \(index + 1)"
+    }
+
+    /// Composed VoiceOver string for a layer row. Pure so it's testable.
+    /// Selection is spoken through the `.isSelected` trait, not repeated
+    /// here — the same division `ExportSheet`'s preset cells and
+    /// `AddOverlaySheet`'s swatches use.
+    /// Example: "New text, Text".
+    nonisolated static func accessibilityDescription(title: String, kind: String) -> String {
+        "\(title), \(kind)"
     }
 }

@@ -158,7 +158,7 @@ struct ExportSheet: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text(stageTitle)
                         .font(Modernist.Typography.bodyEmphasis)
-                        .foregroundStyle(stage == .failed ? palette.accent : palette.text)
+                        .foregroundStyle(stage == .failed ? palette.accentText : palette.text)
                     Spacer()
                     Text(percentText)
                         .font(Modernist.Typography.numeric)

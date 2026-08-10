@@ -89,6 +89,20 @@ private struct TextOverlayTab: View {
         ]
     }
 
+    /// VoiceOver names for `swatches`, in the same order. The row draws each
+    /// swatch as a bare filled `Rectangle` — without this, the button carries
+    /// no accessible name at all (WCAG 4.1.2 Name, Role, Value).
+    private var swatchLabels: [String] {
+        [
+            NSLocalizedString("Off-white", comment: "Overlay text color swatch"),
+            NSLocalizedString("Mid gray", comment: "Overlay text color swatch"),
+            NSLocalizedString("Near black", comment: "Overlay text color swatch"),
+            NSLocalizedString("Accent, light", comment: "Overlay text color swatch"),
+            NSLocalizedString("Accent, dark", comment: "Overlay text color swatch"),
+            NSLocalizedString("Ground text color", comment: "Overlay text color swatch"),
+        ]
+    }
+
     enum TextWeight: String, CaseIterable, Identifiable {
         case regular, medium, bold
         var id: String { rawValue }
@@ -209,7 +223,7 @@ private struct TextOverlayTab: View {
         VStack(alignment: .leading, spacing: Modernist.Space.s2) {
             Text("Color").modernistLabel()
             HStack(spacing: Modernist.Space.s2) {
-                ForEach(Array(swatches.enumerated()), id: \.offset) { _, swatch in
+                ForEach(Array(swatches.enumerated()), id: \.offset) { index, swatch in
                     Button {
                         color = swatch
                     } label: {
@@ -229,6 +243,7 @@ private struct TextOverlayTab: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(swatchLabels[index])
                     .accessibilityAddTraits(color == swatch ? [.isSelected] : [])
                 }
                 // The eyedropper cell at the end of the row. Preserved
@@ -351,6 +366,10 @@ private struct PhotoOverlayTab: View {
 
     @ViewBuilder
     private func pickedThumbnail(_ image: PlatformImage) -> some View {
+        // Echoes the "Picked" state the Source button's label already speaks;
+        // a bitmap `Image` carries no name of its own, so left un-hidden it
+        // would read as a bare, undescribed "Image" stop right after that
+        // button. Same call `TextOverlayTab.canvasPreview` makes.
         #if canImport(UIKit)
         Image(uiImage: image)
             .resizable()
@@ -361,6 +380,7 @@ private struct PhotoOverlayTab: View {
                 Rectangle()
                     .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
             )
+            .accessibilityHidden(true)
         #else
         Image(nsImage: image)
             .resizable()
@@ -371,6 +391,7 @@ private struct PhotoOverlayTab: View {
                 Rectangle()
                     .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
             )
+            .accessibilityHidden(true)
         #endif
     }
 

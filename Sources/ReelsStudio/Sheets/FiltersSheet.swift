@@ -125,6 +125,11 @@ struct FiltersSheet: View {
                 .background(palette.surface)
                 .contentShape(Rectangle())
         }
+        // Bare "plus" SF Symbol carried no VoiceOver name at all before this
+        // — the header's other button (Done) is a real word, so the menu was
+        // the one silent control in the sheet's chrome. Reuses the existing
+        // "Add Filter" key (the same phrase the undo stack already shows).
+        .accessibilityLabel("Add Filter")
     }
 
     private func videoClip(matching id: ClipID) -> VideoClip? {

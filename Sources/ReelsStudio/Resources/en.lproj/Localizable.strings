@@ -158,6 +158,12 @@
 "Preview" = "Preview";
 "New text" = "New text";
 "Add Text Overlay" = "Add Text Overlay";
+"Off-white" = "Off-white";
+"Mid gray" = "Mid gray";
+"Near black" = "Near black";
+"Accent, light" = "Accent, light";
+"Accent, dark" = "Accent, dark";
+"Ground text color" = "Ground text color";
 "Source" = "Source";
 "Pick image…" = "Pick image…";
 "Picked" = "Picked";
@@ -197,6 +203,7 @@
 
 "No overlays yet" = "No overlays yet";
 "Tap **+ Overlay** in the toolbar to add text or stickers." = "Tap **+ Overlay** in the toolbar to add text or stickers.";
+"Selects this layer for editing" = "Selects this layer for editing";
 
 // MARK: - Speed curve sheet
 

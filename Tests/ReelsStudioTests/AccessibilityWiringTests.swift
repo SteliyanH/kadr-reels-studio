@@ -48,4 +48,25 @@ final class ProjectRowAccessibilityTests: XCTestCase {
         let desc = ProjectRow.accessibilityDescription(for: doc)
         XCTAssertTrue(desc.contains("0 clips"))
     }
+
+    // MARK: - Tier 6 contrast binding rule
+    //
+    // `palette.accent` at paragraph size only clears ~3:1 against either
+    // ground's `bg` — legible for large text and glyphs, not body copy.
+    // `accentText` is the paragraph-safe step (a700 on print, a400 on
+    // studio). These pin the token wiring the Tier 6 sweep's ExportSheet fix
+    // (`stage == .failed ? palette.accentText : palette.text`) depends on, so
+    // a future edit that quietly re-aliases `accentText` back to the base
+    // `accent` fails here instead of shipping a body-text contrast
+    // regression.
+
+    func testPrintAccentTextIsA700NotBaseAccent() {
+        XCTAssertEqual(ModernistPalette.print.accentText, Modernist.Accent.a700)
+        XCTAssertNotEqual(ModernistPalette.print.accentText, ModernistPalette.print.accent)
+    }
+
+    func testStudioAccentTextIsA400NotBaseAccent() {
+        XCTAssertEqual(ModernistPalette.studio.accentText, Modernist.Accent.a400)
+        XCTAssertNotEqual(ModernistPalette.studio.accentText, ModernistPalette.studio.accent)
+    }
 }
