@@ -27,9 +27,18 @@
 "Retry" = "Retry";
 "Not now" = "Not now";
 
+// MARK: - Library count (projected in nav header)
+
+"library.count.oneProject" = "1 project";
+"library.count.manyProjects" = "%lld projects";
+"library.count.oneSkipped" = "1 skipped file";
+"library.count.manySkipped" = "%lld skipped files";
+
 // MARK: - Project list
 
 "Projects" = "Projects";
+"New" = "New";
+"Open the bundled sample" = "Open the bundled sample";
 "New Project" = "New Project";
 "Sample" = "Sample";
 "Project not found" = "Project not found";
@@ -56,6 +65,13 @@
 "SFX" = "SFX";
 "Captions" = "Captions";
 "Selection" = "Selection";
+"Split" = "Split";
+"Copy" = "Copy";
+"Speed" = "Speed";
+"Back" = "Back";
+"Delete" = "Delete";
+"Forward" = "Forward";
+"Wrap" = "Wrap";
 "Splits the clip at the playhead" = "Splits the clip at the playhead";
 "Inserts a copy of this clip after itself" = "Inserts a copy of this clip after itself";
 "Opens the speed curve editor" = "Opens the speed curve editor";
@@ -74,6 +90,7 @@
 "Redo" = "Redo";
 "Redo last undone action" = "Redo last undone action";
 "Nothing to redo" = "Nothing to redo";
+"Auto-saved" = "Auto-saved";
 "Settings" = "Settings";
 "Open settings" = "Open settings";
 
@@ -98,11 +115,14 @@
 
 "Appearance" = "Appearance";
 "Accent" = "Accent";
+"Accent · This project" = "Accent · This project";
 "System" = "System";
 "Color" = "Color";
 "Playback" = "Playback";
 "Fixed-center playhead" = "Fixed-center playhead";
+"The timeline scrolls under a pinned playhead instead of letting it drift." = "The timeline scrolls under a pinned playhead instead of letting it drift.";
 "Haptics" = "Haptics";
+"Haptics · All projects" = "Haptics · All projects";
 "Strength" = "Strength";
 
 // MARK: - Add Music sheet
@@ -185,9 +205,23 @@
 "Drag points vertically to change the speed multiplier; horizontally to retime. Long-press to remove." = "Drag points vertically to change the speed multiplier; horizontally to retime. Long-press to remove.";
 "Tap inside the editor to add a keyframe at the playhead. Default speed is 1×." = "Tap inside the editor to add a keyframe at the playhead. Default speed is 1×.";
 
+// MARK: - Transition sheet
+
+"Transition" = "Transition";
+"Duration" = "Duration";
+
+// MARK: - Chroma Key sheet
+
+"Chroma Key" = "Chroma Key";
+"Key color" = "Key color";
+"Threshold" = "Threshold";
+
 // MARK: - Export sheet
 
 "Format" = "Format";
+"Preset" = "Preset";
+"Render" = "Render";
+"Rendering…" = "Rendering…";
 "Status" = "Status";
 "Share" = "Share";
 "Export" = "Export";
