@@ -175,6 +175,11 @@ struct EditorView: View {
         }
         .navigationTitle(document.name)
         .hidingSystemNavigationBar()
+        // Hiding the system bar took the edge-swipe back gesture with it —
+        // UIKit ties the interactive pop to the presence of a back button it
+        // draws itself. The band stays app-drawn; the gesture is handed back
+        // here. See the shim at the foot of this file.
+        .restoringInteractivePopGesture()
         // iOS 17 — @Observable has no Combine publisher, so debounce auto-save with a
         // cancel-and-restart Task keyed off the store's revision counter (replaces the
         // old `store.$project.debounce(...)` pipeline). Same 0.5s window.
@@ -552,4 +557,198 @@ private extension View {
         self
         #endif
     }
+
+    /// Gives the editor back the interactive pop (edge swipe) that
+    /// ``hidingSystemNavigationBar()`` costs it.
+    ///
+    /// UIKit gates `interactivePopGestureRecognizer` on a back button *it*
+    /// draws: `.navigationBarBackButtonHidden(true)` makes the stock delegate
+    /// refuse to begin, and hiding the bar removes the button the rule looks
+    /// for. The approved design keeps the band app-drawn, so the gesture is
+    /// restored by replacing that delegate rather than by restoring the bar.
+    ///
+    /// Same `#if os(iOS)` shim shape as its sibling above: `UIKit`,
+    /// `UINavigationController` and the pop recogniser are iOS-only, and the
+    /// editor source still has to compile for macOS / Catalyst / visionOS,
+    /// where the system bar is never hidden and its native back affordance is
+    /// untouched.
+    @ViewBuilder
+    func restoringInteractivePopGesture() -> some View {
+        #if os(iOS)
+        self.background {
+            InteractivePopGestureBridge()
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        #else
+        self
+        #endif
+    }
 }
+
+// MARK: - Interactive pop shim (iOS)
+
+#if os(iOS)
+import UIKit
+
+/// Zero-size probe that reaches the `UINavigationController` backing the
+/// library's `NavigationStack` and installs ``InteractivePopGestureShim`` as
+/// its pop recogniser's delegate for as long as the editor is on screen.
+///
+/// A `UIViewControllerRepresentable` rather than a `UIViewRepresentable`
+/// because `UIViewController.navigationController` walks the parent chain for
+/// us; the controller renders nothing and takes no touches.
+///
+/// Presentation-only: it reads `viewControllers` to decide whether a swipe may
+/// begin and drives nothing else. No observable state, no store mutation, no
+/// schema.
+private struct InteractivePopGestureBridge: UIViewControllerRepresentable {
+
+    func makeCoordinator() -> InteractivePopGestureShim {
+        InteractivePopGestureShim()
+    }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        ProbeController(shim: context.coordinator)
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) { }
+
+    /// Hand the recogniser back to UIKit's own delegate when the editor leaves
+    /// the stack, so the shim's reach ends with the screen that needs it. Belt
+    /// and braces — the depth gate already makes a surviving shim inert on the
+    /// root screen.
+    static func dismantleUIViewController(
+        _ uiViewController: UIViewController,
+        coordinator: InteractivePopGestureShim
+    ) {
+        coordinator.uninstall()
+    }
+
+    /// Exists only to be parented into the navigation stack's controller
+    /// hierarchy, where `navigationController` resolves.
+    private final class ProbeController: UIViewController {
+
+        private let shim: InteractivePopGestureShim
+
+        init(shim: InteractivePopGestureShim) {
+            self.shim = shim
+            super.init(nibName: nil, bundle: nil)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) {
+            fatalError("InteractivePopGestureBridge.ProbeController is never decoded")
+        }
+
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            view.isUserInteractionEnabled = false
+            view.backgroundColor = .clear
+            view.isAccessibilityElement = false
+        }
+
+        override func didMove(toParent parent: UIViewController?) {
+            super.didMove(toParent: parent)
+            shim.install(from: self)
+        }
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            // `didMove(toParent:)` can land before SwiftUI has parented the
+            // hosting controller into the stack, leaving nothing to resolve.
+            // `install(from:)` is idempotent, so the retry is free when the
+            // first attempt already took.
+            shim.install(from: self)
+        }
+    }
+}
+
+/// The delegate that answers for the interactive pop while the editor owns the
+/// screen. UIKit's stock delegate ties the gesture to a back button it draws;
+/// this one ties it to the only thing that actually matters — whether there is
+/// a screen underneath to pop back to.
+///
+/// `@MainActor` because every `UIKit` member it touches is, and the target
+/// builds with `SWIFT_STRICT_CONCURRENCY = complete`.
+@MainActor
+private final class InteractivePopGestureShim: NSObject, UIGestureRecognizerDelegate {
+
+    private weak var navigationController: UINavigationController?
+    /// UIKit's own delegate, held weakly (the navigation controller owns it)
+    /// so it can be put back on the way out.
+    private weak var systemDelegate: UIGestureRecognizerDelegate?
+    private var isInstalled = false
+
+    /// Idempotent. Returns without effect until the probe is parented deeply
+    /// enough for a navigation controller to resolve.
+    func install(from controller: UIViewController) {
+        guard !isInstalled,
+              let navigation = Self.navigationController(from: controller),
+              let gesture = navigation.interactivePopGestureRecognizer
+        else { return }
+
+        navigationController = navigation
+        systemDelegate = gesture.delegate
+        gesture.delegate = self
+        gesture.isEnabled = true
+        isInstalled = true
+    }
+
+    func uninstall() {
+        guard isInstalled else { return }
+        if let gesture = navigationController?.interactivePopGestureRecognizer,
+           gesture.delegate === self {
+            gesture.delegate = systemDelegate
+        }
+        isInstalled = false
+    }
+
+    // MARK: UIGestureRecognizerDelegate
+
+    /// The root-screen guard, and the reason this shim is safe. A pop begun
+    /// with nothing under the top view controller starts a transition that can
+    /// never complete and wedges the stack — the classic frozen-UI bug that
+    /// blanket `delegate = nil` shims ship with. Depth is the whole test; the
+    /// in-flight check keeps a second swipe off a transition already running.
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let navigation = navigationController else { return false }
+        return navigation.viewControllers.count > 1
+            && navigation.transitionCoordinator == nil
+    }
+
+    /// The editor's timeline is a horizontal scroller. Refusing simultaneous
+    /// recognition keeps an edge drag from scrubbing the timeline while it
+    /// pops — stock navigation-controller behaviour, restated because we now
+    /// own the delegate that used to state it.
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        false
+    }
+
+    // MARK: Resolution
+
+    /// `navigationController` first (the ordinary case), then the responder
+    /// chain: SwiftUI is free to host a `.background` representable in a
+    /// container that isn't itself a direct child of the pushed controller.
+    private static func navigationController(
+        from controller: UIViewController
+    ) -> UINavigationController? {
+        if let navigation = controller.navigationController { return navigation }
+
+        var responder: UIResponder? = controller.view
+        while let current = responder {
+            if let navigation = current as? UINavigationController { return navigation }
+            if let viewController = current as? UIViewController,
+               let navigation = viewController.navigationController {
+                return navigation
+            }
+            responder = current.next
+        }
+        return nil
+    }
+}
+#endif

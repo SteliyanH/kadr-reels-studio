@@ -117,4 +117,46 @@ final class ReelsStudioUITests: XCTestCase {
             "Back navigation should return to the project list"
         )
     }
+
+    // MARK: - Interactive pop (edge swipe)
+
+    /// The witness for the drawn nav band's cost. Hiding the system bar takes
+    /// UIKit's interactive pop with it, and nothing in this suite could see
+    /// that: the Back-button test above taps a control the app draws itself,
+    /// so it stays green while the *gesture* is dead. Only a real edge drag
+    /// tells the two apart, which is why this test drags rather than taps.
+    ///
+    /// The drag starts at dx 0.002 — inside the screen-edge recogniser's
+    /// activation strip — and is preceded by a short press so the gesture is
+    /// delivered as a drag rather than a flick.
+    func testEdgeSwipeFromLeftEdgePopsEditorBackToProjectList() {
+        app.launch()
+        let newProject = app.buttons["New Project"].firstMatch
+        XCTAssertTrue(newProject.waitForExistence(timeout: 5))
+        newProject.tap()
+
+        // The gear is this suite's standing proof of editor presence.
+        let settingsGear = app.buttons["Settings"]
+        XCTAssertTrue(
+            settingsGear.waitForExistence(timeout: 5),
+            "New Project should push the editor before the swipe is attempted"
+        )
+
+        let leftEdge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.002, dy: 0.5))
+        let acrossTheScreen = app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+        leftEdge.press(forDuration: 0.08, thenDragTo: acrossTheScreen)
+
+        // Asserted first, and deliberately: "Projects" alone could pass
+        // vacuously if the popped-from screen's title lingered in the tree.
+        // The editor's own control disappearing is the unambiguous proof the
+        // stack actually popped.
+        XCTAssertTrue(
+            settingsGear.waitForNonExistence(timeout: 5),
+            "Edge swipe should pop the editor off the stack, taking its gear with it"
+        )
+        XCTAssertTrue(
+            app.staticTexts["Projects"].waitForExistence(timeout: 5),
+            "Edge swipe should return to the project list"
+        )
+    }
 }
