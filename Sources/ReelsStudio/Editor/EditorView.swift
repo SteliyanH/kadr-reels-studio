@@ -2,13 +2,21 @@ import SwiftUI
 import CoreMedia
 import Kadr
 
-/// Root editor screen. Composes ``PreviewArea`` (top) + ``TimelineArea`` (bottom)
-/// against a ``ProjectStore``.
+/// Root editor screen. Composes the approved design's six bands, top to
+/// bottom: nav bar · stage (``PreviewArea``) · timeline (``TimelineArea``) ·
+/// keyframes · inspector · toolbar (``EditorToolbar``), all on the studio
+/// ground.
 ///
 /// v0.2 Tier 2 — the editor is now per-project: it's constructed with a
 /// ``ProjectDocument`` (loaded from ``ProjectLibrary``) and writes every
 /// edit back through the library on a debounced auto-save. There is no
 /// Save button anywhere; closing the editor is enough.
+///
+/// v0.8 Tier 5b — the chrome is drawn by the app rather than by
+/// `NavigationStack`: the system bar can't carry a two-line title block, a
+/// ruled undo/redo cell group and 44pt square icon cells, so it is hidden and
+/// this view draws the band itself. Sheet presentation is unchanged and still
+/// owned here.
 struct EditorView: View {
 
     @State private var store: ProjectStore
@@ -66,54 +74,30 @@ struct EditorView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            PreviewArea(store: store)
-                .padding(.horizontal)
-            Spacer(minLength: 8)
-            TimelineArea(
-                store: store,
-                onAddClip: { Task { await requestPhotosThenPick() } },
-                onAddOverlay: { showOverlaySheet = true },
-                onLayers: { showLayersSheet = true },
-                onAddMusic: { showMusicSheet = true },
-                onAddSFX: { showSFXSheet = true },
-                onAddCaptions: { showCaptionsSheet = true },
-                onExport: { showExportSheet = true },
-                onSpeedCurve: { speedCurveClipID = $0 },
-                onFilters: { filtersClipID = $0 },
-                onTransition: { transitionClipID = $0 }
+        VStack(spacing: 0) {
+            // The nav bar is a child view, not an inlined block: `EditorView`'s
+            // own `@Environment(\.modernistPalette)` would resolve against the
+            // *library's* print ground (this screen is pushed from it), and the
+            // `.modernistSurface(.studio)` applied at the bottom of this body
+            // only reaches the subtree. A child reads the studio ground; the
+            // enclosing struct cannot.
+            EditorNavBar(
+                title: document.name,
+                statusMetrics: EditorView.statusMetrics(
+                    preset: store.project.preset,
+                    duration: store.video.duration
+                ),
+                canUndo: store.canUndo,
+                canRedo: store.canRedo,
+                onUndo: { store.undo() },
+                onRedo: { store.redo() },
+                onSettings: { showSettings = true }
             )
-            // Inspector / keyframe pair — routes to clip- or overlay-targeted
-            // surfaces based on which selection slot is active. Mutual
-            // exclusion is enforced by ProjectStore's didSet observers.
-            // v0.4 Tier 4: reveal / dismiss with the editor-wide spring detent.
-            Group {
-                if store.selectedOverlayID != nil {
-                    VStack(spacing: 16) {
-                        OverlayKeyframeArea(store: store)
-                        OverlayInspectorArea(store: store)
-                            .padding(.horizontal)
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else if store.selectedClipID != nil {
-                    VStack(spacing: 16) {
-                        KeyframeArea(store: store)
-                        InspectorArea(store: store)
-                            .padding(.horizontal)
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .animation(
-                .interactiveSpring(response: 0.35, dampingFraction: 0.78),
-                value: EditorView.inspectorPresentationKey(
-                    clip: store.selectedClipID,
-                    overlay: store.selectedOverlayID
-                )
-            )
-            Spacer(minLength: 16)
+            stageBand
+            TimelineArea(store: store)
+            inspectorBands
+            toolbarBand
         }
-        .padding(.top)
         // v0.4 Tier 3: per-project accent threads through every `.tint`-aware
         // surface (inspector tabs, keyframe playhead, timeline selection
         // ring). kadr-ui exposes no theming API, so this `.tint` is the app's
@@ -121,7 +105,7 @@ struct EditorView: View {
         // and retargets the fallback from the system tint to the studio
         // ground's accent token. It sits *inside* `.modernistSurface(.studio)`
         // (which sets its own `.tint`) so the nearer value wins for the
-        // subtree.
+        // subtree. Do not reorder these two.
         .tint(store.project.accentColor ?? ModernistPalette.studio.accent)
         .addClipFlow(isPresented: $showPhotoPicker, store: store)
         .sheet(isPresented: $showOverlaySheet) {
@@ -190,34 +174,7 @@ struct EditorView: View {
             Text("Reels Studio needs access to your photo library to import clips. Turn it on in Settings.")
         }
         .navigationTitle(document.name)
-        .navigationBarTitleDisplayModeInline()
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button {
-                    store.undo()
-                } label: {
-                    Image(systemName: "arrow.uturn.backward")
-                        .accessibilityLabel("Undo")
-                }
-                .disabled(!store.canUndo)
-                .help(store.canUndo ? "Undo last action" : "Nothing to undo")
-                Button {
-                    store.redo()
-                } label: {
-                    Image(systemName: "arrow.uturn.forward")
-                        .accessibilityLabel("Redo")
-                }
-                .disabled(!store.canRedo)
-                .help(store.canRedo ? "Redo last undone action" : "Nothing to redo")
-                Button {
-                    showSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                        .accessibilityLabel("Settings")
-                }
-                .help("Open settings")
-            }
-        }
+        .hidingSystemNavigationBar()
         // iOS 17 — @Observable has no Combine publisher, so debounce auto-save with a
         // cancel-and-restart Task keyed off the store's revision counter (replaces the
         // old `store.$project.debounce(...)` pipeline). Same 0.5s window.
@@ -254,6 +211,76 @@ struct EditorView: View {
         // `Color(.systemGray6)` background.
         .modernistSurface(.studio)
     }
+
+    // MARK: - Stage
+
+    /// Fills whatever height the bands below leave, never below
+    /// `stageMinHeight`. `PreviewArea` letterboxes itself to the preset.
+    private var stageBand: some View {
+        PreviewArea(store: store)
+            .frame(
+                maxWidth: .infinity,
+                minHeight: Modernist.stageMinHeight,
+                maxHeight: .infinity
+            )
+            .padding(.horizontal, Modernist.Space.s4)
+            .padding(.vertical, Modernist.Space.s3)
+    }
+
+    // MARK: - Keyframe + inspector bands
+
+    /// Inspector / keyframe pair — routes to clip- or overlay-targeted
+    /// surfaces based on which selection slot is active. Mutual exclusion is
+    /// enforced by ProjectStore's didSet observers.
+    /// v0.4 Tier 4: reveal / dismiss with the editor-wide spring detent.
+    private var inspectorBands: some View {
+        Group {
+            if store.selectedOverlayID != nil {
+                VStack(spacing: 0) {
+                    OverlayKeyframeArea(store: store)
+                    OverlayInspectorArea(store: store)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else if store.selectedClipID != nil {
+                VStack(spacing: 0) {
+                    KeyframeArea(store: store)
+                    InspectorArea(store: store)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(
+            .interactiveSpring(response: 0.35, dampingFraction: 0.78),
+            value: EditorView.inspectorPresentationKey(
+                clip: store.selectedClipID,
+                overlay: store.selectedOverlayID
+            )
+        )
+    }
+
+    // MARK: - Toolbar band
+
+    /// The selection-driven toolbar, at the bottom of the stack where the
+    /// approved design puts it. The band's own ground, its top rule and the
+    /// safe-area gutter belong to `EditorToolbar` — it can read the studio
+    /// palette from the environment, and this enclosing struct can't.
+    private var toolbarBand: some View {
+        EditorToolbar(
+            store: store,
+            onAddClip: { Task { await requestPhotosThenPick() } },
+            onAddOverlay: { showOverlaySheet = true },
+            onLayers: { showLayersSheet = true },
+            onAddMusic: { showMusicSheet = true },
+            onAddSFX: { showSFXSheet = true },
+            onAddCaptions: { showCaptionsSheet = true },
+            onExport: { showExportSheet = true },
+            onSpeedCurve: { speedCurveClipID = $0 },
+            onFilters: { filtersClipID = $0 },
+            onTransition: { transitionClipID = $0 }
+        )
+    }
+
+    // MARK: - Behaviour (unchanged)
 
     /// Re-apply scene-stored playhead / selection when re-entering the same
     /// project (cold launch, app restart). Gated on `savedDocumentID` to
@@ -318,14 +345,209 @@ struct EditorView: View {
     }
 }
 
-/// `.navigationBarTitleDisplayMode(.inline)` is iOS-only; this shim keeps the
-/// editor source compilable on macOS / Catalyst targets where the modifier
-/// isn't available.
+// MARK: - Nav status line (pure)
+
+extension EditorView {
+
+    /// The numeric tail of the nav bar's status line: " · 9:16 · 0:06".
+    ///
+    /// Split from the localised "Auto-saved" head so the digits can ride
+    /// `Typography.numeric` — the system requires timecodes and ratios to be
+    /// tabular, and a single interpolated string would set the whole line in
+    /// one face. Pure for testability.
+    nonisolated static func statusMetrics(preset: Preset, duration: CMTime) -> String {
+        " · \(aspectLabel(for: preset)) · \(timecode(duration))"
+    }
+
+    /// The preset's aspect ratio in lowest terms — "9:16", "1:1", "16:9".
+    /// Derived from the preset the project already carries; no new state.
+    nonisolated static func aspectLabel(for preset: Preset) -> String {
+        let width = Int(preset.resolution.width.rounded())
+        let height = Int(preset.resolution.height.rounded())
+        guard width > 0, height > 0 else { return "—" }
+        let divisor = greatestCommonDivisor(width, height)
+        return "\(width / divisor):\(height / divisor)"
+    }
+
+    /// `m:ss` — the design's duration format ("0:06"). Negative or
+    /// indefinite times clamp to zero rather than rendering "-0:01".
+    nonisolated static func timecode(_ time: CMTime) -> String {
+        let seconds = CMTimeGetSeconds(time)
+        let total = seconds.isFinite ? Int(max(0, seconds).rounded()) : 0
+        return "\(total / 60):" + String(format: "%02d", total % 60)
+    }
+
+    private nonisolated static func greatestCommonDivisor(_ a: Int, _ b: Int) -> Int {
+        var (x, y) = (abs(a), abs(b))
+        while y != 0 { (x, y) = (y, x % y) }
+        return max(x, 1)
+    }
+}
+
+// MARK: - Nav bar
+
+/// The editor's own navigation band: back · two-line title block ·
+/// undo/redo cell group · settings.
+///
+/// A view rather than a block inlined into ``EditorView`` so it resolves
+/// `\.modernistPalette` from *inside* `.modernistSurface(.studio)` — the
+/// editor is pushed from the print-ground library, and an `@Environment`
+/// property on the enclosing struct would read that instead.
+///
+/// No rule under it: the design has the band sit flush on `bg`, and the stage
+/// below is the same ground, so a divider there would be a line drawn for its
+/// own sake.
+private struct EditorNavBar: View {
+
+    let title: String
+    /// Pre-formatted " · 9:16 · 0:06" — see `EditorView.statusMetrics`.
+    let statusMetrics: String
+    let canUndo: Bool
+    let canRedo: Bool
+    let onUndo: () -> Void
+    let onRedo: () -> Void
+    let onSettings: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modernistPalette) private var palette
+
+    var body: some View {
+        HStack(spacing: Modernist.Space.s3) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+            }
+            .buttonStyle(ModernistIconButtonStyle())
+            .accessibilityLabel("Back")
+            .help("Back to projects")
+
+            titleBlock
+
+            undoRedoGroup
+
+            Button(action: onSettings) {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(ModernistIconButtonStyle())
+            .accessibilityLabel("Settings")
+            .help("Open settings")
+        }
+        .padding(.horizontal, Modernist.Space.s3)
+        .padding(.top, Modernist.Space.s1)
+        .padding(.bottom, Modernist.Space.s2)
+    }
+
+    /// Project name + pencil glyph, and under it the status line: an `n400`
+    /// dot (Decision 4 — status is not an accent job) plus "Auto-saved ·
+    /// 9:16 · 0:06", every value read from state the editor already holds.
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: Modernist.Space.s1 / 2) {
+            HStack(spacing: Modernist.Space.s1) {
+                Text(title)
+                    .font(Modernist.Typography.bodyEmphasis)
+                    .foregroundStyle(palette.text)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                // Decorative: the editor has no rename affordance, and adding
+                // one would be a feature, not a restyle. Hidden from VoiceOver
+                // so it can't be mistaken for a control.
+                Image(systemName: "pencil")
+                    .font(Modernist.Typography.caption)
+                    .foregroundStyle(palette.textMuted)
+                    .accessibilityHidden(true)
+            }
+            HStack(spacing: Modernist.Space.s1) {
+                Circle()
+                    .fill(Modernist.Neutral.n400)
+                    .frame(
+                        width: Modernist.navStatusDotSize,
+                        height: Modernist.navStatusDotSize
+                    )
+                Text("Auto-saved")
+                    .font(Modernist.Typography.caption)
+                    .foregroundStyle(palette.textMuted)
+                Text(verbatim: statusMetrics)
+                    .font(Modernist.Typography.numeric)
+                    .foregroundStyle(palette.textMuted)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Project status")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One ruled cell group, 2pt divider between the halves. The unavailable
+    /// half drops to `Modernist.pairedControlDisabledOpacity` (28%) rather
+    /// than the repo-wide 45% — see that token for why the exception exists
+    /// and why it is confined to this pair.
+    private var undoRedoGroup: some View {
+        HStack(spacing: 0) {
+            Button(action: onUndo) {
+                Image(systemName: "arrow.uturn.backward")
+            }
+            .buttonStyle(NavPairCellStyle())
+            .disabled(!canUndo)
+            .accessibilityLabel("Undo")
+            .help(canUndo ? "Undo last action" : "Nothing to undo")
+
+            Rectangle()
+                .fill(palette.divider)
+                .frame(width: Modernist.ruleWidth, height: Modernist.minHitTarget)
+
+            Button(action: onRedo) {
+                Image(systemName: "arrow.uturn.forward")
+            }
+            .buttonStyle(NavPairCellStyle())
+            .disabled(!canRedo)
+            .accessibilityLabel("Redo")
+            .help(canRedo ? "Redo last undone action" : "Nothing to redo")
+        }
+        .fixedSize()
+    }
+}
+
+// MARK: - Nav pair cell
+
+/// The undo/redo group's cell. Identical to `ModernistIconButtonStyle` except
+/// for the unavailable step: the shared style hard-wires the repo's 45%
+/// disabled convention, and the approved design specifies 28% for this pair
+/// (see `Modernist.pairedControlDisabledOpacity`). Local to the editor so the
+/// exception can't leak into the print ground's controls.
+private struct NavPairCellStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        StyleBody(configuration: configuration)
+    }
+
+    private struct StyleBody: View {
+        let configuration: Configuration
+        @Environment(\.modernistPalette) private var palette
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            configuration.label
+                .font(Modernist.Typography.bodyEmphasis)
+                .foregroundStyle(palette.text)
+                .frame(width: Modernist.minHitTarget, height: Modernist.minHitTarget)
+                .background(configuration.isPressed ? palette.accentTint : palette.surface)
+                .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.sm))
+                .opacity(isEnabled ? 1 : Modernist.pairedControlDisabledOpacity)
+                .contentShape(Rectangle())
+        }
+    }
+}
+
+/// `.navigationBarTitleDisplayMode(.inline)` and `.toolbar(_:for:)` with a
+/// `.navigationBar` placement are iOS-only; this shim keeps the editor source
+/// compilable on macOS / Catalyst targets where they aren't available.
 private extension View {
     @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
+    func hidingSystemNavigationBar() -> some View {
         #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
+        self
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
         #else
         self
         #endif

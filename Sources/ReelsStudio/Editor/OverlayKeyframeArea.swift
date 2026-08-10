@@ -10,9 +10,15 @@ import KadrUI
 /// - `ImageOverlay` / `StickerOverlay` — `.position`, `.size`
 /// - `TextOverlay` — none (uses enum-driven `TextAnimation` instead;
 ///   the editor renders zero rows for text overlays)
+///
+/// v0.8 Tier 5b — same band treatment as ``KeyframeArea``: the app owns the
+/// studio `surface` ground and the design's row proportions; the row's label,
+/// track, playhead and marks are drawn inside `OverlayKeyframeEditor` and are
+/// reported as gaps.
 struct OverlayKeyframeArea: View {
 
     var store: ProjectStore
+    @Environment(\.modernistPalette) private var palette
 
     var body: some View {
         OverlayKeyframeEditor(
@@ -25,6 +31,8 @@ struct OverlayKeyframeArea: View {
                 get: { store.currentTime },
                 set: { store.currentTime = $0 }
             ),
+            rowHeight: Modernist.Space.s6,
+            rowSpacing: Modernist.Space.s1,
             onAdd: { id, property, time in
                 store.addOverlayKeyframe(layerID: id, property: property, time: time)
             },
@@ -35,7 +43,10 @@ struct OverlayKeyframeArea: View {
                 store.retimeOverlayKeyframe(layerID: id, property: property, from: from, to: to)
             }
         )
-        .padding(.horizontal)
+        .padding(.horizontal, Modernist.Space.s4)
+        .padding(.vertical, Modernist.Space.s2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(palette.surface)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Overlay keyframe editor")
         .accessibilityHint("Tap below a property to add a keyframe at the playhead. Long-press a marker to remove. Drag to retime.")

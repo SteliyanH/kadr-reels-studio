@@ -316,6 +316,70 @@ extension Color {
     }
 }
 
+// MARK: - Tier 5 additions (studio squad)
+//
+// Metrics the approved design names for the *editor* bands specifically, which
+// the CSS never had to carry (it describes a print system; none of these
+// surfaces exist there). Every one is a value the editor call sites would
+// otherwise write as a literal. Appended at the end of the file so the print
+// squad's parallel additions and these never collide.
+
+extension Modernist {
+
+    /// The auto-save status dot in the editor nav bar's second title line.
+    /// The design draws a 5pt disc; nothing on the 4/8/12/16/24/32 spacing
+    /// scale lands there, and rounding it to `Space.s1` reads as a speck.
+    /// Decision 4 recolours it to `Neutral.n400` — status is not an accent job.
+    static let navStatusDotSize: CGFloat = 5
+
+    /// The unavailable step of the editor's undo/redo cell pair.
+    ///
+    /// **Exception, recorded deliberately.** The repo-wide disabled convention
+    /// is 45% (`ModernistStyles`' button styles hard-wire it, and the v0.5
+    /// "disabled, never hidden" rule assumes it). The approved design specifies
+    /// 28% for *this pair only* — the two cells share one ruled group, so the
+    /// unavailable half has to drop further to read as unavailable rather than
+    /// as a second live cell. Applies nowhere else; do not generalise it.
+    static let pairedControlDisabledOpacity: Double = 0.28
+
+    /// Height of one timeline lane.
+    ///
+    /// **A compromise, not a preference.** The design specifies three lane
+    /// heights — video 44, overlay 18, audio 22 — and `KadrUI.TimelineView`
+    /// takes a single `laneHeight` that applies to every lane it draws. The
+    /// spec's video lane wins because it is the one the user drags, trims and
+    /// reads filmstrips in; the audio lane simply renders taller than drawn.
+    /// See the gap list.
+    static let timelineLaneHeight: CGFloat = 44
+
+    /// Minimum horizontal distance between two labelled ticks on the app-drawn
+    /// tick row. Below this the numerals collide, so the row steps up to the
+    /// next coarser interval (1 / 2 / 5 / 10 / 30 / 60s). Also the design's
+    /// nominal timeline scale ("48 px/s"), which is where the number comes
+    /// from: at the design's own zoom, ticks land exactly one second apart.
+    static let timelineTickMinSpacing: CGFloat = 48
+
+    /// How many lanes the timeline band sizes itself for before it stops
+    /// growing. `TimelineView` lays lanes out top-down inside whatever frame it
+    /// is given and does not scroll vertically, so the band has to name a
+    /// ceiling or a music-heavy project would push the stage off-screen.
+    static let timelineMaxVisibleLanes = 4
+
+    /// Bottom padding under the editor's toolbar row — the design's safe-area
+    /// gutter, so the bottom row of cells clears the home indicator.
+    static let toolbarBottomInset: CGFloat = 22
+
+    /// Ceiling on the inspector band's height, so a long parameter list can't
+    /// crowd out the stage. Tokenises the literal `320` the inspector areas
+    /// have carried since v0.3.
+    static let inspectorMaxHeight: CGFloat = 320
+
+    /// Floor on the stage's height once the keyframe + inspector bands appear.
+    /// The design shrinks the stage in the clip-selected state but never lets
+    /// it collapse; without a floor SwiftUI would happily give it zero.
+    static let stageMinHeight: CGFloat = 120
+}
+
 // MARK: - Tier 5 additions (print squad)
 //
 // Metrics the approved design names for the *print-ground* screens — the

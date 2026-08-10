@@ -7,13 +7,18 @@ import KadrUI
 /// (Position / Anchor / Opacity) + type-specific (Text + animation,
 /// Sticker rotation) controls. Mutations route through ``ProjectStore``'s
 /// overlay-mutation surface.
+///
+/// v0.8 Tier 5b — the band is the design's `surfaceRaised` block, matching
+/// ``InspectorArea``. `OverlayInspectorPanel`'s own rows are upstream
+/// literals and reported as gaps; the rows this repo draws
+/// (``TextEffectsSection``) take the design's slider treatment.
 struct OverlayInspectorArea: View {
 
     var store: ProjectStore
     @Environment(\.modernistPalette) private var palette
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Modernist.Space.s2) {
             OverlayInspectorPanel(
                 store.video,
                 selectedOverlayID: Binding(
@@ -42,7 +47,7 @@ struct OverlayInspectorArea: View {
                     store.applyOverlayRotation(id: id, radians)
                 }
             )
-            .frame(maxHeight: 320)
+            .frame(maxHeight: Modernist.inspectorMaxHeight)
             // v0.7 Tier 3 — stroke + shadow controls for `TextOverlay`. The
             // upstream `OverlayInspectorPanel` doesn't carry these yet
             // (would need a kadr-ui v0.10.3 patch), so we attach them
