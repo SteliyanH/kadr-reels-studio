@@ -151,6 +151,12 @@ struct ModernistSheetHeader<Actions: View>: View {
             HStack(alignment: .firstTextBaseline, spacing: Modernist.Space.s3) {
                 Text(title)
                     .modernistHeading(Modernist.Typography.h3)
+                    // `.navigationTitle` gave the sheet titles the heading
+                    // trait for free — that's what put them in VoiceOver's
+                    // heading rotor, and drawing our own title band dropped
+                    // it. Restated here so every sheet using this header gets
+                    // it back at once.
+                    .accessibilityAddTraits(.isHeader)
                 actions
             }
             .padding(.horizontal, Modernist.Space.s4)

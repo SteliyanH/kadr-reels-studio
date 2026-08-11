@@ -87,6 +87,49 @@ struct SettingsView: View {
         return .a500
     }
 
+    /// Whether tapping `choice` still has work to do, given what is actually
+    /// stored on the project.
+    ///
+    /// This is the legacy-custom fix. A project saved by v0.5–v0.7's free
+    /// colour picker holds an arbitrary hex; `choice(for:)` seeds the control
+    /// to `.a500` so it reads as "an accent is set", but seeding deliberately
+    /// writes nothing. Tapping "500" then changed no selection, so a
+    /// `.onChange`-driven mutation never fired — and the off-ramp colour
+    /// survived underneath a control claiming the ramp.
+    ///
+    /// Comparing against the *stored* colour rather than against the previous
+    /// selection is what closes that: the legacy hex doesn't match `.a500`'s
+    /// hex, so the tap commits. A tap that genuinely changes nothing still
+    /// writes nothing, so this doesn't fill the undo stack with no-ops.
+    nonisolated static func needsCommit(_ choice: AccentChoice, storedColor: Color?) -> Bool {
+        switch (choice.color, storedColor) {
+        case (nil, nil):
+            return false
+        case let (target?, stored?):
+            guard let targetHex = ProjectDocument.hexString(from: PlatformColor(target)),
+                  let storedHex = ProjectDocument.hexString(from: PlatformColor(stored))
+            else {
+                // Can't prove they match — commit rather than assume, which
+                // is the same bias that produced this fix.
+                return true
+            }
+            return targetHex != storedHex
+        default:
+            // One side clears the accent and the other sets it.
+            return true
+        }
+    }
+
+    /// The accent control's tap handler. Factored out of the binding so the
+    /// legacy-hex path is reachable from a test, and still writing through the
+    /// same `setAccentColor` v0.5 shipped — undo / redo, auto-save and the hex
+    /// round-trip all inherit unchanged.
+    @MainActor
+    static func commit(_ choice: AccentChoice, to store: ProjectStore) {
+        guard needsCommit(choice, storedColor: store.project.accentColor) else { return }
+        store.setAccentColor(choice.color)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ModernistSheetHeader("Settings") {
@@ -107,19 +150,28 @@ struct SettingsView: View {
 
     // MARK: - Accent
 
+    /// A `Binding` rather than `$accentChoice` plus `.onChange`, because the
+    /// segmented control writes on *every* tap while `.onChange` fires only on
+    /// a change of value — and the one case that matters is a tap on the
+    /// segment already showing. See ``needsCommit(_:storedColor:)``.
+    private var accentBinding: Binding<AccentChoice> {
+        Binding(
+            get: { accentChoice },
+            set: { newValue in
+                accentChoice = newValue
+                SettingsView.commit(newValue, to: store)
+            }
+        )
+    }
+
     @ViewBuilder
     private var accentSection: some View {
         VStack(alignment: .leading, spacing: Modernist.Space.s3) {
             Text("Accent · This project").modernistLabel()
             ModernistSegmentedControl(
                 options: AccentChoice.allCases.map { ($0, $0.label) },
-                selection: $accentChoice
+                selection: accentBinding
             )
-            .onChange(of: accentChoice) { _, newValue in
-                // Same mutation v0.5 used — undo / redo / auto-save and the
-                // hex round-trip all inherit unchanged.
-                store.setAccentColor(newValue.color)
-            }
             // Deliberately *no* `.accessibilityLabel` on the control: a label
             // on a container of buttons relabels or swallows the segments,
             // and each segment's own label ("System", "500"…) is the thing

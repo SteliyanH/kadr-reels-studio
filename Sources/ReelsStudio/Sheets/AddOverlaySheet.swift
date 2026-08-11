@@ -56,6 +56,79 @@ struct AddOverlaySheet: View {
     }
 }
 
+// MARK: - Text overlay content model
+//
+// Hoisted out of the private tab view so the two things that are *contract*
+// rather than layout — the default colour and the swatch list — can be pinned
+// by a test.
+
+extension AddOverlaySheet {
+
+    /// The colour a new text overlay starts at.
+    ///
+    /// **Content default, not chrome — do not theme.** This value goes into
+    /// `TextStyle(color:)` and is baked into the user's exported pixels; the
+    /// design system's grounds, surfaces and ramps stop at the app's own
+    /// chrome. The Modernist migration briefly moved this to
+    /// `Modernist.Neutral.n100` (#F8F4F4), which silently changed the colour
+    /// of every text overlay authored after it. Literal on purpose.
+    static let defaultTextColor: Color = .white
+
+    /// One cell of the COLOR row: the colour, and the name VoiceOver speaks
+    /// for it.
+    ///
+    /// A single array of these rather than two parallel literals indexed by
+    /// position — `swatchLabels[index]` would trap the moment the two lists
+    /// drifted by one entry, and nothing in the type system said they had to
+    /// agree. Now a mismatch can't be written down.
+    struct TextColorSwatch: Hashable {
+        let color: Color
+        let name: String
+    }
+
+    /// Decision 4 / the overlay sheet's "COLOR" row — the accent ramp plus
+    /// neutrals, not the iOS system palette. `groundText` is the current
+    /// ground's ink, so the last cell tracks the surface the sheet is on.
+    ///
+    /// The names carry WCAG 4.1.2 (Name, Role, Value): the row draws each
+    /// swatch as a bare filled `Rectangle`, which has no accessible name of
+    /// its own.
+    static func textColorSwatches(groundText: Color) -> [TextColorSwatch] {
+        [
+            TextColorSwatch(
+                color: Modernist.Neutral.n100,
+                name: NSLocalizedString("Off-white", comment: "Overlay text color swatch")
+            ),
+            TextColorSwatch(
+                color: Modernist.Neutral.n500,
+                name: NSLocalizedString("Mid gray", comment: "Overlay text color swatch")
+            ),
+            TextColorSwatch(
+                color: Modernist.Neutral.n900,
+                name: NSLocalizedString("Near black", comment: "Overlay text color swatch")
+            ),
+            TextColorSwatch(
+                color: Modernist.Accent.a500,
+                name: NSLocalizedString("Accent, light", comment: "Overlay text color swatch")
+            ),
+            TextColorSwatch(
+                color: Modernist.Accent.a700,
+                name: NSLocalizedString("Accent, dark", comment: "Overlay text color swatch")
+            ),
+            TextColorSwatch(
+                color: groundText,
+                name: NSLocalizedString("Ground text color", comment: "Overlay text color swatch")
+            ),
+        ]
+    }
+
+    /// The font-size row's quantization, in points. v0.5–v0.7 shipped
+    /// `Slider(value:in:step:)` with this step; the drawn slider dropped it
+    /// and let `TextStyle.fontSize` persist fractional points that the "56 pt"
+    /// readout only rounded for display.
+    static let fontSizeStep: Double = 2
+}
+
 // MARK: - Text tab
 
 private struct TextOverlayTab: View {
@@ -65,42 +138,19 @@ private struct TextOverlayTab: View {
 
     @State private var text: String = "New text"
     @State private var fontSize: Double = 56
-    /// v0.8 Tier 3 — the default is the first swatch of the ramp rather than
-    /// a bare `Color.white`. Same role (the lightest neutral), named.
-    @State private var color: Color = Modernist.Neutral.n100
+    /// Content default, not chrome — do not theme. See
+    /// ``AddOverlaySheet/defaultTextColor``.
+    @State private var color: Color = AddOverlaySheet.defaultTextColor
     @State private var weight: TextWeight = .bold
 
     @Environment(\.modernistPalette) private var palette
 
-    /// Decision 4 / the overlay sheet's "COLOR" row — the accent ramp plus
-    /// neutrals, not the iOS system palette. Square cells; the selected one
-    /// takes a 2pt ring in `palette.text`. The eyedropper (`ColorPicker`)
-    /// stays alongside so arbitrary colours are still reachable: narrowing
-    /// the swatches is a style call, removing the picker would be a
-    /// functional one.
-    private var swatches: [Color] {
-        [
-            Modernist.Neutral.n100,
-            Modernist.Neutral.n500,
-            Modernist.Neutral.n900,
-            Modernist.Accent.a500,
-            Modernist.Accent.a700,
-            palette.text,
-        ]
-    }
-
-    /// VoiceOver names for `swatches`, in the same order. The row draws each
-    /// swatch as a bare filled `Rectangle` — without this, the button carries
-    /// no accessible name at all (WCAG 4.1.2 Name, Role, Value).
-    private var swatchLabels: [String] {
-        [
-            NSLocalizedString("Off-white", comment: "Overlay text color swatch"),
-            NSLocalizedString("Mid gray", comment: "Overlay text color swatch"),
-            NSLocalizedString("Near black", comment: "Overlay text color swatch"),
-            NSLocalizedString("Accent, light", comment: "Overlay text color swatch"),
-            NSLocalizedString("Accent, dark", comment: "Overlay text color swatch"),
-            NSLocalizedString("Ground text color", comment: "Overlay text color swatch"),
-        ]
+    /// Square cells; the selected one takes a 2pt ring in `palette.text`. The
+    /// eyedropper (`ColorPicker`) stays alongside so arbitrary colours are
+    /// still reachable: narrowing the swatches is a style call, removing the
+    /// picker would be a functional one.
+    private var swatches: [AddOverlaySheet.TextColorSwatch] {
+        AddOverlaySheet.textColorSwatches(groundText: palette.text)
     }
 
     enum TextWeight: String, CaseIterable, Identifiable {
@@ -201,6 +251,7 @@ private struct TextOverlayTab: View {
             label: NSLocalizedString("Size", comment: "Overlay text size"),
             value: $fontSize,
             range: 24...96,
+            step: AddOverlaySheet.fontSizeStep,
             valueText: "\(Int(fontSize)) pt"
         )
     }
@@ -223,12 +274,12 @@ private struct TextOverlayTab: View {
         VStack(alignment: .leading, spacing: Modernist.Space.s2) {
             Text("Color").modernistLabel()
             HStack(spacing: Modernist.Space.s2) {
-                ForEach(Array(swatches.enumerated()), id: \.offset) { index, swatch in
+                ForEach(swatches, id: \.name) { swatch in
                     Button {
-                        color = swatch
+                        color = swatch.color
                     } label: {
                         Rectangle()
-                            .fill(swatch)
+                            .fill(swatch.color)
                             .frame(
                                 width: Modernist.minHitTarget,
                                 height: Modernist.minHitTarget
@@ -236,15 +287,15 @@ private struct TextOverlayTab: View {
                             .overlay(
                                 Rectangle()
                                     .strokeBorder(
-                                        color == swatch ? palette.text : palette.divider,
+                                        color == swatch.color ? palette.text : palette.divider,
                                         lineWidth: Modernist.ruleWidth
                                     )
                             )
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(swatchLabels[index])
-                    .accessibilityAddTraits(color == swatch ? [.isSelected] : [])
+                    .accessibilityLabel(swatch.name)
+                    .accessibilityAddTraits(color == swatch.color ? [.isSelected] : [])
                 }
                 // The eyedropper cell at the end of the row. Preserved
                 // verbatim from v0.5: narrowing the swatches is a style call,

@@ -668,6 +668,107 @@ private struct InteractivePopGestureBridge: UIViewControllerRepresentable {
     }
 }
 
+/// What the interactive-pop recogniser looked like before any shim touched it,
+/// pinned to the `UINavigationController` that owns it.
+///
+/// The shim used to chain: each `install` captured whichever delegate happened
+/// to be in place at that moment, and each `uninstall` put that one back.
+/// Pops are LIFO, so today the chain always unwinds in the order it was built
+/// and UIKit's delegate does come back. But the chain has no anchor — every
+/// link knows only its predecessor. A future `path.removeAll()` or pop-to-root
+/// tears editors down in an order the chain can't unwind, and the surviving
+/// link then restores a dead shim instead of UIKit's delegate: the swipe stays
+/// disabled for the rest of the session with nothing to heal it.
+///
+/// This replaces the chain with a record. The first shim to arrive stores
+/// UIKit's own delegate and the recogniser's original `isEnabled` on the
+/// navigation controller itself; claimants after that are tracked as weak
+/// references removed *by identity*, so any teardown order lands back on the
+/// same recorded original.
+@MainActor
+private final class InteractivePopGestureAnchor {
+
+    /// Only the address of this is ever read, never the value, so
+    /// `nonisolated(unsafe)` is exact rather than a concession.
+    private nonisolated(unsafe) static var associationKey: UInt8 = 0
+
+    /// UIKit's delegate, from before the first shim. Weak for the same reason
+    /// the shim's own reference was: the navigation controller owns it.
+    private(set) weak var systemDelegate: UIGestureRecognizerDelegate?
+
+    /// The recogniser's `isEnabled` from before the first shim forced it true.
+    /// `install` used to set `true` unconditionally and `uninstall` put
+    /// nothing back, so a stack that had deliberately disabled the swipe had
+    /// it switched on permanently by opening an editor once.
+    private(set) var systemIsEnabled: Bool
+
+    /// Shims currently installed against this navigation controller, oldest
+    /// first. Weak, so a claimant deallocated without an orderly `uninstall`
+    /// drops out of the list instead of wedging it.
+    private var claimants: [WeakClaimant] = []
+
+    private struct WeakClaimant {
+        weak var shim: InteractivePopGestureShim?
+    }
+
+    private init(systemDelegate: UIGestureRecognizerDelegate?, systemIsEnabled: Bool) {
+        self.systemDelegate = systemDelegate
+        self.systemIsEnabled = systemIsEnabled
+    }
+
+    /// The anchor for `navigation`, created from the recogniser's current
+    /// state on first call. Creation is the only moment the original is still
+    /// readable, so it must happen before any delegate swap.
+    static func anchor(
+        for navigation: UINavigationController,
+        gesture: UIGestureRecognizer
+    ) -> InteractivePopGestureAnchor {
+        if let existing = existing(for: navigation) { return existing }
+        let anchor = InteractivePopGestureAnchor(
+            systemDelegate: gesture.delegate,
+            systemIsEnabled: gesture.isEnabled
+        )
+        objc_setAssociatedObject(
+            navigation,
+            &associationKey,
+            anchor,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+        return anchor
+    }
+
+    static func existing(
+        for navigation: UINavigationController
+    ) -> InteractivePopGestureAnchor? {
+        objc_getAssociatedObject(navigation, &associationKey)
+            as? InteractivePopGestureAnchor
+    }
+
+    func claim(_ shim: InteractivePopGestureShim) {
+        claimants.removeAll { $0.shim == nil }
+        guard !claimants.contains(where: { $0.shim === shim }) else { return }
+        claimants.append(WeakClaimant(shim: shim))
+    }
+
+    /// Drops `shim` and reports who should hold the recogniser now: the most
+    /// recent surviving claimant, or `nil` when the anchor is spent and the
+    /// recorded original goes back. Removal is by identity, which is what
+    /// makes an out-of-order teardown heal instead of wedge.
+    func release(_ shim: InteractivePopGestureShim) -> InteractivePopGestureShim? {
+        claimants.removeAll { $0.shim === shim || $0.shim == nil }
+        return claimants.last?.shim
+    }
+
+    func retire(from navigation: UINavigationController) {
+        objc_setAssociatedObject(
+            navigation,
+            &Self.associationKey,
+            nil,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+    }
+}
+
 /// The delegate that answers for the interactive pop while the editor owns the
 /// screen. UIKit's stock delegate ties the gesture to a back button it draws;
 /// this one ties it to the only thing that actually matters — whether there is
@@ -679,9 +780,6 @@ private struct InteractivePopGestureBridge: UIViewControllerRepresentable {
 private final class InteractivePopGestureShim: NSObject, UIGestureRecognizerDelegate {
 
     private weak var navigationController: UINavigationController?
-    /// UIKit's own delegate, held weakly (the navigation controller owns it)
-    /// so it can be put back on the way out.
-    private weak var systemDelegate: UIGestureRecognizerDelegate?
     private var isInstalled = false
 
     /// Idempotent. Returns without effect until the probe is parented deeply
@@ -692,8 +790,12 @@ private final class InteractivePopGestureShim: NSObject, UIGestureRecognizerDele
               let gesture = navigation.interactivePopGestureRecognizer
         else { return }
 
+        // Resolved *before* the swap below, so whichever shim gets here first
+        // is the one that records UIKit's original delegate and enablement.
+        let anchor = InteractivePopGestureAnchor.anchor(for: navigation, gesture: gesture)
+        anchor.claim(self)
+
         navigationController = navigation
-        systemDelegate = gesture.delegate
         gesture.delegate = self
         gesture.isEnabled = true
         isInstalled = true
@@ -701,11 +803,27 @@ private final class InteractivePopGestureShim: NSObject, UIGestureRecognizerDele
 
     func uninstall() {
         guard isInstalled else { return }
-        if let gesture = navigationController?.interactivePopGestureRecognizer,
-           gesture.delegate === self {
-            gesture.delegate = systemDelegate
-        }
         isInstalled = false
+
+        guard let navigation = navigationController,
+              let gesture = navigation.interactivePopGestureRecognizer,
+              let anchor = InteractivePopGestureAnchor.existing(for: navigation)
+        else { return }
+
+        if let successor = anchor.release(self) {
+            // A shallower editor is still on screen and still wants the shim.
+            // Hand it the recogniser rather than restoring anything.
+            gesture.delegate = successor
+            return
+        }
+
+        // Last one out. Both halves of the original state go back — the
+        // delegate (ASH 6) and the enablement `install` forced (ASH 5) —
+        // whatever order the editors tore down in.
+        gesture.delegate = anchor.systemDelegate
+        gesture.isEnabled = anchor.systemIsEnabled
+        anchor.retire(from: navigation)
+        navigationController = nil
     }
 
     // MARK: UIGestureRecognizerDelegate

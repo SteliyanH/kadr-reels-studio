@@ -405,10 +405,26 @@ struct ModernistSegmentedControl<Value: Hashable>: View {
 ///
 /// Ships the label + value row too, since every call site in the app pairs them
 /// ("Scale … 1.24×", "SIZE … 56 pt").
+///
+/// Drawing our own track costs us the two things `Slider` gave for free, so
+/// both are restated here rather than at the twelve call sites:
+///
+/// - **VoiceOver adjustability.** A bare `DragGesture` is unreachable without
+///   sight; `.accessibilityAdjustableAction` is what makes swipe-up /
+///   swipe-down move the value. Fixed once here, inherited everywhere.
+/// - **Quantization.** `Slider(value:in:step:)` snapped the value; a raw drag
+///   maps pixels straight to `Double` and can persist fractions a readout only
+///   rounds for display. `step` restores the snap.
+///
+/// The two are one mechanism: the step that quantizes a drag is the same step
+/// an adjustable action moves by, so they can't drift apart.
 struct ModernistSlider: View {
     let label: String
     @Binding var value: Double
     var range: ClosedRange<Double> = 0...1
+    /// Quantization, in value units. `nil` leaves the value continuous — the
+    /// behaviour of a `Slider` with no `step:` argument.
+    var step: Double?
     /// Formatted readout, right-aligned. `nil` hides the value column.
     var valueText: String?
 
@@ -418,6 +434,55 @@ struct ModernistSlider: View {
         let span = range.upperBound - range.lowerBound
         guard span > 0 else { return 0 }
         return CGFloat((value - range.lowerBound) / span)
+    }
+
+    /// How far one VoiceOver swipe moves the value.
+    ///
+    /// A quantized slider moves by exactly one step — landing anywhere else
+    /// would put the value off the grid the drag handler snaps to. A
+    /// continuous one moves by a twentieth of its span, so a full traverse is
+    /// twenty swipes on every slider in the app regardless of its units.
+    nonisolated static func adjustmentStep(
+        range: ClosedRange<Double>,
+        step: Double?
+    ) -> Double {
+        if let step, step > 0 { return step }
+        return (range.upperBound - range.lowerBound) / 20
+    }
+
+    /// Snaps a raw value onto the step grid (when there is one) and clamps it
+    /// into `range`.
+    ///
+    /// Both the drag handler and the adjustable action resolve through here,
+    /// which is the whole point: a value reachable by dragging is reachable by
+    /// VoiceOver and vice versa.
+    nonisolated static func resolve(
+        _ raw: Double,
+        range: ClosedRange<Double>,
+        step: Double?
+    ) -> Double {
+        var resolved = raw
+        if let step, step > 0 {
+            let steps = ((raw - range.lowerBound) / step).rounded()
+            resolved = range.lowerBound + steps * step
+        }
+        return min(max(resolved, range.lowerBound), range.upperBound)
+    }
+
+    /// The adjustable action's landing value for one swipe in `direction`.
+    /// Factored out so the arithmetic is assertable without a host.
+    nonisolated static func adjusted(
+        _ current: Double,
+        direction: AccessibilityAdjustmentDirection,
+        range: ClosedRange<Double>,
+        step: Double?
+    ) -> Double {
+        let delta = adjustmentStep(range: range, step: step)
+        switch direction {
+        case .increment: return resolve(current + delta, range: range, step: step)
+        case .decrement: return resolve(current - delta, range: range, step: step)
+        @unknown default: return resolve(current, range: range, step: step)
+        }
     }
 
     var body: some View {
@@ -445,7 +510,9 @@ struct ModernistSlider: View {
                 .gesture(
                     DragGesture(minimumDistance: 0).onChanged { drag in
                         let f = max(0, min(1, drag.location.x / geo.size.width))
-                        value = range.lowerBound + Double(f) * (range.upperBound - range.lowerBound)
+                        let raw = range.lowerBound
+                            + Double(f) * (range.upperBound - range.lowerBound)
+                        value = Self.resolve(raw, range: range, step: step)
                     }
                 )
             }
@@ -461,5 +528,11 @@ struct ModernistSlider: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(label)
         .accessibilityValue(valueText ?? "")
+        // The migration's one real functional loss: `Slider` is adjustable to
+        // VoiceOver out of the box, a `DragGesture` is not. Without this the
+        // control has a name and a value and no way to change either.
+        .accessibilityAdjustableAction { direction in
+            value = Self.adjusted(value, direction: direction, range: range, step: step)
+        }
     }
 }
