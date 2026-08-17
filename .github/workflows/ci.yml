@@ -20,11 +20,22 @@ concurrency:
 jobs:
   test:
     runs-on: macos-15
+
+    # The simulator suite legitimately runs ~13 minutes, so this cap is looser
+    # than the packages'. Without one, GitHub's default is 360 minutes: six
+    # hours of macOS runner time, billed at 10x Linux, if a job wedges. kadr did
+    # exactly that on 2026-08-17 and had to be cancelled by hand after 33.
+    timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          # Pinned rather than `latest-stable`: a red run should mean the code
+          # changed, not that the runner image moved. Note this pins Xcode, not
+          # the simulator runtime — the UDID step below still picks the highest
+          # available iOS runtime, which is deliberate.
+          xcode-version: '26.3'
       - name: Install xcodegen
         run: brew install xcodegen
       - name: Generate Xcode project
