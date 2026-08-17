@@ -1,8 +1,22 @@
 name: CI
+
+# `develop` requires the `test` check (branch protection), and `pull_request`
+# is where that check is evaluated — on the PR's head commit. A `push` trigger
+# on main/develop re-ran the whole ~13-minute suite after every merge, testing
+# code the PR had just tested; `strict: true` (require branches up to date) is
+# what guards the merge-commit delta, not a second full run.
+#
+# Matches kadr#137 / kadr-ui#104, which narrowed the same way. `concurrency`
+# cancels superseded runs so iterating on a PR costs one run, not one per push.
+# `workflow_dispatch` stays for manual runs on a branch.
 on:
-  push:
-    branches: [main, develop]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: macos-15
