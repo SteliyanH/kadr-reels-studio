@@ -18,44 +18,44 @@ struct LayersSheet: View {
 
     var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Layers") {
+            ReelSheetHeader("Layers") {
                 Button("Done") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
             }
             content
         }
-        .modernistSheet(Modernist.SheetDetent.layers)
+        .reelSheet(Reel.SheetDetent.layers)
     }
 
     @ViewBuilder
     private var content: some View {
         if store.project.overlays.isEmpty {
-            VStack(spacing: Modernist.Space.s3) {
+            VStack(spacing: Reel.Space.s3) {
                 Image(systemName: "square.stack.3d.up.slash")
-                    .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
+                    .font(.system(size: Reel.Typography.Glyph.lg, weight: Reel.Typography.headingWeight))
                     .foregroundStyle(palette.textMuted)
                 Text("No overlays yet")
-                    .font(Modernist.Typography.h5)
+                    .font(Reel.Typography.h5)
                 Text("Tap **+ Overlay** in the toolbar to add text or stickers.")
-                    .font(Modernist.Typography.body)
+                    .font(Reel.Typography.body)
                     .foregroundStyle(palette.textMuted)
-                    .frame(maxWidth: Modernist.emptyStateMeasure)
+                    .frame(maxWidth: Reel.emptyStateMeasure)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(Modernist.Space.s4)
+            .padding(Reel.Space.s4)
         } else {
             VStack(spacing: 0) {
                 layerList
                 Text("Swipe a row to delete · use Forward / Back to restack")
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, Modernist.Space.s4)
-                    .padding(.vertical, Modernist.Space.s3)
+                    .padding(.horizontal, Reel.Space.s4)
+                    .padding(.vertical, Reel.Space.s3)
             }
         }
     }
@@ -93,7 +93,7 @@ struct LayersSheet: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .environment(\.defaultMinListRowHeight, Modernist.minHitTarget)
+        .environment(\.defaultMinListRowHeight, Reel.minHitTarget)
     }
 
     @ViewBuilder
@@ -101,45 +101,45 @@ struct LayersSheet: View {
         let (icon, kind) = LayersSheet.iconAndKind(for: overlay)
         let title = LayersSheet.title(for: overlay, index: index)
         let isSelected = overlay.layerID != nil && store.selectedOverlayID == overlay.layerID
-        HStack(spacing: Modernist.Space.s3) {
+        HStack(spacing: Reel.Space.s3) {
             // The icon tile is an accent-tinted block with an accent glyph;
             // `.tint` at an arbitrary opacity is replaced by the named role.
             Rectangle()
                 .fill(palette.accentTint)
-                .frame(width: Modernist.layerIconTileSize, height: Modernist.layerIconTileSize)
+                .frame(width: Reel.layerIconTileSize, height: Reel.layerIconTileSize)
                 .overlay(
                     Image(systemName: icon)
-                        .font(Modernist.Typography.h4)
+                        .font(Reel.Typography.h4)
                         .foregroundStyle(palette.accent)
                 )
-            VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+            VStack(alignment: .leading, spacing: Reel.Space.s1) {
                 Text(title)
-                    .font(Modernist.Typography.bodyEmphasis)
+                    .font(Reel.Typography.bodyEmphasis)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(kind)
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
             }
-            Spacer(minLength: Modernist.Space.s2)
+            Spacer(minLength: Reel.Space.s2)
             // Decision 4 — selection checkmarks go accent.
             if isSelected {
                 Image(systemName: "checkmark")
                     .foregroundStyle(palette.accent)
             }
             Image(systemName: "chevron.right")
-                .font(Modernist.Typography.caption)
+                .font(Reel.Typography.caption)
                 .foregroundStyle(palette.textMuted)
         }
-        .padding(.horizontal, Modernist.Space.s4)
-        .padding(.vertical, Modernist.Space.s2)
-        .frame(minHeight: Modernist.minHitTarget)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.vertical, Reel.Space.s2)
+        .frame(minHeight: Reel.minHitTarget)
         .background(isSelected ? palette.accentTint : palette.surfaceRaised)
         .overlay(
-            RoundedRectangle(cornerRadius: Modernist.Radius.sm)
+            RoundedRectangle(cornerRadius: Reel.Radius.sm)
                 .strokeBorder(
                     isSelected ? palette.accent : Color.clear,
-                    lineWidth: Modernist.ruleWidth
+                    lineWidth: Reel.ruleWidth
                 )
         )
         .contentShape(Rectangle())

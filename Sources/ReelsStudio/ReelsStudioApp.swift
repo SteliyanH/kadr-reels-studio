@@ -70,7 +70,7 @@ struct LibraryHostView: View {
 
     var host: LibraryHost
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         if let library = host.library {
@@ -78,27 +78,27 @@ struct LibraryHostView: View {
         } else {
             // Same centred column the library's empty state uses: glyph,
             // heading, explainer — leading-aligned inside a measured column.
-            VStack(alignment: .leading, spacing: Modernist.Space.s4) {
+            VStack(alignment: .leading, spacing: Reel.Space.s4) {
                 // Decision 4 — the scheme has no warning role; the accent is
                 // the one thing that flags a problem.
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
+                    .font(.system(size: Reel.Typography.Glyph.lg, weight: Reel.Typography.headingWeight))
                     .foregroundStyle(palette.accent)
                 Text("Couldn't open project library")
-                    .modernistHeading(Modernist.Typography.h4)
+                    .reelHeading(Reel.Typography.h4)
                 if let message = host.setupError {
                     Text(message)
-                        .modernistBody()
+                        .reelBody()
                         .foregroundStyle(palette.textMuted)
                 }
             }
-            .frame(maxWidth: Modernist.emptyStateMeasure, alignment: .leading)
+            .frame(maxWidth: Reel.emptyStateMeasure, alignment: .leading)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(Modernist.Space.s4)
+            .padding(Reel.Space.s4)
             // v0.8 Tier 2 — the library-failure screen is app chrome; chrome
             // is the print ground. The happy path is `ProjectListView`, which
             // establishes the same ground at its own root.
-            .modernistSurface(.print)
+            .reelSurface(.print)
         }
     }
 }

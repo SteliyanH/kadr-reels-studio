@@ -19,14 +19,14 @@ import KadrUI
 struct TimelineArea: View {
 
     var store: ProjectStore
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+        VStack(alignment: .leading, spacing: Reel.Space.s1) {
             tickRow
             timeline
         }
-        .padding(.vertical, Modernist.Space.s2)
+        .padding(.vertical, Reel.Space.s2)
         .frame(maxWidth: .infinity)
         .background(palette.surface)
     }
@@ -53,11 +53,11 @@ struct TimelineArea: View {
         // plain child it widened the whole editor stack and pushed the nav
         // bar's cells off-screen — caught by the UI suite.)
         return Color.clear
-            .frame(height: Modernist.Space.s4)
+            .frame(height: Reel.Space.s4)
             .overlay(alignment: .leading) { ticks(step: step, pixelsPerSecond: pixelsPerSecond) }
             .clipped()
             .overlay(alignment: .trailing) { zoomReadout(pixelsPerSecond: pixelsPerSecond) }
-            .padding(.horizontal, Modernist.Space.s4)
+            .padding(.horizontal, Reel.Space.s4)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Timeline scale")
             .accessibilityValue(TimelineArea.zoomReadout(pixelsPerSecond: pixelsPerSecond))
@@ -67,7 +67,7 @@ struct TimelineArea: View {
         HStack(alignment: .top, spacing: 0) {
             ForEach(0..<TimelineArea.tickCount, id: \.self) { index in
                 Text(verbatim: TimelineArea.tickLabel(seconds: Double(index) * step))
-                    .font(Modernist.Typography.numeric)
+                    .font(Reel.Typography.numeric)
                     .foregroundStyle(palette.textMuted)
                     .frame(width: step * pixelsPerSecond, alignment: .leading)
             }
@@ -78,13 +78,13 @@ struct TimelineArea: View {
     /// Pinned right, on its own `surface` block so the numerals scrolling
     /// under it don't collide with it — the same masking the design shows.
     private func zoomReadout(pixelsPerSecond: Double) -> some View {
-        HStack(spacing: Modernist.Space.s1) {
+        HStack(spacing: Reel.Space.s1) {
             Image(systemName: "plus.magnifyingglass")
             Text(verbatim: TimelineArea.zoomReadout(pixelsPerSecond: pixelsPerSecond))
         }
-        .font(Modernist.Typography.numeric)
+        .font(Reel.Typography.numeric)
         .foregroundStyle(palette.textMuted)
-        .padding(.leading, Modernist.Space.s2)
+        .padding(.leading, Reel.Space.s2)
         .background(palette.surface)
     }
 
@@ -128,8 +128,8 @@ struct TimelineArea: View {
             // `laneHeight`, and the design's 44 / 18 / 22 split is
             // unreachable. The video lane wins — it's the one the user drags,
             // trims and reads filmstrips in.
-            laneHeight: Modernist.timelineLaneHeight,
-            laneSpacing: Modernist.Space.s1,
+            laneHeight: Reel.timelineLaneHeight,
+            laneSpacing: Reel.Space.s1,
             showAudioWaveforms: true,
             showLaneLabels: true,
             onReorder: { event in
@@ -179,7 +179,7 @@ struct TimelineArea: View {
             clips: store.project.clips,
             audioTrackCount: store.project.audioTracks.count
         ))
-        .padding(.horizontal, Modernist.Space.s4)
+        .padding(.horizontal, Reel.Space.s4)
         // The inner TimelineView's gesture surface is rich (tap to scrub,
         // pinch to zoom, drag to reorder, long-press to multi-select) and
         // not easily VoiceOver-introspectable. Label the wrapper so a
@@ -217,7 +217,7 @@ extension TimelineArea {
 
     /// How many ticks the row emits. The viewport is at most ~1100pt wide on
     /// any supported device and ticks never sit closer than
-    /// `Modernist.timelineTickMinSpacing`, so this is a generous ceiling on
+    /// `Reel.timelineTickMinSpacing`, so this is a generous ceiling on
     /// what can be visible; the row is clipped, and emitting more would be
     /// building views nobody can see.
     static let tickCount = 32
@@ -233,7 +233,7 @@ extension TimelineArea {
     /// Pure for testability.
     nonisolated static func tickStepSeconds(pixelsPerSecond: Double) -> Double {
         let ladder: [Double] = [1, 2, 5, 10, 30, 60]
-        let minimum = Double(Modernist.timelineTickMinSpacing)
+        let minimum = Double(Reel.timelineTickMinSpacing)
         guard pixelsPerSecond > 0 else { return ladder[ladder.count - 1] }
         return ladder.first { $0 * pixelsPerSecond >= minimum } ?? ladder[ladder.count - 1]
     }
@@ -280,7 +280,7 @@ extension TimelineArea {
     // fixed clip- and audio-lane heights it uses on its single-lane path
     // (where `laneHeight` is ignored entirely), and its internal stack
     // spacing. They are upstream constants, not design values: they don't
-    // belong in `ModernistTheme`, which is this app's system, not kadr-ui's.
+    // belong in `ReelTheme`, which is this app's system, not kadr-ui's.
     // Both facts are on the gap list.
 
     /// The scrub strip drawn above every lane stack whenever a `currentTime`
@@ -301,7 +301,7 @@ extension TimelineArea {
     /// that ignores `laneHeight` outright, and with more than one it renders
     /// `laneHeight`-tall lanes. The band mirrors whichever path the project
     /// will take, so the lanes are never clipped and never swim in dead space.
-    /// The multi-lane path is capped at `Modernist.timelineMaxVisibleLanes`:
+    /// The multi-lane path is capped at `Reel.timelineMaxVisibleLanes`:
     /// the component doesn't scroll vertically, so an uncapped stack of audio
     /// lanes would push the stage off the screen.
     nonisolated static func bandHeight(clips: [any Clip], audioTrackCount: Int) -> CGFloat {
@@ -318,9 +318,9 @@ extension TimelineArea {
             return height
         }
 
-        let lanes = min(nonAudio + audioLanes, Modernist.timelineMaxVisibleLanes)
+        let lanes = min(nonAudio + audioLanes, Reel.timelineMaxVisibleLanes)
         return upstreamScrubStripHeight
-            + CGFloat(lanes) * Modernist.timelineLaneHeight
-            + CGFloat(lanes) * Modernist.Space.s1
+            + CGFloat(lanes) * Reel.timelineLaneHeight
+            + CGFloat(lanes) * Reel.Space.s1
     }
 }

@@ -32,7 +32,7 @@ struct ProjectListView: View {
     /// alert keeps the list robust.
     @State private var errorMessage: String?
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -77,7 +77,7 @@ struct ProjectListView: View {
         // v0.8 Tier 2 — the library is app chrome; chrome is the print
         // ground. Set once, at the root. `EditorView` re-establishes
         // `.studio` for its own subtree when pushed.
-        .modernistSurface(.print)
+        .reelSurface(.print)
     }
 
     /// Skipped-project file selected for the JSON detail sheet.
@@ -97,10 +97,10 @@ struct ProjectListView: View {
     /// that budget, so the header sits flush to the safe-area top.
     @ViewBuilder
     private var navHeader: some View {
-        HStack(alignment: .bottom, spacing: Modernist.Space.s3) {
-            VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+        HStack(alignment: .bottom, spacing: Reel.Space.s3) {
+            VStack(alignment: .leading, spacing: Reel.Space.s1) {
                 Text("Projects")
-                    .modernistHeading(Modernist.Typography.h2)
+                    .reelHeading(Reel.Typography.h2)
                 if !isLibraryEmpty {
                     Text(
                         ProjectListView.countLine(
@@ -108,7 +108,7 @@ struct ProjectListView: View {
                             skipped: library.skippedProjects.count
                         )
                     )
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -121,16 +121,16 @@ struct ProjectListView: View {
                 } label: {
                     Label("New", systemImage: "plus")
                 }
-                .buttonStyle(ModernistPrimaryButtonStyle())
+                .buttonStyle(ReelPrimaryButtonStyle())
                 // The v0.5 sweep's spoken label for this control was
                 // "New Project"; the caption shortens, the announcement
                 // does not.
                 .accessibilityLabel("New Project")
             }
         }
-        .padding(.horizontal, Modernist.Space.s4)
-        .padding(.top, Modernist.Space.s1)
-        .padding(.bottom, Modernist.Space.s3)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.top, Reel.Space.s1)
+        .padding(.bottom, Reel.Space.s3)
     }
 
     /// "3 projects · 2 skipped files". Pure so it's testable.
@@ -181,31 +181,31 @@ struct ProjectListView: View {
     /// Screens §2 — a centred column whose text stays leading-aligned inside
     /// it. One primary action, one quiet alternative; never two peer buttons.
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s4) {
+        VStack(alignment: .leading, spacing: Reel.Space.s4) {
             Image(systemName: "film.stack")
-                .font(.system(size: Modernist.Typography.Glyph.xxl, weight: Modernist.Typography.headingWeight))
+                .font(.system(size: Reel.Typography.Glyph.xxl, weight: Reel.Typography.headingWeight))
                 .foregroundStyle(palette.textMuted)
             Text("No projects yet")
-                .modernistHeading(Modernist.Typography.h4)
+                .reelHeading(Reel.Typography.h4)
             Text("Start with a new project, or import the bundled sample to see what the editor can do.")
-                .modernistBody()
+                .reelBody()
                 .foregroundStyle(palette.textMuted)
             Button { createNewProject() } label: {
                 Label("New Project", systemImage: "plus")
             }
-            .buttonStyle(ModernistPrimaryButtonStyle())
+            .buttonStyle(ReelPrimaryButtonStyle())
             Button { importSample() } label: {
                 Label("Open the bundled sample", systemImage: "wand.and.stars")
             }
-            .buttonStyle(ModernistGhostButtonStyle())
+            .buttonStyle(ReelGhostButtonStyle())
             // The XCUITest reaches this affordance as "Sample" — the caption
             // grew into the design's sentence, the automation handle didn't
             // move.
             .accessibilityIdentifier("Sample")
         }
-        .frame(maxWidth: Modernist.emptyStateMeasure, alignment: .leading)
+        .frame(maxWidth: Reel.emptyStateMeasure, alignment: .leading)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(Modernist.Space.s4)
+        .padding(Reel.Space.s4)
     }
 
     private func importSample() {
@@ -248,7 +248,7 @@ struct ProjectListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .environment(\.defaultMinListRowHeight, Modernist.minHitTarget)
+        .environment(\.defaultMinListRowHeight, Reel.minHitTarget)
         .sheet(item: $inspectingSkipped) { skipped in
             SkippedProjectDetailSheet(skipped: skipped)
         }
@@ -301,18 +301,18 @@ struct ProjectListView: View {
             }
         } header: {
             Text("Skipped projects")
-                .modernistLabel()
-                .padding(.horizontal, Modernist.Space.s4)
-                .padding(.top, Modernist.Space.s6)
-                .padding(.bottom, Modernist.Space.s2)
+                .reelLabel()
+                .padding(.horizontal, Reel.Space.s4)
+                .padding(.top, Reel.Space.s6)
+                .padding(.bottom, Reel.Space.s2)
                 .listRowInsets(EdgeInsets())
         } footer: {
             Text("These files couldn't be loaded. Tap one to see details, or swipe to discard.")
-                .font(Modernist.Typography.caption)
+                .font(Reel.Typography.caption)
                 .foregroundStyle(palette.textMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Modernist.Space.s4)
-                .padding(.top, Modernist.Space.s2)
+                .padding(.horizontal, Reel.Space.s4)
+                .padding(.top, Reel.Space.s2)
                 .listRowInsets(EdgeInsets())
         }
     }
@@ -387,7 +387,7 @@ private struct ProjectRowButtonStyle: ButtonStyle {
 
     private struct StyleBody: View {
         let configuration: Configuration
-        @Environment(\.modernistPalette) private var palette
+        @Environment(\.reelPalette) private var palette
 
         var body: some View {
             configuration.label
@@ -403,41 +403,41 @@ struct ProjectRow: View {
 
     let document: ProjectDocument
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
-        HStack(spacing: Modernist.Space.s3) {
+        HStack(spacing: Reel.Space.s3) {
             ProjectThumbnailTile(document: document)
                 .frame(
-                    width: Modernist.projectThumbnailSize,
-                    height: Modernist.projectThumbnailSize
+                    width: Reel.projectThumbnailSize,
+                    height: Reel.projectThumbnailSize
                 )
-            VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+            VStack(alignment: .leading, spacing: Reel.Space.s1) {
                 Text(document.name)
-                    .font(Modernist.Typography.bodyEmphasis)
+                    .font(Reel.Typography.bodyEmphasis)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                HStack(spacing: Modernist.Space.s2) {
-                    ModernistTag(text: ProjectRow.presetLabel(for: document.preset))
-                    HStack(spacing: Modernist.Space.s2) {
+                HStack(spacing: Reel.Space.s2) {
+                    ReelTag(text: ProjectRow.presetLabel(for: document.preset))
+                    HStack(spacing: Reel.Space.s2) {
                         Text(document.modifiedAt, format: .relative(presentation: .named))
                         Text("·")
                         Text(ProjectRow.clipCountLabel(document.clips.count))
                     }
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
                 }
             }
-            Spacer(minLength: Modernist.Space.s2)
+            Spacer(minLength: Reel.Space.s2)
             Image(systemName: "chevron.right")
-                .font(Modernist.Typography.caption)
+                .font(Reel.Typography.caption)
                 .foregroundStyle(palette.textMuted)
         }
-        .padding(.horizontal, Modernist.Space.s4)
-        .padding(.vertical, Modernist.Space.s2)
-        .frame(minHeight: Modernist.minHitTarget)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.vertical, Reel.Space.s2)
+        .frame(minHeight: Reel.minHitTarget)
         // Rows sit in one block, separated by the system's 2pt rule.
-        .modernistRule()
+        .reelRule()
         // Collapse the row into a single VoiceOver element so the user
         // hears name + modified date + clip count as one announcement
         // instead of three sibling reads.
@@ -446,7 +446,7 @@ struct ProjectRow: View {
         .accessibilityHint("Opens this project in the editor")
     }
 
-    /// The preset's aspect ratio, for the row's `ModernistTag` ("9:16").
+    /// The preset's aspect ratio, for the row's `ReelTag` ("9:16").
     /// Pure so it's testable.
     nonisolated static func presetLabel(for preset: ProjectPreset) -> String {
         switch preset {
@@ -497,31 +497,31 @@ struct SkippedProjectRow: View {
 
     let skipped: SkippedProject
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
-        HStack(alignment: .top, spacing: Modernist.Space.s3) {
+        HStack(alignment: .top, spacing: Reel.Space.s3) {
             // v0.8 Tier 3 / Decision 4 — the scheme has no warning role. This
             // is the one place the accent flags a problem.
             Image(systemName: iconName)
                 .foregroundStyle(palette.accent)
-                .font(Modernist.Typography.h4)
-            VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+                .font(Reel.Typography.h4)
+            VStack(alignment: .leading, spacing: Reel.Space.s1) {
                 Text(skipped.id)
-                    .font(Modernist.Typography.bodyEmphasis)
+                    .font(Reel.Typography.bodyEmphasis)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(skipped.reason.displayLabel)
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
             }
-            Spacer(minLength: Modernist.Space.s2)
+            Spacer(minLength: Reel.Space.s2)
         }
-        .padding(.horizontal, Modernist.Space.s4)
-        .padding(.vertical, Modernist.Space.s2)
-        .frame(minHeight: Modernist.minHitTarget)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.vertical, Reel.Space.s2)
+        .frame(minHeight: Reel.minHitTarget)
         .background(palette.surface)
-        .modernistRule()
+        .reelRule()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             String(
@@ -545,41 +545,41 @@ struct SkippedProjectDetailSheet: View {
 
     let skipped: SkippedProject
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Skipped project") {
+            ReelSheetHeader("Skipped project") {
                 Button("Done") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
                     label("File", value: skipped.id)
                     label("Reason", value: skipped.reason.displayLabel)
-                    VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+                    VStack(alignment: .leading, spacing: Reel.Space.s2) {
                         Text("Details")
-                            .modernistLabel()
+                            .reelLabel()
                         Text(skipped.reason.detail)
-                            .font(Modernist.Typography.body)
+                            .font(Reel.Typography.body)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(Modernist.Space.s4)
+                .padding(Reel.Space.s4)
             }
         }
-        .modernistSheet(Modernist.SheetDetent.export)
+        .reelSheet(Reel.SheetDetent.export)
     }
 
     @ViewBuilder
     private func label(_ title: LocalizedStringKey, value: String) -> some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
             Text(title)
-                .modernistLabel()
+                .reelLabel()
             Text(value)
-                .font(Modernist.Typography.body)
+                .font(Reel.Typography.body)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

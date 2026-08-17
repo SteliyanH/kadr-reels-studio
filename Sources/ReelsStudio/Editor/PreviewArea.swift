@@ -7,7 +7,7 @@ import KadrUI
 /// resolution.
 ///
 /// v0.8 Tier 5b — the approved design's stage band: the 9:16 frame sits on a
-/// true-black letterbox with square corners and `.modernistElevation(.lg)`,
+/// true-black letterbox with square corners and `.reelElevation(.lg)`,
 /// and carries a `numeric` spec chip in its top-left corner reading the
 /// preset's own resolution and frame rate. Decision 5 is explicit that the
 /// stage is the one surface that is **never** grayscaled — the user is
@@ -15,7 +15,7 @@ import KadrUI
 struct PreviewArea: View {
 
     var store: ProjectStore
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         let video = store.video
@@ -38,14 +38,14 @@ struct PreviewArea: View {
         // user grades against, so it takes the stage token rather than a
         // ground-tinted role. Decision 5's "never grayscale the stage" applies
         // to the same surface for the same reason.
-        .background(Modernist.stageInk)
-        .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
+        .background(Reel.stageInk)
+        .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
         // The chip rides the *fitted* frame, not the band: `.aspectRatio(.fit)`
         // resolves this view's own bounds to the letterboxed rectangle, so a
         // `.topLeading` overlay lands in the video's corner on every device
         // width without measuring anything.
         .overlay(alignment: .topLeading) { specChip }
-        .modernistElevation(.lg)
+        .reelElevation(.lg)
     }
 
     // MARK: - Spec chip
@@ -57,12 +57,12 @@ struct PreviewArea: View {
     /// scrubs to — which a text-only chip over live footage would not.
     private var specChip: some View {
         Text(verbatim: PreviewArea.specChipText(for: store.project.preset))
-            .font(Modernist.Typography.numeric)
+            .font(Reel.Typography.numeric)
             .foregroundStyle(palette.text)
-            .padding(.horizontal, Modernist.Space.s2)
-            .padding(.vertical, Modernist.Space.s1)
+            .padding(.horizontal, Reel.Space.s2)
+            .padding(.vertical, Reel.Space.s1)
             .background(palette.bg)
-            .padding(Modernist.Space.s2)
+            .padding(Reel.Space.s2)
             .accessibilityLabel("Output format")
             .accessibilityValue(PreviewArea.specChipText(for: store.project.preset))
     }

@@ -11,33 +11,33 @@ import Kadr
 /// drifted accent. The second is the expensive one: prove that the font the
 /// design is set in actually resolves at the weight it asks for.
 @MainActor
-final class ModernistTokenTests: XCTestCase {
+final class ReelTokenTests: XCTestCase {
 
     // MARK: - Geometry
 
     /// Zero everywhere, on purpose. The whole system reads as squared blocks;
     /// one rounded corner breaks it.
     func testRadiusIsZeroAtEveryStep() {
-        XCTAssertEqual(Modernist.Radius.sm, 0)
-        XCTAssertEqual(Modernist.Radius.md, 0)
-        XCTAssertEqual(Modernist.Radius.lg, 0)
+        XCTAssertEqual(Reel.Radius.sm, 0)
+        XCTAssertEqual(Reel.Radius.md, 0)
+        XCTAssertEqual(Reel.Radius.lg, 0)
     }
 
     /// Rules are 2pt, never a 0.5 or 1pt hairline — they're the system's main
     /// organising device, not a decoration.
     func testRuleWidthIsTwo() {
-        XCTAssertEqual(Modernist.ruleWidth, 2)
+        XCTAssertEqual(Reel.ruleWidth, 2)
     }
 
     func testFocusRingMatchesTheCSSOutline() {
-        XCTAssertEqual(Modernist.focusRingWidth, 2)
-        XCTAssertEqual(Modernist.focusRingOffset, 2)
+        XCTAssertEqual(Reel.focusRingWidth, 2)
+        XCTAssertEqual(Reel.focusRingOffset, 2)
     }
 
     func testSpacingScaleIsTheDocumentedSteps() {
         XCTAssertEqual(
-            [Modernist.Space.s1, Modernist.Space.s2, Modernist.Space.s3,
-             Modernist.Space.s4, Modernist.Space.s6, Modernist.Space.s8],
+            [Reel.Space.s1, Reel.Space.s2, Reel.Space.s3,
+             Reel.Space.s4, Reel.Space.s6, Reel.Space.s8],
             [4, 8, 12, 16, 24, 32]
         )
     }
@@ -53,34 +53,34 @@ final class ModernistTokenTests: XCTestCase {
 
     /// The one accent on the light chrome ground.
     func testPrintAccentIsTheDocumentedRed() throws {
-        XCTAssertEqual(try hex(ModernistPalette.print.accent), "#EC3013")
+        XCTAssertEqual(try hex(ReelPalette.print.accent), "#EC3013")
     }
 
     /// A lighter ramp step on the dark editor ground, per the guide's rule.
     func testStudioAccentIsTheDocumentedRed() throws {
-        XCTAssertEqual(try hex(ModernistPalette.studio.accent), "#FF563C")
+        XCTAssertEqual(try hex(ReelPalette.studio.accent), "#FF563C")
     }
 
     /// The studio accent is `Accent.a500` itself, not a second hand-tuned red.
     func testStudioAccentIsTheAccentRampStep() throws {
         XCTAssertEqual(
-            try hex(ModernistPalette.studio.accent),
-            try hex(Modernist.Accent.a500)
+            try hex(ReelPalette.studio.accent),
+            try hex(Reel.Accent.a500)
         )
     }
 
     func testGroundsAreTheDocumentedValues() throws {
-        XCTAssertEqual(try hex(ModernistPalette.print.bg), "#F3F2F2")
-        XCTAssertEqual(try hex(ModernistPalette.studio.bg), "#0C0C0E")
+        XCTAssertEqual(try hex(ReelPalette.print.bg), "#F3F2F2")
+        XCTAssertEqual(try hex(ReelPalette.studio.bg), "#0C0C0E")
     }
 
     /// The dark ground needs a deeper ambient; the multiplier is a property of
     /// the palette, not something a call site tunes.
     func testStudioScalesElevationHarderThanPrint() {
-        XCTAssertEqual(ModernistPalette.print.elevationScale, 1.0)
+        XCTAssertEqual(ReelPalette.print.elevationScale, 1.0)
         XCTAssertGreaterThan(
-            ModernistPalette.studio.elevationScale,
-            ModernistPalette.print.elevationScale
+            ReelPalette.studio.elevationScale,
+            ReelPalette.print.elevationScale
         )
     }
 
@@ -90,16 +90,16 @@ final class ModernistTokenTests: XCTestCase {
     /// is 23.25, so the delta is 8.25.
     func testBodyLineSpacingIsTheCSSDelta() {
         XCTAssertEqual(
-            Modernist.Typography.lineSpacing(forSize: 15, multiple: 1.55),
+            Reel.Typography.lineSpacing(forSize: 15, multiple: 1.55),
             8.25,
             accuracy: 0.0001
         )
-        XCTAssertEqual(Modernist.Typography.bodyLineSpacing, 8.25, accuracy: 0.0001)
+        XCTAssertEqual(Reel.Typography.bodyLineSpacing, 8.25, accuracy: 0.0001)
     }
 
     func testHeadingLineSpacingIsTheCSSDelta() {
         XCTAssertEqual(
-            Modernist.Typography.headingLineSpacing,
+            Reel.Typography.headingLineSpacing,
             25 * 1.12 - 25,
             accuracy: 0.0001
         )
@@ -109,7 +109,7 @@ final class ModernistTokenTests: XCTestCase {
 /// Archivo is bundled, and — the part that actually matters — SwiftUI resolves
 /// the theme's weights to the right cuts of it.
 @MainActor
-final class ModernistTypographyTests: XCTestCase {
+final class ReelTypographyTests: XCTestCase {
 
     // MARK: - Bundling
 
@@ -117,7 +117,7 @@ final class ModernistTypographyTests: XCTestCase {
     /// fails, every `Typography` style silently falls back to the system face —
     /// right sizes, wrong design, no error anywhere.
     func testFamilyIsBundled() {
-        XCTAssertTrue(Modernist.Typography.isFamilyBundled)
+        XCTAssertTrue(Reel.Typography.isFamilyBundled)
     }
 
     /// All three cuts register, and they register under the PostScript names the
@@ -198,40 +198,40 @@ final class ModernistTypographyTests: XCTestCase {
     /// goes red, the fix is inside the theme — map the weight to the exact
     /// PostScript name and hand *that* to `Font.custom`.
     func testHeadingResolvesToExtraBold() {
-        assertResolves(Modernist.Typography.h2, to: "Archivo-ExtraBold")
+        assertResolves(Reel.Typography.h2, to: "Archivo-ExtraBold")
     }
 
     func testEveryHeadingStepResolvesToExtraBold() {
-        for font in [Modernist.Typography.h1, Modernist.Typography.h3,
-                     Modernist.Typography.h4, Modernist.Typography.h5,
-                     Modernist.Typography.h6] {
+        for font in [Reel.Typography.h1, Reel.Typography.h3,
+                     Reel.Typography.h4, Reel.Typography.h5,
+                     Reel.Typography.h6] {
             assertResolves(font, to: "Archivo-ExtraBold")
         }
     }
 
     func testBodyEmphasisResolvesToSemiBold() {
-        assertResolves(Modernist.Typography.bodyEmphasis, to: "Archivo-SemiBold")
+        assertResolves(Reel.Typography.bodyEmphasis, to: "Archivo-SemiBold")
     }
 
     func testButtonLabelResolvesToSemiBold() {
-        assertResolves(Modernist.Typography.buttonLabel, to: "Archivo-SemiBold")
+        assertResolves(Reel.Typography.buttonLabel, to: "Archivo-SemiBold")
     }
 
     func testBodyResolvesToRegular() {
-        assertResolves(Modernist.Typography.body, to: "Archivo-Regular")
+        assertResolves(Reel.Typography.body, to: "Archivo-Regular")
     }
 
     func testCaptionResolvesToRegular() {
-        assertResolves(Modernist.Typography.caption, to: "Archivo-Regular")
+        assertResolves(Reel.Typography.caption, to: "Archivo-Regular")
     }
 
     /// Distinctness is the real claim: if the weight trait were being dropped,
     /// all three of these would come back as the same cut.
     func testTheThreeWeightsResolveToThreeDifferentCuts() {
         let resolved = Set(
-            [Modernist.Typography.body,
-             Modernist.Typography.bodyEmphasis,
-             Modernist.Typography.h2].flatMap(renderedPostScriptNames)
+            [Reel.Typography.body,
+             Reel.Typography.bodyEmphasis,
+             Reel.Typography.h2].flatMap(renderedPostScriptNames)
                 .map { String($0.split(separator: "+").last ?? "") }
         )
         XCTAssertEqual(resolved, ["Archivo-Regular", "Archivo-SemiBold", "Archivo-ExtraBold"])

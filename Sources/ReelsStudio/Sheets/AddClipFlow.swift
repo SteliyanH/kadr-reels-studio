@@ -73,21 +73,21 @@ extension View {
 /// Loading overlay shown while `clips(from:)` is in flight. Dimmed background +
 /// progress indicator + label.
 private struct ResolvingOverlay: View {
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         ZStack {
             // v0.8 Tier 2 — the modal scrim is the approved design's 55%
             // black over the live editor, not an ad-hoc 40%.
-            Modernist.stageInk.opacity(Modernist.scrimOpacity).ignoresSafeArea()
-            VStack(spacing: Modernist.Space.s3) {
+            Reel.stageInk.opacity(Reel.scrimOpacity).ignoresSafeArea()
+            VStack(spacing: Reel.Space.s3) {
                 ProgressView()
                     .controlSize(.large)
                 Text("Importing clips…")
-                    .font(Modernist.Typography.body)
+                    .font(Reel.Typography.body)
                     .foregroundStyle(palette.text)
             }
-            .padding(Modernist.Space.s6)
+            .padding(Reel.Space.s6)
             // Nothing floats: the card is a flat surface block, square.
             .background(palette.surface)
         }
@@ -112,19 +112,19 @@ private struct ResolvingOverlay: View {
 /// The sheet grabber. The design draws a square 36×5 bar;
 /// `presentationDragIndicator` draws a system capsule that can't be squared
 /// off or retinted, so the app draws its own and hides that one.
-struct ModernistSheetGrabber: View {
+struct ReelSheetGrabber: View {
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         Rectangle()
             .fill(palette.divider)
             .frame(
-                width: Modernist.sheetGrabberWidth,
-                height: Modernist.sheetGrabberHeight
+                width: Reel.sheetGrabberWidth,
+                height: Reel.sheetGrabberHeight
             )
             .frame(maxWidth: .infinity)
-            .padding(.top, Modernist.Space.s2)
+            .padding(.top, Reel.Space.s2)
             .accessibilityHidden(true)
     }
 }
@@ -135,7 +135,7 @@ struct ModernistSheetGrabber: View {
 /// `title` is a `LocalizedStringKey`, not a `String`, on purpose — `Text(_:)`
 /// only routes through `Localizable.strings` for the key overload, and a
 /// `String` parameter would silently pick the verbatim one.
-struct ModernistSheetHeader<Actions: View>: View {
+struct ReelSheetHeader<Actions: View>: View {
 
     let title: LocalizedStringKey
     let actions: Actions
@@ -147,10 +147,10 @@ struct ModernistSheetHeader<Actions: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetGrabber()
-            HStack(alignment: .firstTextBaseline, spacing: Modernist.Space.s3) {
+            ReelSheetGrabber()
+            HStack(alignment: .firstTextBaseline, spacing: Reel.Space.s3) {
                 Text(title)
-                    .modernistHeading(Modernist.Typography.h3)
+                    .reelHeading(Reel.Typography.h3)
                     // `.navigationTitle` gave the sheet titles the heading
                     // trait for free — that's what put them in VoiceOver's
                     // heading rotor, and drawing our own title band dropped
@@ -159,11 +159,11 @@ struct ModernistSheetHeader<Actions: View>: View {
                     .accessibilityAddTraits(.isHeader)
                 actions
             }
-            .padding(.horizontal, Modernist.Space.s4)
-            .padding(.top, Modernist.Space.s2)
-            .padding(.bottom, Modernist.Space.s3)
+            .padding(.horizontal, Reel.Space.s4)
+            .padding(.top, Reel.Space.s2)
+            .padding(.bottom, Reel.Space.s3)
         }
-        .modernistRule()
+        .reelRule()
     }
 }
 
@@ -173,19 +173,19 @@ extension View {
     /// and the design's documented detent.
     ///
     /// - Parameter detent: the fraction of the screen the sheet occupies —
-    ///   `Modernist.SheetDetent.*` for the four sheets the design documents.
-    func modernistSheet(_ detent: CGFloat) -> some View {
-        modernistSheet(detents: [.fraction(detent)])
+    ///   `Reel.SheetDetent.*` for the four sheets the design documents.
+    func reelSheet(_ detent: CGFloat) -> some View {
+        reelSheet(detents: [.fraction(detent)])
     }
 
     /// The same chrome for a sheet the design doesn't give a fixed height —
     /// a full-height editor, or one that needs a second stop.
-    func modernistSheet(detents: Set<PresentationDetent>) -> some View {
-        modifier(ModernistSheetChrome(detents: detents))
+    func reelSheet(detents: Set<PresentationDetent>) -> some View {
+        modifier(ReelSheetChrome(detents: detents))
     }
 }
 
-private struct ModernistSheetChrome: ViewModifier {
+private struct ReelSheetChrome: ViewModifier {
 
     let detents: Set<PresentationDetent>
 
@@ -193,14 +193,14 @@ private struct ModernistSheetChrome: ViewModifier {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // Sheets are chrome; chrome is the print ground.
-            .modernistSurface(.print)
-            .modernistElevation(.lg)
+            .reelSurface(.print)
+            .reelElevation(.lg)
             .presentationDetents(detents)
-            // The app draws the grabber itself — see `ModernistSheetGrabber`.
+            // The app draws the grabber itself — see `ReelSheetGrabber`.
             .presentationDragIndicator(.hidden)
             // Radius is zero everywhere, including the two corners UIKit
             // rounds for a sheet by default.
-            .presentationCornerRadius(Modernist.Radius.lg)
-            .presentationBackground(ModernistPalette.print.bg)
+            .presentationCornerRadius(Reel.Radius.lg)
+            .presentationBackground(ReelPalette.print.bg)
     }
 }

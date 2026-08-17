@@ -18,7 +18,7 @@ struct ChromaKeySheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     /// The one chromatic literal left in view code, deliberately. This is not
     /// chrome — it's the sampled key colour the filter matches against, and
@@ -37,41 +37,41 @@ struct ChromaKeySheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Chroma Key") {
+            ReelSheetHeader("Chroma Key") {
                 Button("Cancel") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
                 Button("Apply") {
                     apply()
                     dismiss()
                 }
-                .buttonStyle(ModernistPrimaryButtonStyle())
+                .buttonStyle(ReelPrimaryButtonStyle())
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
                     colorPreviewSection
                     thresholdSection
                     helpText
                 }
-                .padding(Modernist.Space.s4)
+                .padding(Reel.Space.s4)
             }
         }
-        .modernistSheet(Modernist.SheetDetent.layers)
+        .reelSheet(Reel.SheetDetent.layers)
     }
 
     // MARK: - Subviews
 
     @ViewBuilder
     private var colorPreviewSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
             Text("Key color")
-                .modernistLabel()
-            HStack(spacing: Modernist.Space.s3) {
+                .reelLabel()
+            HStack(spacing: Reel.Space.s3) {
                 Rectangle()
                     .fill(keyColor)
-                    .frame(width: Modernist.swatchSize, height: Modernist.swatchSize)
+                    .frame(width: Reel.swatchSize, height: Reel.swatchSize)
                     .overlay(
                         Rectangle()
-                            .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
+                            .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
                     )
                 // Commander's ruling: this picker is functional, not chrome.
                 // The sheet around it is restyled; the control itself is left
@@ -85,10 +85,10 @@ struct ChromaKeySheet: View {
 
     @ViewBuilder
     private var thresholdSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
             Text("Threshold")
-                .modernistLabel()
-            ModernistSlider(
+                .reelLabel()
+            ReelSlider(
                 label: NSLocalizedString("Threshold", comment: "Chroma key tolerance"),
                 value: $threshold,
                 range: 0...1,
@@ -101,7 +101,7 @@ struct ChromaKeySheet: View {
     @ViewBuilder
     private var helpText: some View {
         Text("Picks any pixel near the key color and replaces it with transparency. Lower threshold keeps more of the subject; higher keys out more background.")
-            .font(Modernist.Typography.caption)
+            .font(Reel.Typography.caption)
             .foregroundStyle(palette.textMuted)
     }
 
@@ -119,7 +119,7 @@ struct ChromaKeySheet: View {
 // MARK: - Bridges
 
 // v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
-// sheet no longer wraps itself in; `ModernistSheetHeader` draws the title.
+// sheet no longer wraps itself in; `ReelSheetHeader` draws the title.
 
 private extension PlatformColor {
     convenience init(_ color: Color) {

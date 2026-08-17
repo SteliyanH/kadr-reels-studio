@@ -15,7 +15,7 @@ struct FiltersSheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     /// Drives the Chroma Key sub-sheet. Bound to a Bool because the sheet
     /// itself is parameterless (it reads from `clipID` directly). v0.7 Tier 4.
@@ -23,17 +23,17 @@ struct FiltersSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Filters") {
+            ReelSheetHeader("Filters") {
                 addMenu
                 Button("Done") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
             }
             content
         }
         .sheet(isPresented: $showChromaKey) {
             ChromaKeySheet(store: store, clipID: clipID)
         }
-        .modernistSheet(detents: [.fraction(Modernist.SheetDetent.layers), .large])
+        .reelSheet(detents: [.fraction(Reel.SheetDetent.layers), .large])
     }
 
     // MARK: - Body
@@ -71,12 +71,12 @@ struct FiltersSheet: View {
                 .scrollContentBackground(.hidden)
             }
         } else {
-            VStack(spacing: Modernist.Space.s3) {
+            VStack(spacing: Reel.Space.s3) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
+                    .font(.system(size: Reel.Typography.Glyph.lg, weight: Reel.Typography.headingWeight))
                     .foregroundStyle(palette.textMuted)
                 Text("Clip not available")
-                    .font(Modernist.Typography.h5)
+                    .font(Reel.Typography.h5)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -84,19 +84,19 @@ struct FiltersSheet: View {
 
     @ViewBuilder
     private var emptyState: some View {
-        VStack(spacing: Modernist.Space.s3) {
+        VStack(spacing: Reel.Space.s3) {
             Image(systemName: "camera.filters")
-                .font(.system(size: Modernist.Typography.Glyph.xl, weight: Modernist.Typography.headingWeight))
+                .font(.system(size: Reel.Typography.Glyph.xl, weight: Reel.Typography.headingWeight))
                 .foregroundStyle(palette.textMuted)
             Text("No filters")
-                .font(Modernist.Typography.h5)
+                .font(Reel.Typography.h5)
             Text("Add a filter from the menu above.")
-                .font(Modernist.Typography.body)
+                .font(Reel.Typography.body)
                 .foregroundStyle(palette.textMuted)
-                .frame(maxWidth: Modernist.emptyStateMeasure)
+                .frame(maxWidth: Reel.emptyStateMeasure)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(Modernist.Space.s4)
+        .padding(Reel.Space.s4)
     }
 
     // MARK: - Add menu
@@ -121,7 +121,7 @@ struct FiltersSheet: View {
             Button("Chroma Key…") { showChromaKey = true }
         } label: {
             Image(systemName: "plus")
-                .frame(width: Modernist.minHitTarget, height: Modernist.minHitTarget)
+                .frame(width: Reel.minHitTarget, height: Reel.minHitTarget)
                 .background(palette.surface)
                 .contentShape(Rectangle())
         }
@@ -143,15 +143,15 @@ private struct FilterRow: View {
     let filter: Filter
     let onIntensityChange: (Double) -> Void
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
             if let scalar = scalarValue, let range = scalarRange {
                 // The slider ships its own label + readout row, which is
                 // exactly the "Scale … 1.24×" shape the design asks for — so
                 // the separate title line the `Form` version needed is gone.
-                ModernistSlider(
+                ReelSlider(
                     label: label,
                     value: Binding(get: { scalar }, set: { onIntensityChange($0) }),
                     range: range,
@@ -159,15 +159,15 @@ private struct FilterRow: View {
                 )
             } else {
                 Text(label)
-                    .font(Modernist.Typography.bodyEmphasis)
+                    .font(Reel.Typography.bodyEmphasis)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(.horizontal, Modernist.Space.s4)
-        .padding(.vertical, Modernist.Space.s2)
-        .frame(minHeight: Modernist.minHitTarget)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.vertical, Reel.Space.s2)
+        .frame(minHeight: Reel.minHitTarget)
         .background(palette.surface)
-        .modernistRule()
+        .reelRule()
     }
 
     private var label: String {

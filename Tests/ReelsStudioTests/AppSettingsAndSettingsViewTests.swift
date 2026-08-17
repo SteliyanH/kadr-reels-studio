@@ -76,7 +76,7 @@ final class SettingsViewTests: XCTestCase {
 
     // MARK: - Haptics segment labels (v0.8 Tier 5a)
 
-    /// The `Form` picker became a `ModernistSegmentedControl`, whose segments
+    /// The `Form` picker became a `ReelSegmentedControl`, whose segments
     /// are real `Button`s labelled with each intensity's display name.
     /// `ReelsStudioUITests.testEditorSettingsGearOpensSheet` proves the sheet
     /// presented by finding `app.buttons["Medium"]`, so the exact three
@@ -138,7 +138,7 @@ final class SettingsViewTests: XCTestCase {
 
         XCTAssertEqual(
             hex(store.project.accentColor),
-            hex(Modernist.Accent.a500),
+            hex(Reel.Accent.a500),
             "Tapping '500' over a legacy custom accent must write the ramp value; "
             + "otherwise the UI claims a colour the project doesn't hold."
         )
@@ -156,7 +156,7 @@ final class SettingsViewTests: XCTestCase {
     /// writes nothing, so committing on every tap doesn't fill the undo stack
     /// with no-ops.
     func testTappingASegmentThatMatchesTheStoredColorWritesNothing() {
-        let store = ProjectStore(project: Project(accentColor: Modernist.Accent.a500))
+        let store = ProjectStore(project: Project(accentColor: Reel.Accent.a500))
         SettingsView.commit(.a500, to: store)
         XCTAssertFalse(store.canUndo)
     }
@@ -176,7 +176,7 @@ final class SettingsViewTests: XCTestCase {
     func testTappingARampStepOnAProjectWithNoAccentSetsIt() {
         let store = ProjectStore(project: Project())
         SettingsView.commit(.a700, to: store)
-        XCTAssertEqual(hex(store.project.accentColor), hex(Modernist.Accent.a700))
+        XCTAssertEqual(hex(store.project.accentColor), hex(Reel.Accent.a700))
     }
 
     // MARK: needsCommit, directly
@@ -186,18 +186,18 @@ final class SettingsViewTests: XCTestCase {
     }
 
     func testNeedsCommitIsFalseWhenTheStoredColorAlreadyMatches() {
-        XCTAssertFalse(SettingsView.needsCommit(.a500, storedColor: Modernist.Accent.a500))
+        XCTAssertFalse(SettingsView.needsCommit(.a500, storedColor: Reel.Accent.a500))
         XCTAssertFalse(SettingsView.needsCommit(.system, storedColor: nil))
     }
 
     func testNeedsCommitIsTrueWhenOneSideClearsAndTheOtherSets() {
-        XCTAssertTrue(SettingsView.needsCommit(.system, storedColor: Modernist.Accent.a500))
+        XCTAssertTrue(SettingsView.needsCommit(.system, storedColor: Reel.Accent.a500))
         XCTAssertTrue(SettingsView.needsCommit(.a600, storedColor: nil))
     }
 
     func testNeedsCommitDistinguishesAdjacentRampSteps() {
-        XCTAssertTrue(SettingsView.needsCommit(.a600, storedColor: Modernist.Accent.a500))
-        XCTAssertTrue(SettingsView.needsCommit(.a700, storedColor: Modernist.Accent.a600))
+        XCTAssertTrue(SettingsView.needsCommit(.a600, storedColor: Reel.Accent.a500))
+        XCTAssertTrue(SettingsView.needsCommit(.a700, storedColor: Reel.Accent.a600))
     }
 }
 

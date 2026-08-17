@@ -15,10 +15,10 @@ import KadrUI
 struct OverlayInspectorArea: View {
 
     var store: ProjectStore
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
-        VStack(spacing: Modernist.Space.s2) {
+        VStack(spacing: Reel.Space.s2) {
             OverlayInspectorPanel(
                 store.video,
                 selectedOverlayID: Binding(
@@ -47,7 +47,7 @@ struct OverlayInspectorArea: View {
                     store.applyOverlayRotation(id: id, radians)
                 }
             )
-            .frame(maxHeight: Modernist.inspectorMaxHeight)
+            .frame(maxHeight: Reel.inspectorMaxHeight)
             // v0.7 Tier 3 — stroke + shadow controls for `TextOverlay`. The
             // upstream `OverlayInspectorPanel` doesn't carry these yet
             // (would need a kadr-ui v0.10.3 patch), so we attach them

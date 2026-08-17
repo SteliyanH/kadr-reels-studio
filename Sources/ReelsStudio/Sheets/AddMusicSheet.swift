@@ -12,7 +12,7 @@ struct AddMusicSheet: View {
 
     var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     @State private var pickedURL: URL?
     @State private var showImporter = false
@@ -21,23 +21,23 @@ struct AddMusicSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Add Music") {
+            ReelSheetHeader("Add Music") {
                 Button("Cancel") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
                 Button("Add") { addTrack() }
-                    .buttonStyle(ModernistPrimaryButtonStyle())
+                    .buttonStyle(ReelPrimaryButtonStyle())
                     .disabled(pickedURL == nil)
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
                     audioSection
                     mixSection
                     Text("Music auto-fades in over 0.5s and out over 1.0s. Auto-ducking lowers music to 30% while clip audio plays.")
-                        .font(Modernist.Typography.caption)
+                        .font(Reel.Typography.caption)
                         .foregroundStyle(palette.textMuted)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(Modernist.Space.s4)
+                .padding(Reel.Space.s4)
             }
         }
         .fileImporter(
@@ -49,13 +49,13 @@ struct AddMusicSheet: View {
                 pickedURL = urls.first
             }
         }
-        .modernistSheet(Modernist.SheetDetent.settings)
+        .reelSheet(Reel.SheetDetent.settings)
     }
 
     @ViewBuilder
     private var audioSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-            Text("Audio").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Audio").reelLabel()
             Button {
                 showImporter = true
             } label: {
@@ -64,22 +64,22 @@ struct AddMusicSheet: View {
                     systemImage: "music.note"
                 )
             }
-            .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+            .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
         }
     }
 
     @ViewBuilder
     private var mixSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
-            Text("Mix").modernistLabel()
-            ModernistSlider(
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Mix").reelLabel()
+            ReelSlider(
                 label: NSLocalizedString("Volume", comment: "Music volume"),
                 value: $volume,
                 range: 0...1,
                 valueText: String(format: "%.2f", volume)
             )
             Toggle("Auto-duck during clip audio", isOn: $enableDucking)
-                .font(Modernist.Typography.body)
+                .font(Reel.Typography.body)
                 // Decision 4 — no success role; the switch's "on" fill is the
                 // one accent, never the system green.
                 .tint(palette.accent)

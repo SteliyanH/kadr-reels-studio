@@ -7,32 +7,32 @@ struct ToastView: View {
     let toast: TransientToast
     var onTap: (() -> Void)? = nil
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         // v0.8 Tier 3 — the banner is an inverted block: ink ground, ground-
         // coloured type. Same read as the old black-at-85% panel, but stated
         // in palette roles, so it inverts correctly on the studio ground.
-        VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+        VStack(alignment: .leading, spacing: Reel.Space.s1) {
             Text(toast.message)
-                .font(Modernist.Typography.bodyEmphasis)
+                .font(Reel.Typography.bodyEmphasis)
                 .foregroundStyle(palette.bg)
             if let detail = toast.detail {
                 Text(detail)
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.bg.opacity(0.85))
                     .lineLimit(2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Modernist.Space.s4)
-        .padding(.vertical, Modernist.Space.s3)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.vertical, Reel.Space.s3)
         .background(
-            RoundedRectangle(cornerRadius: Modernist.Radius.md)
+            RoundedRectangle(cornerRadius: Reel.Radius.md)
                 .fill(palette.text)
         )
-        .modernistElevation(.md)
-        .padding(.horizontal, Modernist.Space.s4)
+        .reelElevation(.md)
+        .padding(.horizontal, Reel.Space.s4)
         .onTapGesture { onTap?() }
         .transition(.move(edge: .top).combined(with: .opacity))
     }
@@ -63,7 +63,7 @@ private struct ToastHostModifier: ViewModifier {
                     ToastView(toast: toast) {
                         center.dismissTransient()
                     }
-                    .padding(.top, Modernist.Space.s2)
+                    .padding(.top, Reel.Space.s2)
                     .zIndex(100)
                     // Collapse the toast content into one VoiceOver element so
                     // message + detail read together instead of as siblings.
@@ -108,34 +108,34 @@ private struct ResumableErrorSheet: View {
     let error: ResumableError
     var center: ToastCenter
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s4) {
-            ModernistSheetGrabber()
+        VStack(alignment: .leading, spacing: Reel.Space.s4) {
+            ReelSheetGrabber()
             // Decision 4 — no warning role; the accent is what flags a
             // problem in this scheme.
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: Modernist.Typography.Glyph.xl, weight: Modernist.Typography.headingWeight))
+                .font(.system(size: Reel.Typography.Glyph.xl, weight: Reel.Typography.headingWeight))
                 .foregroundStyle(palette.accent)
             Text(error.message)
-                .modernistHeading(Modernist.Typography.h4)
-            HStack(spacing: Modernist.Space.s2) {
+                .reelHeading(Reel.Typography.h4)
+            HStack(spacing: Reel.Space.s2) {
                 Button("Cancel", role: .cancel) {
                     center.dismissResumable()
                 }
-                .buttonStyle(ModernistGhostButtonStyle())
+                .buttonStyle(ReelGhostButtonStyle())
                 Button("Retry") {
                     let retry = error.retry
                     center.dismissResumable()
                     Task { await retry() }
                 }
-                .buttonStyle(ModernistPrimaryButtonStyle())
+                .buttonStyle(ReelPrimaryButtonStyle())
             }
         }
-        .padding(Modernist.Space.s4)
+        .padding(Reel.Space.s4)
         // No documented detent for this one — `.medium` is what v0.5 shipped
         // and the sheet's content hasn't changed size.
-        .modernistSheet(detents: [.medium])
+        .reelSheet(detents: [.medium])
     }
 }

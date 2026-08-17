@@ -732,10 +732,10 @@ v0.7.1 completed the kadr-ecosystem iOS 17 migration, but the app's visual layer
 ### Scope lock — Modernist migration
 
 In scope — visual design only; zero feature changes, zero state mutations:
-- **Token layer** (`ModernistTheme.swift` + `ModernistStyles.swift`) — two palettes (print + studio ground), accent ramp, spacing / type / rule constants, environment-keyed appearance modifiers.
+- **Token layer** (`ReelTheme.swift` + `ReelStyles.swift`) — two palettes (print + studio ground), accent ramp, spacing / type / rule constants, environment-keyed appearance modifiers.
 - **Call-site migration** — every hardcoded color / radius / material / font across ~25 view files moves onto the token layer; screens restructured to match the approved design.
 - **Archivo font** — bundled as static instances (400 / 600 / 800 weight) generated from Google Fonts variable, OFL.txt shipped, LICENSE attribution added.
-- **Constrained accent picker** — `setAccentColor(_:)` mutation unchanged; UI narrowed from free `ColorPicker` to `ModernistSegmentedControl` over the three accent ramp steps + System option.
+- **Constrained accent picker** — `setAccentColor(_:)` mutation unchanged; UI narrowed from free `ColorPicker` to `ReelSegmentedControl` over the three accent ramp steps + System option.
 
 Out of scope (carried forward from v0.7+ or deferred):
 - Dynamic Type audit (v1.0 prep).
@@ -745,28 +745,28 @@ Out of scope (carried forward from v0.7+ or deferred):
 ### Five binding decisions (verbatim from handoff)
 
 1. **Two grounds, one system.** Modernist is a light print system; a video editor cannot grade footage against a light field. The theme ships two palettes of the same token system:
-   - `ModernistPalette.print` — all app chrome (library, sheets, settings, export).
-   - `ModernistPalette.studio` — dark grading surround (#0C0C0E / #151517 / #1D1D20) for the editor only (nav, stage, transport, timeline, inspector, toolbar).
+   - `ReelPalette.print` — all app chrome (library, sheets, settings, export).
+   - `ReelPalette.studio` — dark grading surround (#0C0C0E / #151517 / #1D1D20) for the editor only (nav, stage, transport, timeline, inspector, toolbar).
    Both use the same accent, same ramps, zero radius, 2px rules, flush-left labels and Archivo.
 
 2. **The accent is red, not blue.** Modernist is a mono scheme with one accent. Every blue in the previous design becomes `#EC3013` on print, `#FF563C` (Accent.a500) on studio, per the system's rule about using a lighter ramp step on dark grounds.
 
-3. **`Project.accentColor`'s free `ColorPicker` is constrained.** v0.5 shipped a per-project accent with an unconstrained picker, which breaks a mono scheme immediately. Replaced with a `ModernistSegmentedControl` over the three accent ramp steps (`a500` / `a600` / `a700`) plus a System option that clears to `nil`. Persisted field, hex round-trip, and `ProjectDocument` schema v4 unchanged.
+3. **`Project.accentColor`'s free `ColorPicker` is constrained.** v0.5 shipped a per-project accent with an unconstrained picker, which breaks a mono scheme immediately. Replaced with a `ReelSegmentedControl` over the three accent ramp steps (`a500` / `a600` / `a700`) plus a System option that clears to `nil`. Persisted field, hex round-trip, and `ProjectDocument` schema v5 unchanged.
 
-4. **Semantic colors collapse into the mono scheme.** No success / warning / destructive roles. Delete uses `ModernistSecondaryButtonStyle` (accent outline, not red fill — red is already the accent). Auto-save status uses neutral `n400`. Playhead is `text` white (2pt) — it sits over accent-tinted footage; white reads on any frame and stops competing with the accent. This is the one place the design deviates from "red = accent."
+4. **Semantic colors collapse into the mono scheme.** No success / warning / destructive roles. Delete uses `ReelSecondaryButtonStyle` (accent outline, not red fill — red is already the accent). Auto-save status uses neutral `n400`. Playhead is `text` white (2pt) — it sits over accent-tinted footage; white reads on any frame and stops competing with the accent. This is the one place the design deviates from "red = accent."
 
-5. **Footage is grayscale — except on the stage.** Apply `.modernistGrayscale()` to project thumbnails, timeline filmstrips and layer thumbnails. **Do not** apply it to the preview stage — the user is grading color there.
+5. **Footage is grayscale — except on the stage.** Apply `.reelGrayscale()` to project thumbnails, timeline filmstrips and layer thumbnails. **Do not** apply it to the preview stage — the user is grading color there.
 
 ### Archivo provenance
 
 - **Source.** Google Fonts ships Archivo as a variable font only (wght 100–900).
 - **Static instances.** Generated at 400 / 600 / 800 weight using fontTools, with name tables rebuilt (ID 16 family grouping for SwiftUI weight resolution).
 - **Licensing.** OFL 1.1. The `OFL.txt` file ships in `Resources/Fonts/` alongside the `.ttf` instances; attribution recorded in the root `LICENSE` file.
-- **Proven.** SwiftUI weight resolution tested on-simulator — `family+trait` path resolves ExtraBold (800) and SemiBold (600) correctly; guarded by `ModernistTypographyTests`.
+- **Proven.** SwiftUI weight resolution tested on-simulator — `family+trait` path resolves ExtraBold (800) and SemiBold (600) correctly; guarded by `ReelTypographyTests`.
 
-### ModernistStyles.swift amendment
+### ReelStyles.swift amendment
 
-One production fix applied during Tier 2: the nested view `Body` renamed to `StyleBody` to avoid a `ButtonStyle` associated-type witness collision in several contexts (compile blocker, zero visual change). The change is internal to `ModernistStyles.swift` and surfaces nowhere in call sites.
+One production fix applied during Tier 2: the nested view `Body` renamed to `StyleBody` to avoid a `ButtonStyle` associated-type witness collision in several contexts (compile blocker, zero visual change). The change is internal to `ReelStyles.swift` and surfaces nowhere in call sites.
 
 ### kadr-ui 0.12.0 as upstream RFC
 
@@ -817,7 +817,7 @@ Hiding the system navigation bar during the design migration killed the interact
 
 - **No schema changes.** `ProjectDocument` v4 and `AppSettings` structures unchanged; `Project.accentColor` hex round-trip works identically.
 - **No `@Observable` or iOS 17 requirement bump.** Design layer works on iOS 16 runtime (v0.7.1 raised the floor; this migration is orthogonal).
-- **Archivo assets required.** Static font instances must be present in `Info.plist` `UIAppFonts` array for the design to render correctly. Fallback to system face at the same size / weight ensures nothing breaks, but the intended look requires the font.
+- **Archivo assets required.** Static font instances must be declared under `UIAppFonts` in `project.yml` (`Info.plist` is generated by XcodeGen) for the design to render correctly. Fallback to system face at the same size / weight ensures nothing breaks, but the intended look requires the font.
 
 ---
 

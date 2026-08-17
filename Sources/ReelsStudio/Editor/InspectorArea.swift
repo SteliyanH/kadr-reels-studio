@@ -16,14 +16,14 @@ import KadrUI
 /// **Not reachable.** The design's Transform / Opacity / Filters segmented
 /// control has nothing to drive: `InspectorPanel` renders all three sections
 /// in one scroll view and exposes no section selection, so an app-side
-/// `ModernistSegmentedControl` here would be inert chrome — a lie, and new
+/// `ReelSegmentedControl` here would be inert chrome — a lie, and new
 /// behaviour besides. Reported as a gap. The panel's own section headers,
 /// slider track, thumb and row metrics are likewise upstream literals.
 struct InspectorArea: View {
 
     var store: ProjectStore
     @State private var showSpeedCurveSheet = false
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,7 +47,7 @@ struct InspectorArea: View {
                 speedCurveRow
             }
         }
-        .frame(maxHeight: Modernist.inspectorMaxHeight)
+        .frame(maxHeight: Reel.inspectorMaxHeight)
         // v0.8 Tier 2 — nothing floats in this system, so the blur is off-
         // message; the panel is a flat raised surface on the studio ground.
         .background(palette.surfaceRaised)
@@ -68,30 +68,30 @@ struct InspectorArea: View {
     @ViewBuilder
     private var speedCurveRow: some View {
         Button { showSpeedCurveSheet = true } label: {
-            HStack(spacing: Modernist.Space.s2) {
+            HStack(spacing: Reel.Space.s2) {
                 Image(systemName: "speedometer")
                     .foregroundStyle(palette.accent)
                 Text("Speed curve…")
-                    .font(Modernist.Typography.body)
+                    .font(Reel.Typography.body)
                     .foregroundStyle(palette.text)
                 Spacer()
                 if hasSpeedCurve {
                     Text("Custom")
-                        .font(Modernist.Typography.caption)
+                        .font(Reel.Typography.caption)
                         .foregroundStyle(palette.textMuted)
                 }
                 Image(systemName: "chevron.right")
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
             }
-            .padding(.horizontal, Modernist.Space.s4)
-            .frame(minHeight: Modernist.minHitTarget)
+            .padding(.horizontal, Reel.Space.s4)
+            .frame(minHeight: Reel.minHitTarget)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         // The one rule in this band: it separates the panel's parameter rows
         // from the row that leaves the band entirely for a sheet.
-        .modernistRule(.top)
+        .reelRule(.top)
     }
 
     private var hasSpeedCurve: Bool {

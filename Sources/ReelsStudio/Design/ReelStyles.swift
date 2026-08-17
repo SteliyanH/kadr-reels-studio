@@ -7,15 +7,15 @@ import SwiftUI
 // SwiftUI's equivalents are `ButtonStyle`s, `ViewModifier`s and `View`
 // extensions. Same names, one-for-one.
 //
-// Every style reads `\.modernistPalette` from the environment, so the same
+// Every style reads `\.reelPalette` from the environment, so the same
 // button renders correctly on the light chrome and on the dark editor surround
 // without a call site ever naming a color. Set the ground once per surface:
 //
-//     LibraryView().modernistSurface(.print)
-//     EditorView().modernistSurface(.studio)
+//     LibraryView().reelSurface(.print)
+//     EditorView().reelSurface(.studio)
 //
 // No literal colors, sizes, radii or shadows below — everything comes from
-// `Modernist.*`.
+// `Reel.*`.
 
 // MARK: - Surface
 
@@ -23,8 +23,8 @@ extension View {
     /// Establishes the ground for a subtree: sets the palette in the
     /// environment, paints the background, and tints the standard controls.
     /// Apply once per screen, at the root.
-    func modernistSurface(_ palette: ModernistPalette) -> some View {
-        environment(\.modernistPalette, palette)
+    func reelSurface(_ palette: ReelPalette) -> some View {
+        environment(\.reelPalette, palette)
             .background(palette.bg.ignoresSafeArea())
             .tint(palette.accent)
             .foregroundStyle(palette.text)
@@ -45,7 +45,7 @@ extension View {
 /// label starts the text at the leading padding edge (trailing icon and all),
 /// never centered. That's what the `alignment: .leading` frame is for — don't
 /// swap it for a centered one.
-struct ModernistPrimaryButtonStyle: ButtonStyle {
+struct ReelPrimaryButtonStyle: ButtonStyle {
     /// `.btn-block` — fills the available width. `false` hugs the label.
     var isBlock: Bool = false
 
@@ -56,19 +56,19 @@ struct ModernistPrimaryButtonStyle: ButtonStyle {
     private struct StyleBody: View {
         let configuration: Configuration
         let isBlock: Bool
-        @Environment(\.modernistPalette) private var palette
+        @Environment(\.reelPalette) private var palette
         @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
             configuration.label
-                .font(Modernist.Typography.buttonLabel)
+                .font(Reel.Typography.buttonLabel)
                 .foregroundStyle(palette.onAccent)
-                .padding(.horizontal, Modernist.Space.s4)
-                .padding(.vertical, Modernist.Space.s3)
+                .padding(.horizontal, Reel.Space.s4)
+                .padding(.vertical, Reel.Space.s3)
                 .frame(maxWidth: isBlock ? .infinity : nil, alignment: .leading)
-                .frame(minHeight: Modernist.minHitTarget)
+                .frame(minHeight: Reel.minHitTarget)
                 .background(configuration.isPressed ? palette.accentPressed : palette.accent)
-                .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
+                .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
                 .opacity(isEnabled ? 1 : 0.45)
                 .contentShape(Rectangle())
         }
@@ -78,7 +78,7 @@ struct ModernistPrimaryButtonStyle: ButtonStyle {
 /// `.btn.btn-secondary` — outlined in a 2px accent rule, accent label.
 /// Also the destructive treatment: in a mono scheme the accent *is* the red, so
 /// Delete is the outlined variant with a trash icon, never a second red fill.
-struct ModernistSecondaryButtonStyle: ButtonStyle {
+struct ReelSecondaryButtonStyle: ButtonStyle {
     var isBlock: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
@@ -88,21 +88,21 @@ struct ModernistSecondaryButtonStyle: ButtonStyle {
     private struct StyleBody: View {
         let configuration: Configuration
         let isBlock: Bool
-        @Environment(\.modernistPalette) private var palette
+        @Environment(\.reelPalette) private var palette
         @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
             configuration.label
-                .font(Modernist.Typography.buttonLabel)
+                .font(Reel.Typography.buttonLabel)
                 .foregroundStyle(palette.accentText)
-                .padding(.horizontal, Modernist.Space.s4)
-                .padding(.vertical, Modernist.Space.s3)
+                .padding(.horizontal, Reel.Space.s4)
+                .padding(.vertical, Reel.Space.s3)
                 .frame(maxWidth: isBlock ? .infinity : nil, alignment: .leading)
-                .frame(minHeight: Modernist.minHitTarget)
+                .frame(minHeight: Reel.minHitTarget)
                 .background(configuration.isPressed ? palette.accentTint : Color.clear)
                 .overlay(
-                    RoundedRectangle(cornerRadius: Modernist.Radius.md)
-                        .strokeBorder(palette.accent, lineWidth: Modernist.ruleWidth)
+                    RoundedRectangle(cornerRadius: Reel.Radius.md)
+                        .strokeBorder(palette.accent, lineWidth: Reel.ruleWidth)
                 )
                 .opacity(isEnabled ? 1 : 0.45)
                 .contentShape(Rectangle())
@@ -111,23 +111,23 @@ struct ModernistSecondaryButtonStyle: ButtonStyle {
 }
 
 /// `.btn.btn-ghost` — no fill, no rule, ink label; a tint on press.
-struct ModernistGhostButtonStyle: ButtonStyle {
+struct ReelGhostButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         StyleBody(configuration: configuration)
     }
 
     private struct StyleBody: View {
         let configuration: Configuration
-        @Environment(\.modernistPalette) private var palette
+        @Environment(\.reelPalette) private var palette
         @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
             configuration.label
-                .font(Modernist.Typography.buttonLabel)
+                .font(Reel.Typography.buttonLabel)
                 .foregroundStyle(palette.text)
-                .padding(.horizontal, Modernist.Space.s3)
-                .padding(.vertical, Modernist.Space.s2)
-                .frame(minHeight: Modernist.minHitTarget, alignment: .leading)
+                .padding(.horizontal, Reel.Space.s3)
+                .padding(.vertical, Reel.Space.s2)
+                .frame(minHeight: Reel.minHitTarget, alignment: .leading)
                 .background(configuration.isPressed ? palette.accentTint : Color.clear)
                 .opacity(isEnabled ? 1 : 0.45)
                 .contentShape(Rectangle())
@@ -136,7 +136,7 @@ struct ModernistGhostButtonStyle: ButtonStyle {
 }
 
 /// `.btn-icon` — the square icon button, padded to the hit target.
-struct ModernistIconButtonStyle: ButtonStyle {
+struct ReelIconButtonStyle: ButtonStyle {
     /// `true` gives the accent fill (the editor's Export slot); `false` the
     /// surface fill (undo / redo / back / settings).
     var isProminent: Bool = false
@@ -148,7 +148,7 @@ struct ModernistIconButtonStyle: ButtonStyle {
     private struct StyleBody: View {
         let configuration: Configuration
         let isProminent: Bool
-        @Environment(\.modernistPalette) private var palette
+        @Environment(\.reelPalette) private var palette
         @Environment(\.isEnabled) private var isEnabled
 
         private var fill: Color {
@@ -160,11 +160,11 @@ struct ModernistIconButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(Modernist.Typography.bodyEmphasis)
+                .font(Reel.Typography.bodyEmphasis)
                 .foregroundStyle(isProminent ? palette.onAccent : palette.text)
-                .frame(width: Modernist.minHitTarget, height: Modernist.minHitTarget)
+                .frame(width: Reel.minHitTarget, height: Reel.minHitTarget)
                 .background(fill)
-                .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.sm))
+                .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.sm))
                 .opacity(isEnabled ? 1 : 0.45)
                 .contentShape(Rectangle())
         }
@@ -174,7 +174,7 @@ struct ModernistIconButtonStyle: ButtonStyle {
 /// The editor's toolbar cell — icon over label, in a ruled modular row.
 /// Replaces `EditorToolbar.ToolbarButton`'s rounded pill. The label is flush
 /// left with the icon, both leading-aligned, per the system's alignment rule.
-struct ModernistToolbarButtonStyle: ButtonStyle {
+struct ReelToolbarButtonStyle: ButtonStyle {
     var isProminent: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
@@ -184,16 +184,16 @@ struct ModernistToolbarButtonStyle: ButtonStyle {
     private struct StyleBody: View {
         let configuration: Configuration
         let isProminent: Bool
-        @Environment(\.modernistPalette) private var palette
+        @Environment(\.reelPalette) private var palette
         @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
             configuration.label
-                .font(Modernist.Typography.caption.weight(Modernist.Typography.emphasisWeight))
+                .font(Reel.Typography.caption.weight(Reel.Typography.emphasisWeight))
                 .foregroundStyle(isProminent ? palette.onAccent : palette.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(minHeight: Modernist.minHitTarget + Modernist.Space.s2)
-                .padding(.horizontal, Modernist.Space.s2)
+                .frame(minHeight: Reel.minHitTarget + Reel.Space.s2)
+                .padding(.horizontal, Reel.Space.s2)
                 .background(
                     isProminent
                         ? (configuration.isPressed ? palette.accentPressed : palette.accent)
@@ -209,28 +209,28 @@ struct ModernistToolbarButtonStyle: ButtonStyle {
 
 /// `.tag` and its variants. The scheme is mono, so `.accent2` reads the same as
 /// `.accent` — kept only so both token sets resolve.
-struct ModernistTag: View {
+struct ReelTag: View {
     enum Variant { case accent, neutral, outline }
 
     let text: String
     var variant: Variant = .neutral
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         Text(text)
-            .font(Modernist.Typography.caption.weight(Modernist.Typography.emphasisWeight))
+            .font(Reel.Typography.caption.weight(Reel.Typography.emphasisWeight))
             .textCase(.uppercase)
-            .tracking(Modernist.Typography.labelTracking * 0.7)
+            .tracking(Reel.Typography.labelTracking * 0.7)
             .foregroundStyle(variant == .accent ? palette.accentText : palette.text)
-            .padding(.horizontal, Modernist.Space.s2)
-            .padding(.vertical, Modernist.Space.s1)
+            .padding(.horizontal, Reel.Space.s2)
+            .padding(.vertical, Reel.Space.s1)
             .background(background)
             .overlay(
-                RoundedRectangle(cornerRadius: Modernist.Radius.sm)
+                RoundedRectangle(cornerRadius: Reel.Radius.sm)
                     .strokeBorder(
                         variant == .outline ? palette.divider : Color.clear,
-                        lineWidth: Modernist.ruleWidth
+                        lineWidth: Reel.ruleWidth
                     )
             )
     }
@@ -250,79 +250,79 @@ extension View {
 
     /// `.hr` — the strong 2px rule, drawn on the bottom edge. Between major
     /// sections. Never soften it, never drop it for whitespace.
-    func modernistRule(_ edge: VerticalAlignment = .bottom) -> some View {
-        modifier(ModernistRule(edge: edge))
+    func reelRule(_ edge: VerticalAlignment = .bottom) -> some View {
+        modifier(ReelRule(edge: edge))
     }
 
     /// `.card` — a surface-filled block, square corners, flush-left content.
-    func modernistCard(padding: CGFloat = Modernist.Space.s4) -> some View {
-        modifier(ModernistCard(padding: padding))
+    func reelCard(padding: CGFloat = Reel.Space.s4) -> some View {
+        modifier(ReelCard(padding: padding))
     }
 
     /// `.elev-sm` / `.elev-md` / `.elev-lg`, on the current ground.
-    func modernistElevation(_ level: Modernist.Elevation) -> some View {
-        modifier(ModernistElevation(level: level))
+    func reelElevation(_ level: Reel.Elevation) -> some View {
+        modifier(ReelElevation(level: level))
     }
 
     /// `.grayscale` — every content photograph and every video thumbnail goes
     /// through this. Pure black and white, never tinted or colorized.
-    func modernistGrayscale() -> some View {
+    func reelGrayscale() -> some View {
         grayscale(1).contrast(1.08)
     }
 
     /// The `h6` micro-label: uppercase, tracked, flush left. Section headers
     /// ("PRESET", "RENDER", "PLAYBACK", "SKIPPED PROJECTS").
-    func modernistLabel() -> some View {
-        modifier(ModernistLabel())
+    func reelLabel() -> some View {
+        modifier(ReelLabel())
     }
 
     /// A heading at the system's line-height and negative tracking, flush left.
-    func modernistHeading(_ font: Font) -> some View {
+    func reelHeading(_ font: Font) -> some View {
         self
             .font(font)
-            .tracking(Modernist.Typography.headingTracking)
-            .lineSpacing(Modernist.Typography.headingLineSpacing)
+            .tracking(Reel.Typography.headingTracking)
+            .lineSpacing(Reel.Typography.headingLineSpacing)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Body copy at the system's 1.55 line-height, flush left.
-    func modernistBody() -> some View {
+    func reelBody() -> some View {
         self
-            .font(Modernist.Typography.body)
-            .lineSpacing(Modernist.Typography.bodyLineSpacing)
+            .font(Reel.Typography.body)
+            .lineSpacing(Reel.Typography.bodyLineSpacing)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-private struct ModernistRule: ViewModifier {
+private struct ReelRule: ViewModifier {
     let edge: VerticalAlignment
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     func body(content: Content) -> some View {
         content.overlay(alignment: edge == .top ? .top : .bottom) {
             Rectangle()
                 .fill(palette.divider)
-                .frame(height: Modernist.ruleWidth)
+                .frame(height: Reel.ruleWidth)
         }
     }
 }
 
-private struct ModernistCard: ViewModifier {
+private struct ReelCard: ViewModifier {
     let padding: CGFloat
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     func body(content: Content) -> some View {
         content
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(padding)
             .background(palette.surface)
-            .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
+            .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
     }
 }
 
-private struct ModernistElevation: ViewModifier {
-    let level: Modernist.Elevation
-    @Environment(\.modernistPalette) private var palette
+private struct ReelElevation: ViewModifier {
+    let level: Reel.Elevation
+    @Environment(\.reelPalette) private var palette
 
     func body(content: Content) -> some View {
         content.shadow(
@@ -334,14 +334,14 @@ private struct ModernistElevation: ViewModifier {
     }
 }
 
-private struct ModernistLabel: ViewModifier {
-    @Environment(\.modernistPalette) private var palette
+private struct ReelLabel: ViewModifier {
+    @Environment(\.reelPalette) private var palette
 
     func body(content: Content) -> some View {
         content
-            .font(Modernist.Typography.h6)
+            .font(Reel.Typography.h6)
             .textCase(.uppercase)
-            .tracking(Modernist.Typography.labelTracking)
+            .tracking(Reel.Typography.labelTracking)
             .foregroundStyle(palette.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -355,11 +355,11 @@ private struct ModernistLabel: ViewModifier {
 /// squared off or retinted, so the system draws its own. Use for the inspector's
 /// Transform / Opacity / Filters tabs, the overlay sheet's Text / Image /
 /// Sticker tabs, and Settings' haptic intensity.
-struct ModernistSegmentedControl<Value: Hashable>: View {
+struct ReelSegmentedControl<Value: Hashable>: View {
     let options: [(value: Value, label: String)]
     @Binding var selection: Value
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         HStack(spacing: 0) {
@@ -368,13 +368,13 @@ struct ModernistSegmentedControl<Value: Hashable>: View {
                     selection = option.value
                 } label: {
                     Text(option.label)
-                        .font(Modernist.Typography.bodyEmphasis)
+                        .font(Reel.Typography.bodyEmphasis)
                         .foregroundStyle(
                             selection == option.value ? palette.onAccent : palette.text
                         )
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(minHeight: Modernist.minHitTarget)
-                        .padding(.horizontal, Modernist.Space.s3)
+                        .frame(minHeight: Reel.minHitTarget)
+                        .padding(.horizontal, Reel.Space.s3)
                         .background(
                             selection == option.value ? palette.accent : palette.surface
                         )
@@ -386,13 +386,13 @@ struct ModernistSegmentedControl<Value: Hashable>: View {
                 if index < options.count - 1 {
                     Rectangle()
                         .fill(palette.divider)
-                        .frame(width: Modernist.ruleWidth)
+                        .frame(width: Reel.ruleWidth)
                 }
             }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: Modernist.Radius.sm)
-                .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
+            RoundedRectangle(cornerRadius: Reel.Radius.sm)
+                .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
         )
     }
 }
@@ -418,7 +418,7 @@ struct ModernistSegmentedControl<Value: Hashable>: View {
 ///
 /// The two are one mechanism: the step that quantizes a drag is the same step
 /// an adjustable action moves by, so they can't drift apart.
-struct ModernistSlider: View {
+struct ReelSlider: View {
     let label: String
     @Binding var value: Double
     var range: ClosedRange<Double> = 0...1
@@ -428,7 +428,7 @@ struct ModernistSlider: View {
     /// Formatted readout, right-aligned. `nil` hides the value column.
     var valueText: String?
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     private var fraction: CGFloat {
         let span = range.upperBound - range.lowerBound
@@ -486,9 +486,9 @@ struct ModernistSlider: View {
     }
 
     var body: some View {
-        HStack(spacing: Modernist.Space.s3) {
+        HStack(spacing: Reel.Space.s3) {
             Text(label)
-                .font(Modernist.Typography.body)
+                .font(Reel.Typography.body)
                 .foregroundStyle(palette.textMuted)
                 .frame(width: 64, alignment: .leading)
 
@@ -496,16 +496,16 @@ struct ModernistSlider: View {
                 ZStack(alignment: .leading) {
                     Rectangle()
                         .fill(palette.divider)
-                        .frame(height: Modernist.ruleWidth)
+                        .frame(height: Reel.ruleWidth)
                     Rectangle()
                         .fill(palette.accent)
-                        .frame(width: geo.size.width * fraction, height: Modernist.ruleWidth)
+                        .frame(width: geo.size.width * fraction, height: Reel.ruleWidth)
                     Rectangle()
                         .fill(palette.text)
-                        .frame(width: Modernist.Space.s2, height: Modernist.Space.s4)
-                        .offset(x: (geo.size.width - Modernist.Space.s2) * fraction)
+                        .frame(width: Reel.Space.s2, height: Reel.Space.s4)
+                        .offset(x: (geo.size.width - Reel.Space.s2) * fraction)
                 }
-                .frame(height: Modernist.minHitTarget)
+                .frame(height: Reel.minHitTarget)
                 .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 0).onChanged { drag in
@@ -516,11 +516,11 @@ struct ModernistSlider: View {
                     }
                 )
             }
-            .frame(height: Modernist.minHitTarget)
+            .frame(height: Reel.minHitTarget)
 
             if let valueText {
                 Text(valueText)
-                    .font(Modernist.Typography.numeric)
+                    .font(Reel.Typography.numeric)
                     .foregroundStyle(palette.textMuted)
                     .frame(width: 48, alignment: .trailing)
             }

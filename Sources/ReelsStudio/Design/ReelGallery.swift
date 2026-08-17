@@ -1,7 +1,7 @@
 #if DEBUG
 import SwiftUI
 
-/// A preview-only specimen sheet for the Modernist layer.
+/// A preview-only specimen sheet for the Reel layer (Modernist design system).
 ///
 /// Every component class and every step of the type scale, rendered on both
 /// grounds. Nothing in the app references this view — it exists so a wrong
@@ -10,12 +10,12 @@ import SwiftUI
 ///
 /// Debug-only on purpose: it ships no user-facing copy and no shipping build
 /// should carry it.
-struct ModernistGallery: View {
-    let palette: ModernistPalette
+struct ReelGallery: View {
+    let palette: ReelPalette
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+            VStack(alignment: .leading, spacing: Reel.Space.s6) {
                 typeScale
                 buttons
                 tags
@@ -23,38 +23,38 @@ struct ModernistGallery: View {
                 slider
                 cardAndRule
             }
-            .padding(Modernist.Space.s4)
+            .padding(Reel.Space.s4)
         }
-        .modernistSurface(palette)
+        .reelSurface(palette)
     }
 
     // MARK: - Type
 
     private var typeScale: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-            Text("Type scale").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Type scale").reelLabel()
 
-            Text("Heading one").modernistHeading(Modernist.Typography.h1)
-            Text("Heading two").modernistHeading(Modernist.Typography.h2)
-            Text("Heading three").modernistHeading(Modernist.Typography.h3)
-            Text("Heading four").modernistHeading(Modernist.Typography.h4)
-            Text("Heading five").modernistHeading(Modernist.Typography.h5)
-            Text("Heading six").modernistLabel()
+            Text("Heading one").reelHeading(Reel.Typography.h1)
+            Text("Heading two").reelHeading(Reel.Typography.h2)
+            Text("Heading three").reelHeading(Reel.Typography.h3)
+            Text("Heading four").reelHeading(Reel.Typography.h4)
+            Text("Heading five").reelHeading(Reel.Typography.h5)
+            Text("Heading six").reelLabel()
 
             Text("Body copy sets at fifteen point on a 1.55 line-height, flush left, and never justifies. This paragraph is here to show the measure.")
-                .modernistBody()
+                .reelBody()
 
             Text("Body emphasis — the 600 weight")
-                .font(Modernist.Typography.bodyEmphasis)
+                .font(Reel.Typography.bodyEmphasis)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Text("Caption — secondary meta copy")
-                .font(Modernist.Typography.caption)
+                .font(Reel.Typography.caption)
                 .foregroundStyle(palette.textMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Text("00:01 / 00:06 · 48 px/s · 124%")
-                .font(Modernist.Typography.numeric)
+                .font(Reel.Typography.numeric)
                 .foregroundStyle(palette.textMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -63,38 +63,38 @@ struct ModernistGallery: View {
     // MARK: - Buttons
 
     private var buttons: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
-            Text("Buttons").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Buttons").reelLabel()
 
             Button("Primary") {}
-                .buttonStyle(ModernistPrimaryButtonStyle())
+                .buttonStyle(ReelPrimaryButtonStyle())
             Button("Primary block") {}
-                .buttonStyle(ModernistPrimaryButtonStyle(isBlock: true))
+                .buttonStyle(ReelPrimaryButtonStyle(isBlock: true))
             Button("Primary disabled") {}
-                .buttonStyle(ModernistPrimaryButtonStyle())
+                .buttonStyle(ReelPrimaryButtonStyle())
                 .disabled(true)
 
             Button("Secondary") {}
-                .buttonStyle(ModernistSecondaryButtonStyle())
+                .buttonStyle(ReelSecondaryButtonStyle())
             Button("Secondary block") {}
-                .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+                .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
 
             Button("Ghost") {}
-                .buttonStyle(ModernistGhostButtonStyle())
+                .buttonStyle(ReelGhostButtonStyle())
 
-            HStack(spacing: Modernist.Space.s2) {
+            HStack(spacing: Reel.Space.s2) {
                 Button { } label: { Image(systemName: "chevron.left") }
-                    .buttonStyle(ModernistIconButtonStyle())
+                    .buttonStyle(ReelIconButtonStyle())
                 Button { } label: { Image(systemName: "arrow.uturn.backward") }
-                    .buttonStyle(ModernistIconButtonStyle())
+                    .buttonStyle(ReelIconButtonStyle())
                 Button { } label: { Image(systemName: "arrow.uturn.forward") }
-                    .buttonStyle(ModernistIconButtonStyle())
+                    .buttonStyle(ReelIconButtonStyle())
                     .disabled(true)
                 Button { } label: { Image(systemName: "square.and.arrow.up") }
-                    .buttonStyle(ModernistIconButtonStyle(isProminent: true))
+                    .buttonStyle(ReelIconButtonStyle(isProminent: true))
             }
 
-            HStack(spacing: Modernist.ruleWidth) {
+            HStack(spacing: Reel.ruleWidth) {
                 toolbarCell("scissors", "Split")
                 toolbarCell("doc.on.doc", "Copy")
                 toolbarCell("speedometer", "Speed")
@@ -106,23 +106,23 @@ struct ModernistGallery: View {
     private func toolbarCell(_ symbol: String, _ title: String, prominent: Bool = false) -> some View {
         Button {
         } label: {
-            VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+            VStack(alignment: .leading, spacing: Reel.Space.s1) {
                 Image(systemName: symbol)
                 Text(title)
             }
         }
-        .buttonStyle(ModernistToolbarButtonStyle(isProminent: prominent))
+        .buttonStyle(ReelToolbarButtonStyle(isProminent: prominent))
     }
 
     // MARK: - Tags
 
     private var tags: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-            Text("Tags").modernistLabel()
-            HStack(spacing: Modernist.Space.s2) {
-                ModernistTag(text: "9:16", variant: .neutral)
-                ModernistTag(text: "HEVC", variant: .accent)
-                ModernistTag(text: "Draft", variant: .outline)
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Tags").reelLabel()
+            HStack(spacing: Reel.Space.s2) {
+                ReelTag(text: "9:16", variant: .neutral)
+                ReelTag(text: "HEVC", variant: .accent)
+                ReelTag(text: "Draft", variant: .outline)
             }
         }
     }
@@ -130,8 +130,8 @@ struct ModernistGallery: View {
     // MARK: - Segmented control
 
     private var segmentedControl: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-            Text("Segmented control").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Segmented control").reelLabel()
             SegmentedSpecimen()
         }
     }
@@ -140,7 +140,7 @@ struct ModernistGallery: View {
         @State private var selection = "Transform"
 
         var body: some View {
-            ModernistSegmentedControl(
+            ReelSegmentedControl(
                 options: [
                     (value: "Transform", label: "Transform"),
                     (value: "Opacity", label: "Opacity"),
@@ -154,8 +154,8 @@ struct ModernistGallery: View {
     // MARK: - Slider
 
     private var slider: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-            Text("Slider").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Slider").reelLabel()
             SliderSpecimen()
         }
     }
@@ -165,14 +165,14 @@ struct ModernistGallery: View {
         @State private var opacity: Double = 0.88
 
         var body: some View {
-            VStack(spacing: Modernist.Space.s2) {
-                ModernistSlider(
+            VStack(spacing: Reel.Space.s2) {
+                ReelSlider(
                     label: "Scale",
                     value: $scale,
                     range: 0.5...2,
                     valueText: String(format: "%.2f×", scale)
                 )
-                ModernistSlider(
+                ReelSlider(
                     label: "Opacity",
                     value: $opacity,
                     valueText: "\(Int(opacity * 100))%"
@@ -184,40 +184,40 @@ struct ModernistGallery: View {
     // MARK: - Card and rule
 
     private var cardAndRule: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
-            Text("Card and rule").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Card and rule").reelLabel()
 
-            VStack(alignment: .leading, spacing: Modernist.Space.s1) {
-                Text("Rendering…").font(Modernist.Typography.bodyEmphasis)
+            VStack(alignment: .leading, spacing: Reel.Space.s1) {
+                Text("Rendering…").font(Reel.Typography.bodyEmphasis)
                 Text("1080×1920 · 30 fps · HEVC · 0:06")
-                    .font(Modernist.Typography.numeric)
+                    .font(Reel.Typography.numeric)
                     .foregroundStyle(palette.textMuted)
             }
-            .modernistCard()
+            .reelCard()
 
             Color.clear
-                .frame(height: Modernist.Space.s4)
-                .modernistRule()
+                .frame(height: Reel.Space.s4)
+                .reelRule()
 
             Rectangle()
                 .fill(palette.surfaceRaised)
                 .frame(height: 56)
                 .overlay(alignment: .leading) {
                     Text("Grayscale specimen")
-                        .font(Modernist.Typography.caption)
-                        .padding(.horizontal, Modernist.Space.s3)
+                        .font(Reel.Typography.caption)
+                        .padding(.horizontal, Reel.Space.s3)
                 }
-                .modernistGrayscale()
-                .modernistElevation(.md)
+                .reelGrayscale()
+                .reelElevation(.md)
         }
     }
 }
 
-#Preview("Modernist · print") {
-    ModernistGallery(palette: .print)
+#Preview("Reel · print") {
+    ReelGallery(palette: .print)
 }
 
-#Preview("Modernist · studio") {
-    ModernistGallery(palette: .studio)
+#Preview("Reel · studio") {
+    ReelGallery(palette: .studio)
 }
 #endif

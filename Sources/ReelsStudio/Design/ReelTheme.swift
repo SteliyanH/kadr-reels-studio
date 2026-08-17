@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Modernist — the design system's tokens, expressed in Swift.
+/// Reel — the Modernist design system's tokens, expressed in Swift.
 ///
 /// Mirrors the `:root` block of the system's `styles.css` one-for-one (a copy of
 /// that file ships alongside this one in `reference/`). This is the single
@@ -11,7 +11,7 @@ import SwiftUI
 /// in Archivo, near-mono red, a visible modular grid, **zero** corner radius,
 /// and 2px rules doing the organising. Nothing floats and nothing is decorated —
 /// alignment and the strength of the dividers do all the work.
-enum Modernist {
+enum Reel {
 
     // MARK: - Spacing
 
@@ -161,7 +161,7 @@ enum Modernist {
         static var h3: Font { font(size: 25, weight: headingWeight) }
         static var h4: Font { font(size: 20, weight: headingWeight) }
         static var h5: Font { font(size: 16, weight: headingWeight) }
-        /// The uppercase micro-label — see `.modernistLabel()`.
+        /// The uppercase micro-label — see `.reelLabel()`.
         static var h6: Font { font(size: 13, weight: headingWeight) }
 
         static var body: Font { font(size: 15, weight: bodyWeight) }
@@ -215,7 +215,7 @@ enum Modernist {
 ///
 /// Both are real Modernist: same ramps, same accent, same geometry. Choosing
 /// between them is a matter of which surface you're on, never taste.
-struct ModernistPalette: Equatable {
+struct ReelPalette: Equatable {
 
     /// The page ground.
     var bg: Color
@@ -244,60 +244,60 @@ struct ModernistPalette: Equatable {
     var elevationScale: Double
 
     /// The system as authored. App chrome: library, sheets, settings, export.
-    static let print = ModernistPalette(
+    static let print = ReelPalette(
         bg: Color(hex: 0xF3F2F2),
         surface: Color(hex: 0xEAE9E9),
-        surfaceRaised: Modernist.Neutral.n100,
+        surfaceRaised: Reel.Neutral.n100,
         text: Color(hex: 0x201E1D),
         textMuted: Color(hex: 0x201E1D).opacity(0.55),
         divider: Color(hex: 0x201E1D).opacity(0.40),
         accent: Color(hex: 0xEC3013),
-        accentPressed: Modernist.Accent.a600,
-        accentTint: Modernist.Accent.a200,
-        accentText: Modernist.Accent.a700,
+        accentPressed: Reel.Accent.a600,
+        accentTint: Reel.Accent.a200,
+        accentText: Reel.Accent.a700,
         onAccent: Color(hex: 0xF3F2F2),
-        shadowInk: Modernist.Neutral.n900,
+        shadowInk: Reel.Neutral.n900,
         elevationScale: 1.0
     )
 
     /// The editor's grading surround. Same system, dark ground.
-    static let studio = ModernistPalette(
+    static let studio = ReelPalette(
         bg: Color(hex: 0x0C0C0E),
         surface: Color(hex: 0x151517),
         surfaceRaised: Color(hex: 0x1D1D20),
         text: Color(hex: 0xFFFFFF),
         textMuted: Color.white.opacity(0.55),
         divider: Color.white.opacity(0.40),
-        accent: Modernist.Accent.a500,
-        accentPressed: Modernist.Accent.a400,
-        accentTint: Modernist.Accent.a500.opacity(0.18),
-        accentText: Modernist.Accent.a400,
+        accent: Reel.Accent.a500,
+        accentPressed: Reel.Accent.a400,
+        accentTint: Reel.Accent.a500.opacity(0.18),
+        accentText: Reel.Accent.a400,
         onAccent: Color(hex: 0x201E1D),
         shadowInk: .black,
         elevationScale: 2.2
     )
 }
 
-extension ModernistPalette {
+extension ReelPalette {
     /// A shadow color for one elevation step on this ground.
-    func shadowColor(_ level: Modernist.Elevation) -> Color {
+    func shadowColor(_ level: Reel.Elevation) -> Color {
         shadowInk.opacity(min(level.baseOpacity * elevationScale, 0.85))
     }
 }
 
 // MARK: - Environment
 
-private struct ModernistPaletteKey: EnvironmentKey {
-    static let defaultValue: ModernistPalette = .print
+private struct ReelPaletteKey: EnvironmentKey {
+    static let defaultValue: ReelPalette = .print
 }
 
 extension EnvironmentValues {
     /// The ground the current subtree is drawn on. Set it once per surface with
-    /// `.modernistSurface(.studio)`; every style below reads it, so no call site
+    /// `.reelSurface(.studio)`; every style below reads it, so no call site
     /// has to pass a palette around.
-    var modernistPalette: ModernistPalette {
-        get { self[ModernistPaletteKey.self] }
-        set { self[ModernistPaletteKey.self] = newValue }
+    var reelPalette: ReelPalette {
+        get { self[ReelPaletteKey.self] }
+        set { self[ReelPaletteKey.self] = newValue }
     }
 }
 
@@ -324,7 +324,7 @@ extension Color {
 // otherwise write as a literal. Appended at the end of the file so the print
 // squad's parallel additions and these never collide.
 
-extension Modernist {
+extension Reel {
 
     /// The auto-save status dot in the editor nav bar's second title line.
     /// The design draws a 5pt disc; nothing on the 4/8/12/16/24/32 spacing
@@ -335,7 +335,7 @@ extension Modernist {
     /// The unavailable step of the editor's undo/redo cell pair.
     ///
     /// **Exception, recorded deliberately.** The repo-wide disabled convention
-    /// is 45% (`ModernistStyles`' button styles hard-wire it, and the v0.5
+    /// is 45% (`ReelStyles`' button styles hard-wire it, and the v0.5
     /// "disabled, never hidden" rule assumes it). The approved design specifies
     /// 28% for *this pair only* — the two cells share one ruled group, so the
     /// unavailable half has to drop further to read as unavailable rather than
@@ -389,7 +389,7 @@ extension Modernist {
 // write as a literal. Appended at the very end of the file so this tier's
 // parallel sections never collide.
 
-extension Modernist {
+extension Reel {
 
     // MARK: Project library
 

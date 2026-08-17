@@ -12,23 +12,23 @@ import Kadr
 /// 0-1 / 0-360 sliders so the layout doesn't feel inconsistent.
 ///
 /// v0.8 Tier 5b — chrome only. These are the one set of inspector parameter
-/// rows the app actually draws, so they move onto `ModernistSlider` (square
+/// rows the app actually draws, so they move onto `ReelSlider` (square
 /// 2pt track, square thumb, tabular readout). The two `ColorPicker`s stay
 /// functional: a swatch ramp can't express an arbitrary stroke or shadow
 /// colour, and narrowing them would be a behaviour change, not a restyle.
 struct TextEffectsSection: View {
 
     var store: ProjectStore
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         if let id = store.selectedOverlayID,
            let overlay = store.project.overlays.first(where: { $0.layerID == id }) as? TextOverlay {
-            VStack(spacing: Modernist.Space.s3) {
+            VStack(spacing: Reel.Space.s3) {
                 strokeSection(id: id, overlay: overlay)
                 shadowSection(id: id, overlay: overlay)
             }
-            .padding(.horizontal, Modernist.Space.s4)
+            .padding(.horizontal, Reel.Space.s4)
         }
     }
 
@@ -38,7 +38,7 @@ struct TextEffectsSection: View {
     private func strokeSection(id: LayerID, overlay: TextOverlay) -> some View {
         let stroke = overlay.style.stroke
         DisclosureGroup {
-            VStack(spacing: Modernist.Space.s2) {
+            VStack(spacing: Reel.Space.s2) {
                 Toggle(isOn: Binding(
                     get: { stroke != nil },
                     set: { enabled in
@@ -50,10 +50,10 @@ struct TextEffectsSection: View {
                     }
                 )) {
                     Text("Enable stroke")
-                        .font(Modernist.Typography.body)
+                        .font(Reel.Typography.body)
                 }
                 if let stroke {
-                    ModernistSlider(
+                    ReelSlider(
                         label: "Width",
                         value: Binding(
                             get: { stroke.width },
@@ -82,10 +82,10 @@ struct TextEffectsSection: View {
                     )
                 }
             }
-            .padding(.vertical, Modernist.Space.s1)
+            .padding(.vertical, Reel.Space.s1)
         } label: {
             Label("Stroke", systemImage: "circle.dashed")
-                .font(Modernist.Typography.bodyEmphasis)
+                .font(Reel.Typography.bodyEmphasis)
                 .foregroundStyle(palette.text)
         }
     }
@@ -96,7 +96,7 @@ struct TextEffectsSection: View {
     private func shadowSection(id: LayerID, overlay: TextOverlay) -> some View {
         let shadow = overlay.style.shadow
         DisclosureGroup {
-            VStack(spacing: Modernist.Space.s2) {
+            VStack(spacing: Reel.Space.s2) {
                 Toggle(isOn: Binding(
                     get: { shadow != nil },
                     set: { enabled in
@@ -108,12 +108,12 @@ struct TextEffectsSection: View {
                     }
                 )) {
                     Text("Enable shadow")
-                        .font(Modernist.Typography.body)
+                        .font(Reel.Typography.body)
                 }
                 if let shadow {
                     shadowOffsetRow(id: id, shadow: shadow, axis: .horizontal)
                     shadowOffsetRow(id: id, shadow: shadow, axis: .vertical)
-                    ModernistSlider(
+                    ReelSlider(
                         label: "Blur",
                         value: Binding(
                             get: { shadow.blur },
@@ -146,10 +146,10 @@ struct TextEffectsSection: View {
                     )
                 }
             }
-            .padding(.vertical, Modernist.Space.s1)
+            .padding(.vertical, Reel.Space.s1)
         } label: {
             Label("Shadow", systemImage: "shadow")
-                .font(Modernist.Typography.bodyEmphasis)
+                .font(Reel.Typography.bodyEmphasis)
                 .foregroundStyle(palette.text)
         }
     }
@@ -160,7 +160,7 @@ struct TextEffectsSection: View {
     private func shadowOffsetRow(id: LayerID, shadow: TextShadow, axis: ShadowAxis) -> some View {
         let label = axis == .horizontal ? "X" : "Y"
         let value = axis == .horizontal ? Double(shadow.offset.width) : Double(shadow.offset.height)
-        ModernistSlider(
+        ReelSlider(
             label: label,
             value: Binding(
                 get: { value },

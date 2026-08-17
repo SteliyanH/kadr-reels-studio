@@ -21,7 +21,7 @@ import KadrUI
 struct KeyframeArea: View {
 
     var store: ProjectStore
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         KeyframeEditor(
@@ -34,8 +34,8 @@ struct KeyframeArea: View {
                 get: { store.currentTime },
                 set: { store.currentTime = $0 }
             ),
-            rowHeight: Modernist.Space.s6,
-            rowSpacing: Modernist.Space.s1,
+            rowHeight: Reel.Space.s6,
+            rowSpacing: Reel.Space.s1,
             onAdd: { id, property, time in
                 store.addKeyframe(clipID: id, property: property, time: time)
             },
@@ -46,8 +46,8 @@ struct KeyframeArea: View {
                 store.retimeKeyframe(clipID: id, property: property, from: from, to: to)
             }
         )
-        .padding(.horizontal, Modernist.Space.s4)
-        .padding(.vertical, Modernist.Space.s2)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.vertical, Reel.Space.s2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(palette.surface)
         .accessibilityElement(children: .contain)

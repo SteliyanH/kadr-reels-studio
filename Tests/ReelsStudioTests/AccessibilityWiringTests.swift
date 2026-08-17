@@ -66,25 +66,25 @@ final class ProjectRowAccessibilityTests: XCTestCase {
     // regression.
 
     func testPrintAccentTextIsA700NotBaseAccent() {
-        XCTAssertEqual(ModernistPalette.print.accentText, Modernist.Accent.a700)
-        XCTAssertNotEqual(ModernistPalette.print.accentText, ModernistPalette.print.accent)
+        XCTAssertEqual(ReelPalette.print.accentText, Reel.Accent.a700)
+        XCTAssertNotEqual(ReelPalette.print.accentText, ReelPalette.print.accent)
     }
 
     func testStudioAccentTextIsA400NotBaseAccent() {
-        XCTAssertEqual(ModernistPalette.studio.accentText, Modernist.Accent.a400)
-        XCTAssertNotEqual(ModernistPalette.studio.accentText, ModernistPalette.studio.accent)
+        XCTAssertEqual(ReelPalette.studio.accentText, Reel.Accent.a400)
+        XCTAssertNotEqual(ReelPalette.studio.accentText, ReelPalette.studio.accent)
     }
 }
 
-// MARK: - ModernistSlider adjustability
+// MARK: - ReelSlider adjustability
 
 /// The migration replaced every native `Slider` with a `DragGesture`-driven
-/// `ModernistSlider`. A drag is not operable without sight, so twelve call
+/// `ReelSlider`. A drag is not operable without sight, so twelve call
 /// sites — opacity, font size, chroma threshold, speed, SFX volume — went from
 /// adjustable to unusable. The a11y tests of the day missed it because they
 /// only ever asserted strings.
 ///
-/// So these assert movement, not strings. `ModernistSlider.adjusted` is the
+/// So these assert movement, not strings. `ReelSlider.adjusted` is the
 /// whole body of the `.accessibilityAdjustableAction` closure:
 ///
 ///     .accessibilityAdjustableAction { direction in
@@ -106,7 +106,7 @@ final class ProjectRowAccessibilityTests: XCTestCase {
 /// is deleted. Closing that gap needs ViewInspector to add the iOS 26 path, or
 /// a VoiceOver-driven UI test.
 @MainActor
-final class ModernistSliderAdjustabilityTests: XCTestCase {
+final class ReelSliderAdjustabilityTests: XCTestCase {
 
     /// One VoiceOver swipe, as the attached action performs it.
     private func swipe(
@@ -115,7 +115,7 @@ final class ModernistSliderAdjustabilityTests: XCTestCase {
         range: ClosedRange<Double>,
         step: Double? = nil
     ) -> Double {
-        ModernistSlider.adjusted(start, direction: direction, range: range, step: step)
+        ReelSlider.adjusted(start, direction: direction, range: range, step: step)
     }
 
     // MARK: Continuous sliders — one swipe is a twentieth of the span
@@ -184,29 +184,29 @@ final class ModernistSliderAdjustabilityTests: XCTestCase {
 
     func testAdjustmentStepPrefersAnExplicitStepOverTheSpanFraction() {
         XCTAssertEqual(
-            ModernistSlider.adjustmentStep(range: 24...96, step: 2), 2, accuracy: 1e-9
+            ReelSlider.adjustmentStep(range: 24...96, step: 2), 2, accuracy: 1e-9
         )
         XCTAssertEqual(
-            ModernistSlider.adjustmentStep(range: 24...96, step: nil), 3.6, accuracy: 1e-9
+            ReelSlider.adjustmentStep(range: 24...96, step: nil), 3.6, accuracy: 1e-9
         )
     }
 
     // MARK: Drag and adjust resolve through the same grid
 
     func testDragResolutionSnapsToTheStepGrid() {
-        XCTAssertEqual(ModernistSlider.resolve(57.3, range: 24...96, step: 2), 58, accuracy: 1e-9)
-        XCTAssertEqual(ModernistSlider.resolve(56.9, range: 24...96, step: 2), 56, accuracy: 1e-9)
+        XCTAssertEqual(ReelSlider.resolve(57.3, range: 24...96, step: 2), 58, accuracy: 1e-9)
+        XCTAssertEqual(ReelSlider.resolve(56.9, range: 24...96, step: 2), 56, accuracy: 1e-9)
     }
 
     func testDragResolutionWithoutAStepStaysContinuous() {
         XCTAssertEqual(
-            ModernistSlider.resolve(0.3333, range: 0...1, step: nil), 0.3333, accuracy: 1e-9
+            ReelSlider.resolve(0.3333, range: 0...1, step: nil), 0.3333, accuracy: 1e-9
         )
     }
 
     func testDragResolutionClampsOutsideTheRange() {
-        XCTAssertEqual(ModernistSlider.resolve(-5, range: 0...1, step: nil), 0, accuracy: 1e-9)
-        XCTAssertEqual(ModernistSlider.resolve(9, range: 0...1, step: nil), 1, accuracy: 1e-9)
+        XCTAssertEqual(ReelSlider.resolve(-5, range: 0...1, step: nil), 0, accuracy: 1e-9)
+        XCTAssertEqual(ReelSlider.resolve(9, range: 0...1, step: nil), 1, accuracy: 1e-9)
     }
 
     /// Every value VoiceOver can reach must also be a value a drag can reach,
@@ -214,12 +214,12 @@ final class ModernistSliderAdjustabilityTests: XCTestCase {
     func testAdjustedValuesAreAlwaysValidDragValues() {
         for start in stride(from: 24.0, through: 96.0, by: 2.0) {
             for direction in [AccessibilityAdjustmentDirection.increment, .decrement] {
-                let landed = ModernistSlider.adjusted(
+                let landed = ReelSlider.adjusted(
                     start, direction: direction, range: 24...96, step: 2
                 )
                 XCTAssertEqual(
                     landed,
-                    ModernistSlider.resolve(landed, range: 24...96, step: 2),
+                    ReelSlider.resolve(landed, range: 24...96, step: 2),
                     accuracy: 1e-9
                 )
             }
@@ -232,7 +232,7 @@ final class ModernistSliderAdjustabilityTests: XCTestCase {
     /// resolve against the same `AccessibilityAttachmentModifier` the
     /// adjustable action is stored in, so stripping the a11y block fails here.
     func testSliderStillCarriesItsAccessibilityBlock() throws {
-        let sut = ModernistSlider(
+        let sut = ReelSlider(
             label: "Opacity",
             value: .constant(0.5),
             range: 0...1,
@@ -247,7 +247,7 @@ final class ModernistSliderAdjustabilityTests: XCTestCase {
 
 /// ~11 sheets moved off `.navigationTitle` — which carries the heading trait,
 /// and with it a place in VoiceOver's heading rotor — onto a title band the
-/// app draws. `ModernistSheetHeader` restates the trait so all of them get it
+/// app draws. `ReelSheetHeader` restates the trait so all of them get it
 /// back at once.
 ///
 /// **The trait itself is not assertable from this suite**, and that is stated
@@ -260,15 +260,15 @@ final class ModernistSliderAdjustabilityTests: XCTestCase {
 /// pinned here is the title element the trait rides on, so a header that stops
 /// drawing a title — the other way this regresses — still fails.
 @MainActor
-final class ModernistSheetHeaderAccessibilityTests: XCTestCase {
+final class ReelSheetHeaderAccessibilityTests: XCTestCase {
 
     func testHeaderRendersTheTitleTheHeadingTraitRidesOn() throws {
-        let header = ModernistSheetHeader("Add Overlay") { EmptyView() }
+        let header = ReelSheetHeader("Add Overlay") { EmptyView() }
         XCTAssertNoThrow(try header.inspect().find(text: "Add Overlay"))
     }
 
     func testHeaderRendersItsTrailingActionsAlongsideTheTitle() throws {
-        let header = ModernistSheetHeader("Settings") { Button("Done") { } }
+        let header = ReelSheetHeader("Settings") { Button("Done") { } }
         XCTAssertNoThrow(try header.inspect().find(text: "Settings"))
         XCTAssertNoThrow(try header.inspect().find(button: "Done"))
     }

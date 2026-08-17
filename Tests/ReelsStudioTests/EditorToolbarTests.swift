@@ -162,8 +162,8 @@ final class EditorChromeTests: XCTestCase {
         // Single non-audio lane: kadr-ui renders its fixed-metric strip and
         // ignores `laneHeight` outright, so the band must not size to it.
         let single = TimelineArea.bandHeight(clips: chain, audioTrackCount: 0)
-        XCTAssertGreaterThan(single, Modernist.timelineLaneHeight)
-        XCTAssertLessThan(single, Modernist.timelineLaneHeight * 2)
+        XCTAssertGreaterThan(single, Reel.timelineLaneHeight)
+        XCTAssertLessThan(single, Reel.timelineLaneHeight * 2)
 
         // An audio track adds its (also fixed) lane on that same path.
         let withAudio = TimelineArea.bandHeight(clips: chain, audioTrackCount: 1)
@@ -189,8 +189,8 @@ final class EditorChromeTests: XCTestCase {
         let absurd = TimelineArea.bandHeight(clips: chain, audioTrackCount: 99)
         XCTAssertLessThanOrEqual(
             absurd,
-            CGFloat(Modernist.timelineMaxVisibleLanes)
-                * (Modernist.timelineLaneHeight + Modernist.Space.s1) + 100
+            CGFloat(Reel.timelineMaxVisibleLanes)
+                * (Reel.timelineLaneHeight + Reel.Space.s1) + 100
         )
         XCTAssertGreaterThanOrEqual(absurd, single)
     }
@@ -198,7 +198,7 @@ final class EditorChromeTests: XCTestCase {
     // MARK: - Text-effect readout
 
     func testEffectReadoutKeepsOneDecimal() {
-        // Same numbers the rows printed before they moved onto ModernistSlider.
+        // Same numbers the rows printed before they moved onto ReelSlider.
         XCTAssertEqual(TextEffectsSection.readout(2), "2.0")
         XCTAssertEqual(TextEffectsSection.readout(-12.34), "-12.3")
     }

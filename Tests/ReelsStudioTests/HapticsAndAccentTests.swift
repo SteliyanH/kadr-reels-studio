@@ -128,13 +128,13 @@ final class AccentColorRoundTripTests: XCTestCase {
     /// Prove every ramp step the narrowed picker can select survives
     /// `ProjectDocument` encode/decode at schema v5 exactly, driven through
     /// the store rather than constructing `Project` directly.
-    func testModernistRampAccentsRoundTripThroughSetAccentColorAtSchemaV5() throws {
+    func testReelRampAccentsRoundTripThroughSetAccentColorAtSchemaV5() throws {
         XCTAssertEqual(ProjectDocument.currentSchemaVersion, 5)
 
         let rampAccents: [(name: String, color: Color)] = [
-            ("a500", Modernist.Accent.a500),
-            ("a600", Modernist.Accent.a600),
-            ("a700", Modernist.Accent.a700),
+            ("a500", Reel.Accent.a500),
+            ("a600", Reel.Accent.a600),
+            ("a700", Reel.Accent.a700),
         ]
 
         for (name, accent) in rampAccents {
@@ -161,7 +161,7 @@ final class AccentColorRoundTripTests: XCTestCase {
     /// round-trips as `nil`: no field is written, no field is read, at
     /// schema v5 exactly as before the picker was narrowed.
     func testClearingAccentToSystemRoundTripsAsNilThroughSetAccentColor() throws {
-        let store = ProjectStore(project: Project(accentColor: Modernist.Accent.a500))
+        let store = ProjectStore(project: Project(accentColor: Reel.Accent.a500))
         store.setAccentColor(nil)
         XCTAssertNil(store.project.accentColor)
 

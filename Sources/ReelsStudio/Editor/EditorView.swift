@@ -76,9 +76,9 @@ struct EditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             // The nav bar is a child view, not an inlined block: `EditorView`'s
-            // own `@Environment(\.modernistPalette)` would resolve against the
+            // own `@Environment(\.reelPalette)` would resolve against the
             // *library's* print ground (this screen is pushed from it), and the
-            // `.modernistSurface(.studio)` applied at the bottom of this body
+            // `.reelSurface(.studio)` applied at the bottom of this body
             // only reaches the subtree. A child reads the studio ground; the
             // enclosing struct cannot.
             EditorNavBar(
@@ -103,10 +103,10 @@ struct EditorView: View {
         // ring). kadr-ui exposes no theming API, so this `.tint` is the app's
         // only channel into that package's internals — v0.8 Tier 2 keeps it
         // and retargets the fallback from the system tint to the studio
-        // ground's accent token. It sits *inside* `.modernistSurface(.studio)`
+        // ground's accent token. It sits *inside* `.reelSurface(.studio)`
         // (which sets its own `.tint`) so the nearer value wins for the
         // subtree. Do not reorder these two.
-        .tint(store.project.accentColor ?? ModernistPalette.studio.accent)
+        .tint(store.project.accentColor ?? ReelPalette.studio.accent)
         .addClipFlow(isPresented: $showPhotoPicker, store: store)
         .sheet(isPresented: $showOverlaySheet) {
             AddOverlaySheet(store: store)
@@ -214,7 +214,7 @@ struct EditorView: View {
         // so the whole subtree (stage, timeline, inspector, the AddClipFlow
         // overlay) reads `.studio` from the environment. Replaces the
         // `Color(.systemGray6)` background.
-        .modernistSurface(.studio)
+        .reelSurface(.studio)
     }
 
     // MARK: - Stage
@@ -225,11 +225,11 @@ struct EditorView: View {
         PreviewArea(store: store)
             .frame(
                 maxWidth: .infinity,
-                minHeight: Modernist.stageMinHeight,
+                minHeight: Reel.stageMinHeight,
                 maxHeight: .infinity
             )
-            .padding(.horizontal, Modernist.Space.s4)
-            .padding(.vertical, Modernist.Space.s3)
+            .padding(.horizontal, Reel.Space.s4)
+            .padding(.vertical, Reel.Space.s3)
     }
 
     // MARK: - Keyframe + inspector bands
@@ -395,7 +395,7 @@ extension EditorView {
 /// undo/redo cell group · settings.
 ///
 /// A view rather than a block inlined into ``EditorView`` so it resolves
-/// `\.modernistPalette` from *inside* `.modernistSurface(.studio)` — the
+/// `\.reelPalette` from *inside* `.reelSurface(.studio)` — the
 /// editor is pushed from the print-ground library, and an `@Environment`
 /// property on the enclosing struct would read that instead.
 ///
@@ -414,16 +414,16 @@ private struct EditorNavBar: View {
     let onSettings: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
-        HStack(spacing: Modernist.Space.s3) {
+        HStack(spacing: Reel.Space.s3) {
             Button {
                 dismiss()
             } label: {
                 Image(systemName: "chevron.left")
             }
-            .buttonStyle(ModernistIconButtonStyle())
+            .buttonStyle(ReelIconButtonStyle())
             .accessibilityLabel("Back")
             .help("Back to projects")
 
@@ -434,23 +434,23 @@ private struct EditorNavBar: View {
             Button(action: onSettings) {
                 Image(systemName: "gearshape")
             }
-            .buttonStyle(ModernistIconButtonStyle())
+            .buttonStyle(ReelIconButtonStyle())
             .accessibilityLabel("Settings")
             .help("Open settings")
         }
-        .padding(.horizontal, Modernist.Space.s3)
-        .padding(.top, Modernist.Space.s1)
-        .padding(.bottom, Modernist.Space.s2)
+        .padding(.horizontal, Reel.Space.s3)
+        .padding(.top, Reel.Space.s1)
+        .padding(.bottom, Reel.Space.s2)
     }
 
     /// Project name + pencil glyph, and under it the status line: an `n400`
     /// dot (Decision 4 — status is not an accent job) plus "Auto-saved ·
     /// 9:16 · 0:06", every value read from state the editor already holds.
     private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s1 / 2) {
-            HStack(spacing: Modernist.Space.s1) {
+        VStack(alignment: .leading, spacing: Reel.Space.s1 / 2) {
+            HStack(spacing: Reel.Space.s1) {
                 Text(title)
-                    .font(Modernist.Typography.bodyEmphasis)
+                    .font(Reel.Typography.bodyEmphasis)
                     .foregroundStyle(palette.text)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -458,22 +458,22 @@ private struct EditorNavBar: View {
                 // one would be a feature, not a restyle. Hidden from VoiceOver
                 // so it can't be mistaken for a control.
                 Image(systemName: "pencil")
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
                     .accessibilityHidden(true)
             }
-            HStack(spacing: Modernist.Space.s1) {
+            HStack(spacing: Reel.Space.s1) {
                 Circle()
-                    .fill(Modernist.Neutral.n400)
+                    .fill(Reel.Neutral.n400)
                     .frame(
-                        width: Modernist.navStatusDotSize,
-                        height: Modernist.navStatusDotSize
+                        width: Reel.navStatusDotSize,
+                        height: Reel.navStatusDotSize
                     )
                 Text("Auto-saved")
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
                 Text(verbatim: statusMetrics)
-                    .font(Modernist.Typography.numeric)
+                    .font(Reel.Typography.numeric)
                     .foregroundStyle(palette.textMuted)
             }
             .accessibilityElement(children: .combine)
@@ -484,7 +484,7 @@ private struct EditorNavBar: View {
     }
 
     /// One ruled cell group, 2pt divider between the halves. The unavailable
-    /// half drops to `Modernist.pairedControlDisabledOpacity` (28%) rather
+    /// half drops to `Reel.pairedControlDisabledOpacity` (28%) rather
     /// than the repo-wide 45% — see that token for why the exception exists
     /// and why it is confined to this pair.
     private var undoRedoGroup: some View {
@@ -500,7 +500,7 @@ private struct EditorNavBar: View {
 
             Rectangle()
                 .fill(palette.divider)
-                .frame(width: Modernist.ruleWidth, height: Modernist.minHitTarget)
+                .frame(width: Reel.ruleWidth, height: Reel.minHitTarget)
 
             Button(action: onRedo) {
                 Image(systemName: "arrow.uturn.forward")
@@ -517,10 +517,10 @@ private struct EditorNavBar: View {
 
 // MARK: - Nav pair cell
 
-/// The undo/redo group's cell. Identical to `ModernistIconButtonStyle` except
+/// The undo/redo group's cell. Identical to `ReelIconButtonStyle` except
 /// for the unavailable step: the shared style hard-wires the repo's 45%
 /// disabled convention, and the approved design specifies 28% for this pair
-/// (see `Modernist.pairedControlDisabledOpacity`). Local to the editor so the
+/// (see `Reel.pairedControlDisabledOpacity`). Local to the editor so the
 /// exception can't leak into the print ground's controls.
 private struct NavPairCellStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -529,17 +529,17 @@ private struct NavPairCellStyle: ButtonStyle {
 
     private struct StyleBody: View {
         let configuration: Configuration
-        @Environment(\.modernistPalette) private var palette
+        @Environment(\.reelPalette) private var palette
         @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
             configuration.label
-                .font(Modernist.Typography.bodyEmphasis)
+                .font(Reel.Typography.bodyEmphasis)
                 .foregroundStyle(palette.text)
-                .frame(width: Modernist.minHitTarget, height: Modernist.minHitTarget)
+                .frame(width: Reel.minHitTarget, height: Reel.minHitTarget)
                 .background(configuration.isPressed ? palette.accentTint : palette.surface)
-                .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.sm))
-                .opacity(isEnabled ? 1 : Modernist.pairedControlDisabledOpacity)
+                .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.sm))
+                .opacity(isEnabled ? 1 : Reel.pairedControlDisabledOpacity)
                 .contentShape(Rectangle())
         }
     }

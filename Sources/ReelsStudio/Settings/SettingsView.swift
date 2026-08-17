@@ -22,7 +22,7 @@ struct SettingsView: View {
     var store: ProjectStore
     @Environment(AppSettings.self) private var settings
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     /// Which segment of the accent ramp is showing. Local state because
     /// seeding it must not fire a mutation — the `.onChange` below is what
@@ -49,9 +49,9 @@ struct SettingsView: View {
         var color: Color? {
             switch self {
             case .system: return nil
-            case .a500:   return Modernist.Accent.a500
-            case .a600:   return Modernist.Accent.a600
-            case .a700:   return Modernist.Accent.a700
+            case .a500:   return Reel.Accent.a500
+            case .a600:   return Reel.Accent.a600
+            case .a700:   return Reel.Accent.a700
             }
         }
 
@@ -132,20 +132,20 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Settings") {
+            ReelSheetHeader("Settings") {
                 Button("Done") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
                     accentSection
                     playbackSection
                     hapticsSection
                 }
-                .padding(Modernist.Space.s4)
+                .padding(Reel.Space.s4)
             }
         }
-        .modernistSheet(Modernist.SheetDetent.settings)
+        .reelSheet(Reel.SheetDetent.settings)
     }
 
     // MARK: - Accent
@@ -166,9 +166,9 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var accentSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
-            Text("Accent · This project").modernistLabel()
-            ModernistSegmentedControl(
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Accent · This project").reelLabel()
+            ReelSegmentedControl(
                 options: AccentChoice.allCases.map { ($0, $0.label) },
                 selection: accentBinding
             )
@@ -183,26 +183,26 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var playbackSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
-            Text("Playback").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Playback").reelLabel()
             Toggle(
                 isOn: Binding(
                     get: { store.project.fixedCenterPlayhead },
                     set: { store.setFixedCenterPlayhead($0) }
                 )
             ) {
-                VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+                VStack(alignment: .leading, spacing: Reel.Space.s1) {
                     Text("Fixed-center playhead")
-                        .font(Modernist.Typography.bodyEmphasis)
+                        .font(Reel.Typography.bodyEmphasis)
                     Text("The timeline scrolls under a pinned playhead instead of letting it drift.")
-                        .font(Modernist.Typography.caption)
+                        .font(Reel.Typography.caption)
                         .foregroundStyle(palette.textMuted)
                 }
             }
             // Decision 4 — the scheme has no success role, so the switch's
             // "on" fill is the accent, never the system green.
             .tint(palette.accent)
-            .modernistCard()
+            .reelCard()
         }
     }
 
@@ -213,12 +213,12 @@ struct SettingsView: View {
         // local @Bindable (the replacement for `@ObservedObject` / `@EnvironmentObject`
         // bindings).
         @Bindable var settings = settings
-        return VStack(alignment: .leading, spacing: Modernist.Space.s3) {
-            Text("Haptics · All projects").modernistLabel()
+        return VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Haptics · All projects").reelLabel()
             // Each segment is a real `Button` whose label is the intensity's
             // display name, so `app.buttons["Medium"]` — the XCUITest's proof
             // that this sheet presented — keeps resolving.
-            ModernistSegmentedControl(
+            ReelSegmentedControl(
                 options: HapticIntensity.allCases.map { ($0, $0.displayName) },
                 selection: $settings.hapticIntensity
             )

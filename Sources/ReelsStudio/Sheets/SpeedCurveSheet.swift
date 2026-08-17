@@ -14,28 +14,28 @@ struct SpeedCurveSheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Speed Curve") {
+            ReelSheetHeader("Speed Curve") {
                 Button("Done") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
             }
             content
         }
         // The design gives no fixed height for this one; the log-scaled
         // multiplier axis needs every point it can get, so it takes the
         // full-height stop.
-        .modernistSheet(detents: [.large])
+        .reelSheet(detents: [.large])
     }
 
     @ViewBuilder
     private var content: some View {
         if let clip = videoClip(matching: clipID) {
-            VStack(alignment: .leading, spacing: Modernist.Space.s3) {
+            VStack(alignment: .leading, spacing: Reel.Space.s3) {
                 Text(headerText(for: clip))
-                    .font(Modernist.Typography.body)
+                    .font(Reel.Typography.body)
                     .foregroundStyle(palette.textMuted)
                 SpeedCurveEditor(
                     clip: clip,
@@ -43,28 +43,28 @@ struct SpeedCurveSheet: View {
                         get: { store.currentTime },
                         set: { store.currentTime = $0 }
                     ),
-                    height: Modernist.speedCurveEditorHeight,
+                    height: Reel.speedCurveEditorHeight,
                     onUpdate: { newCurve in
                         store.applySpeedCurve(id: clipID, newCurve)
                     }
                 )
                 Spacer()
             }
-            .padding(Modernist.Space.s4)
+            .padding(Reel.Space.s4)
         } else {
-            VStack(spacing: Modernist.Space.s3) {
+            VStack(spacing: Reel.Space.s3) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: Modernist.Typography.Glyph.lg, weight: Modernist.Typography.headingWeight))
+                    .font(.system(size: Reel.Typography.Glyph.lg, weight: Reel.Typography.headingWeight))
                     .foregroundStyle(palette.textMuted)
                 Text("Clip not available")
-                    .font(Modernist.Typography.h5)
+                    .font(Reel.Typography.h5)
                 Text("This clip is no longer in the project. Close this sheet and reselect.")
-                    .font(Modernist.Typography.body)
+                    .font(Reel.Typography.body)
                     .foregroundStyle(palette.textMuted)
-                    .frame(maxWidth: Modernist.emptyStateMeasure)
+                    .frame(maxWidth: Reel.emptyStateMeasure)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(Modernist.Space.s4)
+            .padding(Reel.Space.s4)
         }
     }
 
@@ -81,4 +81,4 @@ struct SpeedCurveSheet: View {
 }
 
 // v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
-// sheet no longer wraps itself in; `ModernistSheetHeader` draws the title.
+// sheet no longer wraps itself in; `ReelSheetHeader` draws the title.

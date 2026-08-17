@@ -16,7 +16,7 @@ struct TransitionsSheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     @State private var selectedKind: TransitionKind
     @State private var durationSeconds: Double
@@ -42,42 +42,42 @@ struct TransitionsSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Transition") {
+            ReelSheetHeader("Transition") {
                 Button("Cancel") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
                 Button("Apply") {
                     apply()
                     dismiss()
                 }
-                .buttonStyle(ModernistPrimaryButtonStyle())
+                .buttonStyle(ReelPrimaryButtonStyle())
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
                     kindGrid
                     durationSection
                     if existingTransitionPresent {
                         removeButton
                     }
                 }
-                .padding(Modernist.Space.s4)
+                .padding(Reel.Space.s4)
             }
         }
-        .modernistSheet(Modernist.SheetDetent.settings)
+        .reelSheet(Reel.SheetDetent.settings)
     }
 
     // MARK: - Subviews
 
     @ViewBuilder
     private var kindGrid: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
             Text("Kind")
-                .modernistLabel()
+                .reelLabel()
             LazyVGrid(
                 columns: Array(
-                    repeating: GridItem(.flexible(), spacing: Modernist.Space.s2),
-                    count: Modernist.presetGridColumns
+                    repeating: GridItem(.flexible(), spacing: Reel.Space.s2),
+                    count: Reel.presetGridColumns
                 ),
-                spacing: Modernist.Space.s2
+                spacing: Reel.Space.s2
             ) {
                 ForEach(TransitionKind.allCases, id: \.self) { kind in
                     transitionTile(kind: kind)
@@ -92,23 +92,23 @@ struct TransitionsSheet: View {
         Button {
             selectedKind = kind
         } label: {
-            VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+            VStack(alignment: .leading, spacing: Reel.Space.s2) {
                 Image(systemName: kind.systemImage)
-                    .font(.system(size: Modernist.Typography.Glyph.md, weight: Modernist.Typography.headingWeight))
+                    .font(.system(size: Reel.Typography.Glyph.md, weight: Reel.Typography.headingWeight))
                 Text(kind.displayLabel)
-                    .font(Modernist.Typography.bodyEmphasis)
+                    .font(Reel.Typography.bodyEmphasis)
             }
             // Icon over label, both flush left — the system's alignment rule.
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(minHeight: Modernist.minHitTarget + Modernist.Space.s6)
-            .padding(Modernist.Space.s3)
+            .frame(minHeight: Reel.minHitTarget + Reel.Space.s6)
+            .padding(Reel.Space.s3)
             // v0.8 Tier 3 — the selected-cell pattern for the whole app: a
             // named `accentTint` fill (never an ad-hoc accent opacity) and a
             // 2pt accent rule.
             .background(isSelected ? palette.accentTint : palette.surface)
             .overlay(
-                RoundedRectangle(cornerRadius: Modernist.Radius.md)
-                    .stroke(isSelected ? palette.accent : .clear, lineWidth: Modernist.ruleWidth)
+                RoundedRectangle(cornerRadius: Reel.Radius.md)
+                    .stroke(isSelected ? palette.accent : .clear, lineWidth: Reel.ruleWidth)
             )
             .contentShape(Rectangle())
         }
@@ -119,10 +119,10 @@ struct TransitionsSheet: View {
 
     @ViewBuilder
     private var durationSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
             Text("Duration")
-                .modernistLabel()
-            ModernistSlider(
+                .reelLabel()
+            ReelSlider(
                 label: NSLocalizedString("Duration", comment: "Transition duration"),
                 value: $durationSeconds,
                 range: Self.minDuration...Self.maxDuration,
@@ -146,8 +146,8 @@ struct TransitionsSheet: View {
         } label: {
             Label("Remove transition", systemImage: "trash")
         }
-        .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
-        .padding(.top, Modernist.Space.s1)
+        .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
+        .padding(.top, Reel.Space.s1)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -168,5 +168,5 @@ struct TransitionsSheet: View {
 
 // v0.8 Tier 5a — the `navigationBarTitleDisplayModeInline()` shim went with
 // the `NavigationStack` this sheet no longer wraps itself in. The sheet's
-// title is drawn by `ModernistSheetHeader`, so there is no system navigation
+// title is drawn by `ReelSheetHeader`, so there is no system navigation
 // bar left to configure.

@@ -27,17 +27,17 @@ struct ExportSheet: View {
     @State private var showShareSheet = false
     @State private var exporter: Exporter?
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Export") {
+            ReelSheetHeader("Export") {
                 Button {
                     cancelAndDismiss()
                 } label: {
                     Image(systemName: "xmark")
                 }
-                .buttonStyle(ModernistIconButtonStyle())
+                .buttonStyle(ReelIconButtonStyle())
                 // The header's square close button *is* the old
                 // cancellation-action toolbar button; it carried "Cancel"
                 // mid-render and "Close" otherwise, and VoiceOver keeps
@@ -46,14 +46,14 @@ struct ExportSheet: View {
             }
 
             ScrollView {
-                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
                     presetSection
                     renderSection
                     if stage == .completed, resultURL != nil {
                         shareButton
                     }
                 }
-                .padding(Modernist.Space.s4)
+                .padding(Reel.Space.s4)
             }
 
             footer
@@ -65,21 +65,21 @@ struct ExportSheet: View {
             }
         }
         #endif
-        .modernistSheet(Modernist.SheetDetent.export)
+        .reelSheet(Reel.SheetDetent.export)
     }
 
     // MARK: - Preset
 
     @ViewBuilder
     private var presetSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
-            Text("Preset").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Preset").reelLabel()
             LazyVGrid(
                 columns: Array(
-                    repeating: GridItem(.flexible(), spacing: Modernist.Space.s2),
-                    count: Modernist.presetGridColumns
+                    repeating: GridItem(.flexible(), spacing: Reel.Space.s2),
+                    count: Reel.presetGridColumns
                 ),
-                spacing: Modernist.Space.s2
+                spacing: Reel.Space.s2
             ) {
                 ForEach(ExportPreset.allCases) { preset in
                     presetCell(preset)
@@ -95,29 +95,29 @@ struct ExportSheet: View {
         Button {
             selectedPreset = preset
         } label: {
-            HStack(spacing: Modernist.Space.s3) {
+            HStack(spacing: Reel.Space.s3) {
                 aspectGlyph(preset.aspect, isSelected: isSelected)
-                VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+                VStack(alignment: .leading, spacing: Reel.Space.s1) {
                     Text(preset.label)
-                        .font(Modernist.Typography.bodyEmphasis)
+                        .font(Reel.Typography.bodyEmphasis)
                         .foregroundStyle(palette.text)
                     Text(preset.detail)
-                        .font(Modernist.Typography.caption)
+                        .font(Reel.Typography.caption)
                         .foregroundStyle(palette.textMuted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(Modernist.Space.s3)
+            .padding(Reel.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(minHeight: Modernist.minHitTarget)
+            .frame(minHeight: Reel.minHitTarget)
             // The app-wide selected-cell pattern: `accentTint` fill, 2pt
             // accent rule. Never an ad-hoc accent opacity.
             .background(isSelected ? palette.accentTint : palette.surface)
             .overlay(
-                RoundedRectangle(cornerRadius: Modernist.Radius.sm)
+                RoundedRectangle(cornerRadius: Reel.Radius.sm)
                     .strokeBorder(
                         isSelected ? palette.accent : Color.clear,
-                        lineWidth: Modernist.ruleWidth
+                        lineWidth: Reel.ruleWidth
                     )
             )
             .contentShape(Rectangle())
@@ -134,16 +134,16 @@ struct ExportSheet: View {
     @ViewBuilder
     private func aspectGlyph(_ aspect: CGSize, isSelected: Bool) -> some View {
         let longest = max(aspect.width, aspect.height)
-        let scale = Modernist.aspectGlyphExtent / max(longest, 1)
+        let scale = Reel.aspectGlyphExtent / max(longest, 1)
         Rectangle()
             .strokeBorder(
                 isSelected ? palette.accent : palette.divider,
-                lineWidth: Modernist.ruleWidth
+                lineWidth: Reel.ruleWidth
             )
             .frame(width: aspect.width * scale, height: aspect.height * scale)
             .frame(
-                width: Modernist.aspectGlyphExtent,
-                height: Modernist.aspectGlyphExtent
+                width: Reel.aspectGlyphExtent,
+                height: Reel.aspectGlyphExtent
             )
             .accessibilityHidden(true)
     }
@@ -152,29 +152,29 @@ struct ExportSheet: View {
 
     @ViewBuilder
     private var renderSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
-            Text("Render").modernistLabel()
-            VStack(alignment: .leading, spacing: Modernist.Space.s3) {
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Render").reelLabel()
+            VStack(alignment: .leading, spacing: Reel.Space.s3) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(stageTitle)
-                        .font(Modernist.Typography.bodyEmphasis)
+                        .font(Reel.Typography.bodyEmphasis)
                         .foregroundStyle(stage == .failed ? palette.accentText : palette.text)
                     Spacer()
                     Text(percentText)
-                        .font(Modernist.Typography.numeric)
+                        .font(Reel.Typography.numeric)
                         .foregroundStyle(palette.textMuted)
                 }
                 progressBar
                 Text(specLine)
-                    .font(Modernist.Typography.numeric)
+                    .font(Reel.Typography.numeric)
                     .foregroundStyle(palette.textMuted)
                 if stage == .failed, let errorMessage {
                     Text(errorMessage)
-                        .font(Modernist.Typography.caption)
+                        .font(Reel.Typography.caption)
                         .foregroundStyle(palette.accentText)
                 }
             }
-            .modernistCard()
+            .reelCard()
         }
         .accessibilityElement(children: .combine)
     }
@@ -191,7 +191,7 @@ struct ExportSheet: View {
                     .frame(width: geo.size.width * CGFloat(displayedFraction))
             }
         }
-        .frame(height: Modernist.progressBarHeight)
+        .frame(height: Reel.progressBarHeight)
         .accessibilityHidden(true)
     }
 
@@ -240,25 +240,25 @@ struct ExportSheet: View {
         } label: {
             Label("Share", systemImage: "square.and.arrow.up")
         }
-        .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+        .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
     }
 
     // MARK: - Footer
 
     @ViewBuilder
     private var footer: some View {
-        HStack(spacing: Modernist.Space.s2) {
+        HStack(spacing: Reel.Space.s2) {
             Button("Cancel") { cancelAndDismiss() }
-                .buttonStyle(ModernistGhostButtonStyle())
+                .buttonStyle(ReelGhostButtonStyle())
             Button("Export") { Task { await runExport() } }
-                .buttonStyle(ModernistPrimaryButtonStyle(isBlock: true))
+                .buttonStyle(ReelPrimaryButtonStyle(isBlock: true))
                 // The style already fades a disabled control to 45% — the
                 // v0.5 "disabled, never hidden" rule, unchanged.
                 .disabled(stage == .running)
         }
-        .padding(.horizontal, Modernist.Space.s4)
-        .padding(.vertical, Modernist.Space.s3)
-        .modernistRule(.top)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.vertical, Reel.Space.s3)
+        .reelRule(.top)
     }
 
     // MARK: - Actions
@@ -339,7 +339,7 @@ extension ExportSheet {
         }
 
         /// Frame proportion, for the grid's aspect glyph. Ratio only — the
-        /// glyph is scaled to `Modernist.aspectGlyphExtent`, so these are read
+        /// glyph is scaled to `Reel.aspectGlyphExtent`, so these are read
         /// as a shape, never as pixels.
         var aspect: CGSize {
             switch self {

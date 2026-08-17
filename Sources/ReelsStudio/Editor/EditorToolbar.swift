@@ -9,7 +9,7 @@ import Kadr
 ///
 /// v0.8 Tier 5b — every mode is now a **ruled modular row**: equal cells with
 /// 2pt dividers between them, icon over label and both flush left inside the
-/// cell (`ModernistToolbarButtonStyle`), a gap, then the row's one trailing
+/// cell (`ReelToolbarButtonStyle`), a gap, then the row's one trailing
 /// action. Export takes the accent fill; Delete takes the accent *outline*
 /// (Decision 4 — the accent already is red, so a second red fill can't read as
 /// danger). The `Mode` state machine and the
@@ -19,7 +19,7 @@ struct EditorToolbar: View {
 
     var store: ProjectStore
     @Environment(ToastCenter.self) private var toasts
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     // Root-row callbacks — owned by `EditorView` so it can present sheets.
     var onAddClip: () -> Void
@@ -65,16 +65,16 @@ struct EditorToolbar: View {
             }
         }
         .animation(.interactiveSpring(response: 0.35, dampingFraction: 0.78), value: mode)
-        .padding(.horizontal, Modernist.Space.s3)
-        .padding(.top, Modernist.Space.s2)
+        .padding(.horizontal, Reel.Space.s3)
+        .padding(.top, Reel.Space.s2)
         // The band's own chrome lives here rather than at the call site: this
         // view can read the studio palette from the environment, and
         // `EditorView` — which establishes that ground — cannot read it back
         // out for its own body.
-        .padding(.bottom, Modernist.toolbarBottomInset)
+        .padding(.bottom, Reel.toolbarBottomInset)
         .frame(maxWidth: .infinity)
         .background(palette.surface)
-        .modernistRule(.top)
+        .reelRule(.top)
     }
 
     // MARK: - Root row
@@ -103,7 +103,7 @@ struct EditorToolbar: View {
             // The design's gap between the modular group and the row's one
             // primary action. Padding rather than a spacer so Export stays an
             // equal cell instead of collapsing to its label.
-            .padding(.leading, Modernist.Space.s2)
+            .padding(.leading, Reel.Space.s2)
             // The style already dims a disabled cell to the repo's 45%; the
             // v0.5 rule is "disabled, never hidden", so nothing else to do.
             .disabled(store.project.clips.isEmpty)
@@ -233,7 +233,7 @@ struct EditorToolbar: View {
 
     @ViewBuilder
     private var multiSelectRow: some View {
-        HStack(spacing: Modernist.Space.s3) {
+        HStack(spacing: Reel.Space.s3) {
             cell(
                 Cell(
                     id: "cancel",
@@ -246,15 +246,15 @@ struct EditorToolbar: View {
             )
             // Two hit targets wide: this row's cells hug rather than divide
             // the row, so the count reads as the row's subject.
-            .frame(maxWidth: Modernist.minHitTarget * 2)
+            .frame(maxWidth: Reel.minHitTarget * 2)
 
             Text("\(store.selectedClipIDs.count) selected")
-                .font(Modernist.Typography.caption.weight(Modernist.Typography.emphasisWeight))
+                .font(Reel.Typography.caption.weight(Reel.Typography.emphasisWeight))
                 .foregroundStyle(palette.textMuted)
                 .accessibilityLabel("Selection")
                 .accessibilityValue("\(store.selectedClipIDs.count) clips selected")
 
-            Spacer(minLength: Modernist.Space.s2)
+            Spacer(minLength: Reel.Space.s2)
 
             cell(
                 Cell(
@@ -274,7 +274,7 @@ struct EditorToolbar: View {
                     }
                 }
             )
-            .frame(maxWidth: Modernist.minHitTarget * 2)
+            .frame(maxWidth: Reel.minHitTarget * 2)
             .disabled(store.selectedClipIDs.isEmpty)
         }
     }
@@ -343,12 +343,12 @@ struct EditorToolbar: View {
         Button(action: item.action) {
             cellLabel(systemImage: item.systemImage, label: item.label)
         }
-        .buttonStyle(ModernistToolbarButtonStyle(isProminent: isProminent))
+        .buttonStyle(ReelToolbarButtonStyle(isProminent: isProminent))
         .overlay(alignment: .trailing) {
             if isRuled {
                 Rectangle()
                     .fill(palette.divider)
-                    .frame(width: Modernist.ruleWidth)
+                    .frame(width: Reel.ruleWidth)
             }
         }
         // Default VoiceOver output combines the image's localized name and
@@ -372,8 +372,8 @@ struct EditorToolbar: View {
         Button(role: .destructive, action: action) {
             cellLabel(systemImage: "trash", label: "Delete")
         }
-        .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
-        .padding(.leading, Modernist.Space.s2)
+        .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
+        .padding(.leading, Reel.Space.s2)
         .accessibilityLabel("Delete")
         .accessibilityHint(hint)
         .help(hint)
@@ -383,14 +383,14 @@ struct EditorToolbar: View {
     /// fonts here beat the button style's outer font, which is what keeps the
     /// glyph a glyph and the label a caption in *both* styles.
     private func cellLabel(systemImage: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s1) {
+        VStack(alignment: .leading, spacing: Reel.Space.s1) {
             Image(systemName: systemImage)
                 .font(.system(
-                    size: Modernist.Typography.Glyph.sm,
-                    weight: Modernist.Typography.emphasisWeight
+                    size: Reel.Typography.Glyph.sm,
+                    weight: Reel.Typography.emphasisWeight
                 ))
             Text(LocalizedStringKey(label))
-                .font(Modernist.Typography.caption.weight(Modernist.Typography.emphasisWeight))
+                .font(Reel.Typography.caption.weight(Reel.Typography.emphasisWeight))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }

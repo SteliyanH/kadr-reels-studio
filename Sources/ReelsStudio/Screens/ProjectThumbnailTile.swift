@@ -10,7 +10,7 @@ import SwiftUI
 /// v0.8 Tier 5a: per the approved design, an *empty* project's tile is a 2pt
 /// dashed `divider` frame on `surface` — nothing else — and a tile that can
 /// name the project's length carries a `numeric` duration chip along its
-/// bottom edge. Real thumbnails still go through `.modernistGrayscale()`
+/// bottom edge. Real thumbnails still go through `.reelGrayscale()`
 /// (Decision 5).
 struct ProjectThumbnailTile: View {
 
@@ -20,7 +20,7 @@ struct ProjectThumbnailTile: View {
     /// `Image` = hit.
     @State private var image: Image?
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
         ZStack {
@@ -31,7 +31,7 @@ struct ProjectThumbnailTile: View {
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .modernistGrayscale()
+                    .reelGrayscale()
             } else {
                 // v0.8 Tier 3 — the placeholder was a hue-derived gradient
                 // keyed off the project id. A generated hue is the opposite
@@ -41,15 +41,15 @@ struct ProjectThumbnailTile: View {
                 palette.surface
                 if !document.clips.isEmpty {
                     Image(systemName: "film")
-                        .font(.system(size: Modernist.Typography.Glyph.sm, weight: Modernist.Typography.headingWeight))
+                        .font(.system(size: Reel.Typography.Glyph.sm, weight: Reel.Typography.headingWeight))
                         .foregroundStyle(palette.textMuted)
                 }
             }
         }
         .overlay(alignment: .bottom) { durationChip }
-        .clipShape(RoundedRectangle(cornerRadius: Modernist.Radius.md))
+        .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
         .overlay(
-            RoundedRectangle(cornerRadius: Modernist.Radius.md)
+            RoundedRectangle(cornerRadius: Reel.Radius.md)
                 .strokeBorder(palette.divider, style: frameStroke)
         )
         .onAppear { loadIfNeeded() }
@@ -63,10 +63,10 @@ struct ProjectThumbnailTile: View {
     private var durationChip: some View {
         if let label = ProjectThumbnailTile.durationLabel(for: document) {
             Text(label)
-                .font(Modernist.Typography.numeric)
+                .font(Reel.Typography.numeric)
                 .foregroundStyle(palette.onAccent)
                 .frame(maxWidth: .infinity)
-                .frame(height: Modernist.thumbnailChipHeight)
+                .frame(height: Reel.thumbnailChipHeight)
                 .background(palette.text)
                 .accessibilityHidden(true)
         }
@@ -78,10 +78,10 @@ struct ProjectThumbnailTile: View {
     private var frameStroke: StrokeStyle {
         document.clips.isEmpty
             ? StrokeStyle(
-                lineWidth: Modernist.ruleWidth,
-                dash: [Modernist.Space.s1, Modernist.Space.s1]
+                lineWidth: Reel.ruleWidth,
+                dash: [Reel.Space.s1, Reel.Space.s1]
               )
-            : StrokeStyle(lineWidth: Modernist.ruleWidth)
+            : StrokeStyle(lineWidth: Reel.ruleWidth)
     }
 
     // MARK: - Duration

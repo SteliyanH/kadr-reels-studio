@@ -21,7 +21,7 @@ struct AddCaptionsSheet: View {
     @Environment(ToastCenter.self) private var toasts
 
     @State private var selectedTab: Tab
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     init(store: ProjectStore) {
         self.store = store
@@ -36,19 +36,19 @@ struct AddCaptionsSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Captions") {
+            ReelSheetHeader("Captions") {
                 Button("Done") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
             }
 
-            ModernistSegmentedControl(
+            ReelSegmentedControl(
                 options: [
                     (Tab.edit, NSLocalizedString("Edit", comment: "Caption edit tab")),
                     (Tab.import, NSLocalizedString("Import", comment: "Caption import tab")),
                 ],
                 selection: $selectedTab
             )
-            .padding(Modernist.Space.s4)
+            .padding(Reel.Space.s4)
 
             switch selectedTab {
             case .edit:    editTab
@@ -57,7 +57,7 @@ struct AddCaptionsSheet: View {
         }
         // The design gives no fixed height for this one; the cue editor is a
         // full working surface, so it takes the full-height stop.
-        .modernistSheet(detents: [.large])
+        .reelSheet(detents: [.large])
     }
 
     // MARK: - Edit tab
@@ -76,7 +76,7 @@ struct AddCaptionsSheet: View {
                     store.setCaptions(newCaptions)
                 }
             )
-            .padding(.horizontal, Modernist.Space.s4)
+            .padding(.horizontal, Reel.Space.s4)
         }
     }
 
@@ -102,9 +102,9 @@ struct AddCaptionsSheet: View {
     @ViewBuilder
     private var importTab: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Modernist.Space.s6) {
-                VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-                    Text("Caption file").modernistLabel()
+            VStack(alignment: .leading, spacing: Reel.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s2) {
+                    Text("Caption file").reelLabel()
                     Button {
                         showImporter = true
                     } label: {
@@ -114,35 +114,35 @@ struct AddCaptionsSheet: View {
                             systemImage: "captions.bubble"
                         )
                     }
-                    .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+                    .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
                     if let pickedURL {
                         Text(pickedURL.pathExtension.uppercased())
-                            .font(Modernist.Typography.numeric)
+                            .font(Reel.Typography.numeric)
                             .foregroundStyle(palette.textMuted)
                     }
                 }
                 if lastImportedCount > 0 {
-                    VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-                        Text("Imported").modernistLabel()
+                    VStack(alignment: .leading, spacing: Reel.Space.s2) {
+                        Text("Imported").reelLabel()
                         Label(
                             importedCountText,
                             systemImage: "checkmark.circle"
                         )
-                        .font(Modernist.Typography.body)
+                        .font(Reel.Typography.body)
                         // Decision 4 — no success role; a confirmation is ink.
                         .foregroundStyle(palette.text)
                         Button("Switch to Edit") {
                             selectedTab = .edit
                         }
-                        .buttonStyle(ModernistGhostButtonStyle())
+                        .buttonStyle(ReelGhostButtonStyle())
                     }
                 }
                 Text("Supported formats: SRT, VTT, iTT, ASS, SSA. Cues append to the project's caption list — switch to Edit to retime / rename / delete.")
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(Modernist.Space.s4)
+            .padding(Reel.Space.s4)
         }
         .fileImporter(
             isPresented: $showImporter,
@@ -194,4 +194,4 @@ struct AddCaptionsSheet: View {
 }
 
 // v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
-// sheet no longer wraps itself in; `ModernistSheetHeader` draws the title.
+// sheet no longer wraps itself in; `ReelSheetHeader` draws the title.

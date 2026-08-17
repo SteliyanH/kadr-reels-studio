@@ -72,7 +72,7 @@ final class AddOverlaySheetTests: XCTestCase {
     // MARK: - Default text colour is content, not chrome
     //
     // The Modernist migration retinted the new-text-overlay default from
-    // `Color.white` to `Modernist.Neutral.n100`. That value goes into
+    // `Color.white` to `Reel.Neutral.n100`. That value goes into
     // `TextStyle(color:)` and is baked into exported pixels — overlay content,
     // not app chrome, and outside the two behaviour changes the migration was
     // allowed. These pin it so it can't drift back on the next sweep.
@@ -93,7 +93,7 @@ final class AddOverlaySheetTests: XCTestCase {
         // The exact regression: n100 is #F8F4F4, three channels short of white.
         XCTAssertNotEqual(
             hex(AddOverlaySheet.defaultTextColor),
-            hex(Modernist.Neutral.n100),
+            hex(Reel.Neutral.n100),
             "The text-overlay default was themed onto the neutral ramp. It is "
             + "content, not chrome — it must stay literal white."
         )
@@ -113,7 +113,7 @@ final class AddOverlaySheetTests: XCTestCase {
         // Sweep the whole track the way a drag does, at a deliberately awkward
         // pitch, and assert every value that could reach the store is on grid.
         for raw in stride(from: 24.0, through: 96.0, by: 0.37) {
-            let resolved = ModernistSlider.resolve(
+            let resolved = ReelSlider.resolve(
                 raw, range: 24...96, step: AddOverlaySheet.fontSizeStep
             )
             XCTAssertEqual(resolved.rounded(), resolved, accuracy: 1e-9)
@@ -125,19 +125,19 @@ final class AddOverlaySheetTests: XCTestCase {
     // MARK: - Colour swatches are one list, not two
 
     private var swatches: [AddOverlaySheet.TextColorSwatch] {
-        AddOverlaySheet.textColorSwatches(groundText: ModernistPalette.print.text)
+        AddOverlaySheet.textColorSwatches(groundText: ReelPalette.print.text)
     }
 
     func testSwatchListIsTheApprovedRampInOrder() {
         XCTAssertEqual(
             swatches.map(\.color),
             [
-                Modernist.Neutral.n100,
-                Modernist.Neutral.n500,
-                Modernist.Neutral.n900,
-                Modernist.Accent.a500,
-                Modernist.Accent.a700,
-                ModernistPalette.print.text,
+                Reel.Neutral.n100,
+                Reel.Neutral.n500,
+                Reel.Neutral.n900,
+                Reel.Accent.a500,
+                Reel.Accent.a700,
+                ReelPalette.print.text,
             ]
         )
     }
@@ -167,8 +167,8 @@ final class AddOverlaySheetTests: XCTestCase {
     }
 
     func testGroundTextSwatchTracksTheGroundItIsGiven() {
-        let studio = AddOverlaySheet.textColorSwatches(groundText: ModernistPalette.studio.text)
-        XCTAssertEqual(studio.last?.color, ModernistPalette.studio.text)
+        let studio = AddOverlaySheet.textColorSwatches(groundText: ReelPalette.studio.text)
+        XCTAssertEqual(studio.last?.color, ReelPalette.studio.text)
         XCTAssertEqual(studio.last?.name, swatches.last?.name)
     }
 }

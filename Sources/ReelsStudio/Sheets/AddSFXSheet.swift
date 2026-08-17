@@ -13,7 +13,7 @@ struct AddSFXSheet: View {
 
     var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     @State private var pickedURL: URL?
     @State private var showImporter = false
@@ -26,15 +26,15 @@ struct AddSFXSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Add SFX") {
+            ReelSheetHeader("Add SFX") {
                 Button("Cancel") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
                 Button("Add") { addTrack() }
-                    .buttonStyle(ModernistPrimaryButtonStyle())
+                    .buttonStyle(ReelPrimaryButtonStyle())
                     .disabled(pickedURL == nil)
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
                     soundSection
                     timingSection
                     Text(
@@ -43,11 +43,11 @@ struct AddSFXSheet: View {
                             compositionDurationSeconds
                         )
                     )
-                    .font(Modernist.Typography.caption)
+                    .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(Modernist.Space.s4)
+                .padding(Reel.Space.s4)
             }
         }
         .fileImporter(
@@ -59,13 +59,13 @@ struct AddSFXSheet: View {
                 pickedURL = urls.first
             }
         }
-        .modernistSheet(Modernist.SheetDetent.settings)
+        .reelSheet(Reel.SheetDetent.settings)
     }
 
     @ViewBuilder
     private var soundSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-            Text("Sound").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Sound").reelLabel()
             Button {
                 showImporter = true
             } label: {
@@ -74,21 +74,21 @@ struct AddSFXSheet: View {
                     systemImage: "speaker.wave.2"
                 )
             }
-            .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+            .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
         }
     }
 
     @ViewBuilder
     private var timingSection: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s3) {
-            Text("Timing").modernistLabel()
-            ModernistSlider(
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Timing").reelLabel()
+            ReelSlider(
                 label: NSLocalizedString("Pin at", comment: "SFX pin time"),
                 value: $pinTimeSeconds,
                 range: 0...max(compositionDurationSeconds, 0.1),
                 valueText: String(format: "%.1fs", pinTimeSeconds)
             )
-            ModernistSlider(
+            ReelSlider(
                 label: NSLocalizedString("Volume", comment: "SFX volume"),
                 value: $volume,
                 range: 0...1,

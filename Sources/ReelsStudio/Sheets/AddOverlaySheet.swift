@@ -25,18 +25,18 @@ struct AddOverlaySheet: View {
     @Environment(ToastCenter.self) private var toasts
 
     @State private var selectedTab: Tab = .text
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     enum Tab: Hashable { case text, image, sticker }
 
     var body: some View {
         VStack(spacing: 0) {
-            ModernistSheetHeader("Add Overlay") {
+            ReelSheetHeader("Add Overlay") {
                 Button("Cancel") { dismiss() }
-                    .buttonStyle(ModernistGhostButtonStyle())
+                    .buttonStyle(ReelGhostButtonStyle())
             }
 
-            ModernistSegmentedControl(
+            ReelSegmentedControl(
                 options: [
                     (Tab.text, NSLocalizedString("Text", comment: "Text overlay tab")),
                     (Tab.image, NSLocalizedString("Image", comment: "Image overlay tab")),
@@ -44,7 +44,7 @@ struct AddOverlaySheet: View {
                 ],
                 selection: $selectedTab
             )
-            .padding(Modernist.Space.s4)
+            .padding(Reel.Space.s4)
 
             switch selectedTab {
             case .text:    TextOverlayTab(store: store, dismiss: dismiss)
@@ -52,7 +52,7 @@ struct AddOverlaySheet: View {
             case .sticker: PhotoOverlayTab(store: store, kind: .sticker, dismiss: dismiss)
             }
         }
-        .modernistSheet(Modernist.SheetDetent.addOverlay)
+        .reelSheet(Reel.SheetDetent.addOverlay)
     }
 }
 
@@ -70,7 +70,7 @@ extension AddOverlaySheet {
     /// `TextStyle(color:)` and is baked into the user's exported pixels; the
     /// design system's grounds, surfaces and ramps stop at the app's own
     /// chrome. The Modernist migration briefly moved this to
-    /// `Modernist.Neutral.n100` (#F8F4F4), which silently changed the colour
+    /// `Reel.Neutral.n100` (#F8F4F4), which silently changed the colour
     /// of every text overlay authored after it. Literal on purpose.
     static let defaultTextColor: Color = .white
 
@@ -96,23 +96,23 @@ extension AddOverlaySheet {
     static func textColorSwatches(groundText: Color) -> [TextColorSwatch] {
         [
             TextColorSwatch(
-                color: Modernist.Neutral.n100,
+                color: Reel.Neutral.n100,
                 name: NSLocalizedString("Off-white", comment: "Overlay text color swatch")
             ),
             TextColorSwatch(
-                color: Modernist.Neutral.n500,
+                color: Reel.Neutral.n500,
                 name: NSLocalizedString("Mid gray", comment: "Overlay text color swatch")
             ),
             TextColorSwatch(
-                color: Modernist.Neutral.n900,
+                color: Reel.Neutral.n900,
                 name: NSLocalizedString("Near black", comment: "Overlay text color swatch")
             ),
             TextColorSwatch(
-                color: Modernist.Accent.a500,
+                color: Reel.Accent.a500,
                 name: NSLocalizedString("Accent, light", comment: "Overlay text color swatch")
             ),
             TextColorSwatch(
-                color: Modernist.Accent.a700,
+                color: Reel.Accent.a700,
                 name: NSLocalizedString("Accent, dark", comment: "Overlay text color swatch")
             ),
             TextColorSwatch(
@@ -143,7 +143,7 @@ private struct TextOverlayTab: View {
     @State private var color: Color = AddOverlaySheet.defaultTextColor
     @State private var weight: TextWeight = .bold
 
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     /// Square cells; the selected one takes a 2pt ring in `palette.text`. The
     /// eyedropper (`ColorPicker`) stays alongside so arbitrary colours are
@@ -172,18 +172,18 @@ private struct TextOverlayTab: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Modernist.Space.s6) {
+            VStack(alignment: .leading, spacing: Reel.Space.s6) {
                 canvasPreview
                 textRow
                 sizeRow
                 weightRow
                 colorRow
                 Button("Add Text Overlay") { addTextOverlay() }
-                    .buttonStyle(ModernistPrimaryButtonStyle(isBlock: true))
+                    .buttonStyle(ReelPrimaryButtonStyle(isBlock: true))
                     .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            .padding(.horizontal, Modernist.Space.s4)
-            .padding(.bottom, Modernist.Space.s6)
+            .padding(.horizontal, Reel.Space.s4)
+            .padding(.bottom, Reel.Space.s6)
         }
     }
 
@@ -203,26 +203,26 @@ private struct TextOverlayTab: View {
                 .foregroundStyle(color)
                 .minimumScaleFactor(0.1)
                 .lineLimit(3)
-                .padding(.horizontal, Modernist.Space.s2)
+                .padding(.horizontal, Reel.Space.s2)
                 .frame(maxWidth: .infinity)
                 .overlay(
                     Rectangle()
                         .strokeBorder(
                             palette.accent,
                             style: StrokeStyle(
-                                lineWidth: Modernist.ruleWidth,
-                                dash: [Modernist.Space.s1, Modernist.Space.s1]
+                                lineWidth: Reel.ruleWidth,
+                                dash: [Reel.Space.s1, Reel.Space.s1]
                             )
                         )
                 )
         }
         .frame(
-            width: Modernist.overlayCanvasWidth,
-            height: Modernist.overlayCanvasHeight
+            width: Reel.overlayCanvasWidth,
+            height: Reel.overlayCanvasHeight
         )
         .overlay(
             Rectangle()
-                .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
+                .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
         )
         .frame(maxWidth: .infinity)
         .accessibilityHidden(true)
@@ -230,24 +230,24 @@ private struct TextOverlayTab: View {
 
     @ViewBuilder
     private var textRow: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-            Text("Text").modernistLabel()
-            HStack(spacing: Modernist.Space.s3) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Text").reelLabel()
+            HStack(spacing: Reel.Space.s3) {
                 Image(systemName: "textformat")
                     .foregroundStyle(palette.textMuted)
                 TextField("Caption", text: $text, axis: .vertical)
-                    .font(Modernist.Typography.body)
+                    .font(Reel.Typography.body)
                     .lineLimit(1...3)
             }
-            .padding(Modernist.Space.s3)
-            .frame(minHeight: Modernist.minHitTarget)
+            .padding(Reel.Space.s3)
+            .frame(minHeight: Reel.minHitTarget)
             .background(palette.surfaceRaised)
         }
     }
 
     @ViewBuilder
     private var sizeRow: some View {
-        ModernistSlider(
+        ReelSlider(
             label: NSLocalizedString("Size", comment: "Overlay text size"),
             value: $fontSize,
             range: 24...96,
@@ -258,11 +258,11 @@ private struct TextOverlayTab: View {
 
     @ViewBuilder
     private var weightRow: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-            Text("Weight").modernistLabel()
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Weight").reelLabel()
             // Three cells, the active one accent-filled — which is exactly
             // what the segmented control already draws.
-            ModernistSegmentedControl(
+            ReelSegmentedControl(
                 options: TextWeight.allCases.map { ($0, $0.label) },
                 selection: $weight
             )
@@ -271,9 +271,9 @@ private struct TextOverlayTab: View {
 
     @ViewBuilder
     private var colorRow: some View {
-        VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-            Text("Color").modernistLabel()
-            HStack(spacing: Modernist.Space.s2) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Color").reelLabel()
+            HStack(spacing: Reel.Space.s2) {
                 ForEach(swatches, id: \.name) { swatch in
                     Button {
                         color = swatch.color
@@ -281,14 +281,14 @@ private struct TextOverlayTab: View {
                         Rectangle()
                             .fill(swatch.color)
                             .frame(
-                                width: Modernist.minHitTarget,
-                                height: Modernist.minHitTarget
+                                width: Reel.minHitTarget,
+                                height: Reel.minHitTarget
                             )
                             .overlay(
                                 Rectangle()
                                     .strokeBorder(
                                         color == swatch.color ? palette.text : palette.divider,
-                                        lineWidth: Modernist.ruleWidth
+                                        lineWidth: Reel.ruleWidth
                                     )
                             )
                             .contentShape(Rectangle())
@@ -354,7 +354,7 @@ private struct PhotoOverlayTab: View {
     let kind: Kind
     let dismiss: DismissAction
     @Environment(ToastCenter.self) private var toasts
-    @Environment(\.modernistPalette) private var palette
+    @Environment(\.reelPalette) private var palette
 
     @State private var picked: [PhotoPickerResult] = []
     @State private var pickedImage: PlatformImage?
@@ -364,9 +364,9 @@ private struct PhotoOverlayTab: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Modernist.Space.s6) {
-                VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-                    Text("Source").modernistLabel()
+            VStack(alignment: .leading, spacing: Reel.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s2) {
+                    Text("Source").reelLabel()
                     Button {
                         showPicker = true
                     } label: {
@@ -375,14 +375,14 @@ private struct PhotoOverlayTab: View {
                             systemImage: kind.iconSystemName
                         )
                     }
-                    .buttonStyle(ModernistSecondaryButtonStyle(isBlock: true))
+                    .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
                     if let pickedImage {
                         pickedThumbnail(pickedImage)
                     }
                 }
-                VStack(alignment: .leading, spacing: Modernist.Space.s2) {
-                    Text("Style").modernistLabel()
-                    ModernistSlider(
+                VStack(alignment: .leading, spacing: Reel.Space.s2) {
+                    Text("Style").reelLabel()
+                    ReelSlider(
                         label: NSLocalizedString("Opacity", comment: "Overlay opacity"),
                         value: $opacity,
                         range: 0...1,
@@ -392,11 +392,11 @@ private struct PhotoOverlayTab: View {
                 Button(String(format: NSLocalizedString("overlay.add.kind", comment: "Add <kind>"), kind.label)) {
                     addPhotoOverlay()
                 }
-                .buttonStyle(ModernistPrimaryButtonStyle(isBlock: true))
+                .buttonStyle(ReelPrimaryButtonStyle(isBlock: true))
                 .disabled(pickedImage == nil)
             }
-            .padding(.horizontal, Modernist.Space.s4)
-            .padding(.bottom, Modernist.Space.s6)
+            .padding(.horizontal, Reel.Space.s4)
+            .padding(.bottom, Reel.Space.s6)
         }
         .overlay {
             if isResolving { ProgressView().controlSize(.large) }
@@ -425,22 +425,22 @@ private struct PhotoOverlayTab: View {
         Image(uiImage: image)
             .resizable()
             .scaledToFit()
-            .frame(maxHeight: Modernist.overlayCanvasWidth)
-            .modernistGrayscale()
+            .frame(maxHeight: Reel.overlayCanvasWidth)
+            .reelGrayscale()
             .overlay(
                 Rectangle()
-                    .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
+                    .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
             )
             .accessibilityHidden(true)
         #else
         Image(nsImage: image)
             .resizable()
             .scaledToFit()
-            .frame(maxHeight: Modernist.overlayCanvasWidth)
-            .modernistGrayscale()
+            .frame(maxHeight: Reel.overlayCanvasWidth)
+            .reelGrayscale()
             .overlay(
                 Rectangle()
-                    .strokeBorder(palette.divider, lineWidth: Modernist.ruleWidth)
+                    .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
             )
             .accessibilityHidden(true)
         #endif
