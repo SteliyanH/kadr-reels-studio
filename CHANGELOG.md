@@ -66,7 +66,7 @@ The design migration originally stopped at the editor's edge. kadr-ui draws the 
 - **iOS 17 floor.** The design layer is orthogonal to v0.7.1's iOS 17 bump and adds no further platform requirement. Weight-trait font resolution works on iOS 16+, but the repo floor remains iOS 17.
 - **Font assets required.** Archivo static instances must be declared under `UIAppFonts` in `project.yml`. Fallback to system face at same size/weight means nothing breaks, but intended look requires the font.
 - **kadr-ui floor → 0.13.0.** The design initially stopped at the editor: kadr-ui 0.12 exposed no theming API, so the timeline kept the package's red playhead, kind-keyed clip hues and rounded corners while everything the app drew itself was migrated. kadr-ui 0.13 adds `KadrAppearance`, and the editor now lands whole. See *Editor completion*.
-- **Package.resolved stale.** Root `Package.resolved` points to kadr-ui 0.6.0 (SPM residue); `.xcodeproj` resolves 0.12.0 correctly. Technical debt; regenerate or accept as-is.
+- **Dependency versions live in the `.xcodeproj`.** `ReelsStudio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is the file to read. A root `Package.resolved` can appear as local residue if anyone runs `swift build` here — it is gitignored, is not part of the repo, and will be stale, because there is no `Package.swift` for SwiftPM to resolve against.
 
 ### Fixed
 
