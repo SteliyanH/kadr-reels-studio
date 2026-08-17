@@ -768,11 +768,13 @@ Out of scope (carried forward from v0.7+ or deferred):
 
 One production fix applied during Tier 2: the nested view `Body` renamed to `StyleBody` to avoid a `ButtonStyle` associated-type witness collision in several contexts (compile blocker, zero visual change). The change is internal to `ReelStyles.swift` and surfaces nowhere in call sites.
 
-### kadr-ui 0.12.0 as upstream RFC
+### kadr-ui 0.12.0 as upstream RFC — closed in 0.13.0
 
 The Modernist design exposed hard limits in kadr-ui's customization surface. kadr-ui ships with a zero-theming API by documented policy — the library is the reference implementation, not a theming substrate. Downstream apps are named the v1.0 reference consumer (this app).
 
-**Unreachable with kadr-ui 0.12.0:**
+> **Resolved.** kadr-ui 0.13.0 shipped `KadrAppearance` (issue #101, PR #103), and `EditorView.studioAppearance(accent:)` now maps `ReelPalette.studio` onto it. The list below is kept as the record of what the ceiling was, not as an open gap. What remains upstream is the eyedropper's tap-to-sample (#102).
+
+**Was unreachable with kadr-ui 0.12.0:**
 - Red playhead (currently system accent, but playhead should be white per decision 4).
 - Clip-cell background colours, hues, and radius-4 corners.
 - Waveform colour on audio rows.

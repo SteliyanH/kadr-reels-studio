@@ -23,8 +23,8 @@ Visual design system overhaul — zero feature changes, zero state mutations. Ev
 ### Changed — screen rebuilds (call-site migration)
 
 - **`ProjectListView`** (app chrome, `.reelSurface(.print)`) — project rows now show a 56pt square grayscale thumbnail + preset tag + metadata, with swipe-to-delete on existing behaviour; skipped-file section with warning glyph; empty state with one primary CTA and one ghost alternative.
-- **`EditorView`** (studio editor, `.reelSurface(.studio)`) — nav bar with project name, status line (auto-save dot, duration, time), ruled undo/redo pair, settings gear; stage remains colour-graded (no grayscale); toolbar with six root-mode cells and context-sensitive swap to clip/overlay/multi-select rows. The timeline itself is drawn by kadr-ui and is **not** migrated — see the ceiling note under *Compatibility*.
-- **Inspector areas** (studio ground) — segmented controls for the tab rows; all sliders adopt `ReelSlider`. Keyframe marks are drawn by kadr-ui and are **not** migrated.
+- **`EditorView`** (studio editor, `.reelSurface(.studio)`) — nav bar with project name, status line (auto-save dot, duration, time), ruled undo/redo pair, settings gear; stage remains colour-graded (no grayscale); toolbar with six root-mode cells and context-sensitive swap to clip/overlay/multi-select rows. The timeline is drawn by kadr-ui and is migrated via its 0.13 appearance surface — see *Editor completion* below.
+- **Inspector areas** (studio ground) — segmented controls for the tab rows; all sliders adopt `ReelSlider`. Keyframe marks are drawn by kadr-ui and are migrated via its appearance surface.
 - **Sheets** (print ground) — Export / Add Overlay / Layers / Settings now use a square-topped bottom sheet with a 36×5 grabber and `.reelElevation(.lg)`, via the shared `reelSheet(_:)` / `ReelSheetHeader` chrome. Accent ramp colour swatches replace iOS system colours. Buttons adopt `ReelPrimaryButtonStyle` / `ReelSecondaryButtonStyle`.
 
 ### Changed — accent picker constraint
@@ -36,24 +36,36 @@ Visual design system overhaul — zero feature changes, zero state mutations. Ev
 - **Delete buttons.** Changed from solid red fill to `ReelSecondaryButtonStyle` (accent outline + trash icon); red is already the accent, so a second red fill reads as undifferentiated.
 - **Auto-save status.** Neutral `n400` dot instead of green.
 - **Selection rings.** Already white 2pt in v0.7 (accidental alignment); the design codifies this.
-- **Keyframe marks and playhead.** Specified as accent diamonds and a white 2pt playhead respectively. **Neither is implemented** — both are drawn inside kadr-ui, which exposes no theming API. The playhead still renders red. See the ceiling note under *Compatibility*.
+- **Keyframe marks and playhead.** Accent diamonds and a white 2pt playhead. Both are drawn inside kadr-ui and land through its 0.13 appearance surface — see *Editor completion*.
 
 ### Changed — footage grayscale
 
 - **Applied to:** project row thumbnails (`ProjectThumbnailTile`) and the photo-picker thumbnails in `AddOverlaySheet`.
-- **Specified but not applied:** timeline filmstrips — drawn by kadr-ui, unreachable from this repo.
+- **Applied through kadr-ui 0.13:** timeline filmstrips, via `KadrAppearance.clipContentRendering = .grayscale`.
 - **Do not apply to:** preview stage (user is colour-grading there; grayscale would be a functional regression).
 
 ### Changed — corner radius everywhere
 
 - **Zero radius on all elements.** Sheets, buttons, cards, tags, sliders — none have rounded corners. Square is the Modernist baseline.
 
+### Editor completion — kadr-ui 0.13 appearance
+
+The design migration originally stopped at the editor's edge. kadr-ui draws the timeline, keyframe tracks, inspectors and preview, and at 0.12 it exposed no theming API — so the nav bar, toolbar, inspectors and sheets were Modernist while the timeline kept the package's own red playhead, kind-keyed clip hues and rounded corners. That gap is now closed upstream ([kadr-ui#101](https://github.com/SteliyanH/kadr-ui/issues/101), shipped in [v0.13.0](https://github.com/SteliyanH/kadr-ui/releases/tag/v0.13.0)).
+
+- **kadr-ui floor → 0.13.0** in `project.yml`.
+- **`EditorView.studioAppearance(accent:)`** maps `ReelPalette.studio` onto `KadrAppearance` and is set once beside the existing `.tint`: zero radius, no ambient shadow, white 2pt playhead and track playhead, `.uniform` mono clip cells, grayscale filmstrips, `Neutral.n400` waveform, accent diamonds for keyframe marks, `accentTint` overlay lane, and the Reel type scale for clip labels, timecodes and panel rows.
+- Built from `ReelPalette.studio` directly rather than `@Environment(\.reelPalette)` — the editor is pushed from the print-ground library, so an environment property on `EditorView` resolves against *that* ground. Same reason the nav bar is a child view.
+- The per-project accent is threaded in, so the package's internals and the app's own controls agree on one accent.
+- `.tint` is **kept**: the appearance covers what kadr-ui draws itself, while `.tint` still reaches SwiftUI's own controls inside those views.
+
+**Still not implemented, and still upstream:** the eyedropper needs tap-to-sample on `VideoPreview` ([kadr-ui#102](https://github.com/SteliyanH/kadr-ui/issues/102)). The transport band remains dropped as new behaviour.
+
 ### Compatibility
 
 - **No schema changes.** `ProjectDocument` v5 persists identically; `Project.accentColor` hex round-trip works as before.
 - **iOS 17 floor.** The design layer is orthogonal to v0.7.1's iOS 17 bump and adds no further platform requirement. Weight-trait font resolution works on iOS 16+, but the repo floor remains iOS 17.
 - **Font assets required.** Archivo static instances must be declared under `UIAppFonts` in `project.yml`. Fallback to system face at same size/weight means nothing breaks, but intended look requires the font.
-- **kadr-ui 0.12.0 ceiling.** The design exposed hard limits in kadr-ui's customization API (zero-theming by policy). Unreachable (kadr-ui keeps its own): the white 2pt playhead (renders red), clip-cell colours / radii / hues, waveform colour, keyframe marks, lane backgrounds, per-lane heights, unhiddable 14pt scrub strip, AVKit transport chrome, time ruler, filmstrips in clip cells. Proposed upstream RFC: EnvironmentValues-based appearance modifier through existing private helpers.
+- **kadr-ui floor → 0.13.0.** The design initially stopped at the editor: kadr-ui 0.12 exposed no theming API, so the timeline kept the package's red playhead, kind-keyed clip hues and rounded corners while everything the app drew itself was migrated. kadr-ui 0.13 adds `KadrAppearance`, and the editor now lands whole. See *Editor completion*.
 - **Package.resolved stale.** Root `Package.resolved` points to kadr-ui 0.6.0 (SPM residue); `.xcodeproj` resolves 0.12.0 correctly. Technical debt; regenerate or accept as-is.
 
 ### Fixed

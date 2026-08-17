@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreMedia
 import Kadr
+import KadrUI
 
 /// Root editor screen. Composes the approved design's six bands, top to
 /// bottom: nav bar · stage (``PreviewArea``) · timeline (``TimelineArea``) ·
@@ -99,14 +100,21 @@ struct EditorView: View {
             toolbarBand
         }
         // v0.4 Tier 3: per-project accent threads through every `.tint`-aware
-        // surface (inspector tabs, keyframe playhead, timeline selection
-        // ring). kadr-ui exposes no theming API, so this `.tint` is the app's
-        // only channel into that package's internals — v0.8 Tier 2 keeps it
-        // and retargets the fallback from the system tint to the studio
-        // ground's accent token. It sits *inside* `.reelSurface(.studio)`
-        // (which sets its own `.tint`) so the nearer value wins for the
-        // subtree. Do not reorder these two.
+        // surface. v0.8 Tier 2 retargeted the fallback from the system tint to
+        // the studio ground's accent token. Still needed after v0.8.1: the
+        // appearance below covers what kadr-ui draws itself, while `.tint`
+        // still reaches SwiftUI's own controls inside those views. It sits
+        // *inside* `.reelSurface(.studio)` (which sets its own `.tint`) so the
+        // nearer value wins for the subtree. Do not reorder these two.
         .tint(store.project.accentColor ?? ReelPalette.studio.accent)
+        // v0.8.1 — kadr-ui 0.13's appearance surface. Until it existed the
+        // timeline, keyframe tracks and inspectors drew with the package's own
+        // red playhead, kind-keyed clip hues and rounded corners, and `.tint`
+        // above was the only channel in — so the editor rendered half-migrated.
+        // Set here, alongside the tint, for the same subtree.
+        .kadrAppearance(EditorView.studioAppearance(
+            accent: store.project.accentColor ?? ReelPalette.studio.accent
+        ))
         .addClipFlow(isPresented: $showPhotoPicker, store: store)
         .sheet(isPresented: $showOverlaySheet) {
             AddOverlaySheet(store: store)
@@ -390,6 +398,55 @@ extension EditorView {
 }
 
 // MARK: - Nav bar
+
+extension EditorView {
+
+    /// The studio ground expressed as kadr-ui appearance tokens.
+    ///
+    /// Built from `ReelPalette.studio` directly rather than from
+    /// `@Environment(\.reelPalette)`, for the same reason the nav bar is a child
+    /// view: the editor is pushed from the print-ground library, so an
+    /// `@Environment` property on this struct resolves against *that* ground,
+    /// not the one `.reelSurface(.studio)` installs for the subtree.
+    ///
+    /// `accent` is threaded in rather than read from the palette because the
+    /// project may override it — the same value the `.tint` above uses, so the
+    /// package's internals and the app's own controls agree.
+    static func studioAppearance(accent: Color) -> KadrAppearance {
+        let palette = ReelPalette.studio
+        return KadrAppearance(
+            // Modernist is square and flat: zero radius, no ambient shadow.
+            cornerRadius: Reel.Radius.md,
+            laneCornerRadius: Reel.Radius.md,
+            strokeWidth: Reel.ruleWidth,
+            elevation: 0,
+            // White reads on any frame and stops competing with the accent —
+            // the one place the design deviates from "red = accent".
+            playhead: palette.text,
+            selectionRing: palette.text,
+            trackBackground: palette.text.opacity(0.06),
+            laneBackground: palette.surface,
+            placeholder: palette.surfaceRaised,
+            waveform: Reel.Neutral.n400,
+            overlayLaneFill: accent.opacity(0.18),
+            // Authored values are accent; a diamond reads as "keyframe".
+            keyframeMark: accent,
+            keyframeMarkShape: .diamond,
+            trackPlayhead: palette.text,
+            // Mono: the cell's filmstrip and label carry the meaning the hue
+            // used to. Footage goes grayscale here — but never on the stage,
+            // where the user is grading colour.
+            clipColors: .uniform(palette.surfaceRaised),
+            clipContentRendering: .grayscale,
+            clipLabelFont: Reel.Typography.caption,
+            timecodeFont: Reel.Typography.numeric,
+            trackLabelFont: Reel.Typography.caption,
+            panelTitleFont: Reel.Typography.h5,
+            panelSectionFont: Reel.Typography.bodyEmphasis,
+            panelValueFont: Reel.Typography.numeric
+        )
+    }
+}
 
 /// The editor's own navigation band: back · two-line title block ·
 /// undo/redo cell group · settings.
