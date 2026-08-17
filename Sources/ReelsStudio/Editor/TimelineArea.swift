@@ -12,10 +12,13 @@ import KadrUI
 /// **What the app can style here.** The band's ground, its padding, the tick
 /// row, and the four layout parameters `TimelineView` exposes
 /// (`laneHeight` / `laneSpacing` / `showAudioWaveforms` / `showLaneLabels`).
-/// Everything the component draws inside itself — clip cells, their fills and
-/// 4pt corners, the red playhead, lane backgrounds, the waveform's colour —
-/// is a private literal upstream with no theming API. Those are reported as
-/// gaps, not worked around.
+///
+/// v0.8.1 — everything the component draws inside itself (clip cells and their
+/// fills, corner radii, the playhead, lane backgrounds, the waveform, keyframe
+/// marks) was a private literal upstream until kadr-ui 0.13 added
+/// `KadrAppearance`. It is now set once in ``EditorView/studioAppearance(accent:)``
+/// and inherited here through the environment — so this view sets layout, and
+/// the appearance sets everything else.
 struct TimelineArea: View {
 
     var store: ProjectStore
