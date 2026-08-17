@@ -37,11 +37,19 @@ targets:
     type: application
     platform: iOS
     sources:
+      # Globs the whole tree; .ttf files under Resources/Fonts are inferred as
+      # resources and land flat at the .app root, same as en.lproj's strings.
       - path: Sources/ReelsStudio
     info:
       path: Sources/ReelsStudio/Info.plist
       properties:
         UILaunchScreen: {}
+        # Archivo 400/600/800. Copy Bundle Resources flattens, so these are
+        # bundle-root relative — no Fonts/ prefix.
+        UIAppFonts:
+          - Archivo-Regular.ttf
+          - Archivo-SemiBold.ttf
+          - Archivo-ExtraBold.ttf
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSPhotoLibraryUsageDescription: "Reels Studio reads your photos and videos so you can import them as clips."

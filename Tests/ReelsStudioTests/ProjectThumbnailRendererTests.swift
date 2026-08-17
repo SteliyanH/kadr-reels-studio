@@ -1,5 +1,6 @@
 import XCTest
 import SwiftUI
+import ViewInspector
 @testable import ReelsStudio
 
 /// v0.7 Tier 5 — tests for the cache-keying primitives and rendering
@@ -65,19 +66,76 @@ final class ProjectThumbnailRendererTests: XCTestCase {
         XCTAssertNil(ProjectThumbnailRenderer.cachedURL(for: doc))
     }
 
-    // MARK: - Placeholder gradient (deterministic)
+    // MARK: - Empty-project placeholder
 
-    func testPlaceholderGradientIsDeterministicPerID() {
-        // The hash → hue mapping is the *visual* identity of a placeholder.
-        // Re-deriving from the same id must produce the same gradient (so
-        // an empty project doesn't reflow visually on every redraw). We
-        // can't unwrap a LinearGradient's internals through SwiftUI's
-        // public API, but we can pin "calling twice doesn't crash and
-        // returns the same shape" via a smoke construction.
-        let id = UUID()
-        _ = ProjectThumbnailTile.placeholderGradient(for: id)
-        _ = ProjectThumbnailTile.placeholderGradient(for: id)
-        // No crash + no XCTFail = test passes. The visual determinism is
-        // verifiable by hand in the simulator.
+    /// v0.8 Tier 5a retired `placeholderGradient(for:)` — the Wave-2 shim
+    /// that survived only to keep this file compiling once the hue-derived
+    /// gradient collapsed into the mono scheme. What actually needs pinning
+    /// now is that the tile *builds* for a project with no clips, since that
+    /// is the branch the approved design gives its own treatment: a 2pt
+    /// dashed `divider` frame on `surface`, with no glyph and no chip.
+    func testTileBodyConstructsForEmptyProject() throws {
+        let doc = ProjectDocument(name: "Empty")
+        XCTAssertTrue(doc.clips.isEmpty)
+        let tile = ProjectThumbnailTile(document: doc)
+        XCTAssertNoThrow(try tile.inspect())
+    }
+
+    func testTileBodyConstructsForProjectWithClips() throws {
+        let doc = ProjectDocument(
+            name: "Has clips",
+            clips: [.title(TitleSequenceData(text: "Hi", durationSeconds: 2))]
+        )
+        let tile = ProjectThumbnailTile(document: doc)
+        XCTAssertNoThrow(try tile.inspect())
+    }
+
+    // MARK: - Duration chip
+
+    func testDurationLabelIsNilForEmptyProject() {
+        let doc = ProjectDocument(name: "Empty")
+        XCTAssertNil(ProjectThumbnailTile.durationLabel(for: doc))
+    }
+
+    func testDurationLabelFormatsMinutesAndSeconds() {
+        let doc = ProjectDocument(
+            name: "Six seconds",
+            clips: [
+                .title(TitleSequenceData(text: "a", durationSeconds: 2)),
+                .title(TitleSequenceData(text: "b", durationSeconds: 4)),
+            ]
+        )
+        XCTAssertEqual(ProjectThumbnailTile.durationLabel(for: doc), "0:06")
+    }
+
+    func testDurationLabelPadsSecondsPastAMinute() {
+        let doc = ProjectDocument(
+            name: "Long",
+            clips: [.title(TitleSequenceData(text: "a", durationSeconds: 65))]
+        )
+        XCTAssertEqual(ProjectThumbnailTile.durationLabel(for: doc), "1:05")
+    }
+
+    func testDurationSkipsTransitionsAndDescendsIntoTracks() {
+        // Transitions overlap their neighbours in kadr, so counting them
+        // would over-report; a `Track {}` block's children do count.
+        let clips: [ProjectClip] = [
+            .transition(TransitionData(kind: .fade, durationSeconds: 5)),
+            .track(TrackData(clips: [
+                .title(TitleSequenceData(text: "nested", durationSeconds: 3)),
+            ])),
+        ]
+        XCTAssertEqual(ProjectThumbnailTile.durationSeconds(of: clips), 3, accuracy: 0.0001)
+    }
+
+    func testUntrimmedVideoClipContributesNoDuration() {
+        // A video clip's length lives in the asset until it has been
+        // trimmed; a list row must not open an asset to find out.
+        let clips: [ProjectClip] = [
+            .video(VideoClipData(url: URL(fileURLWithPath: "/tmp/x.mov"))),
+        ]
+        XCTAssertEqual(ProjectThumbnailTile.durationSeconds(of: clips), 0, accuracy: 0.0001)
     }
 }
+
+extension ProjectThumbnailTile: Inspectable {}

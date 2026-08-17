@@ -16,6 +16,7 @@ struct TransitionsSheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.reelPalette) private var palette
 
     @State private var selectedKind: TransitionKind
     @State private var durationSeconds: Double
@@ -40,42 +41,44 @@ struct TransitionsSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ReelSheetHeader("Transition") {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(ReelGhostButtonStyle())
+                Button("Apply") {
+                    apply()
+                    dismiss()
+                }
+                .buttonStyle(ReelPrimaryButtonStyle())
+            }
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
                     kindGrid
                     durationSection
                     if existingTransitionPresent {
                         removeButton
                     }
                 }
-                .padding()
-            }
-            .navigationTitle("Transition")
-            .navigationBarTitleDisplayModeInline()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
-                        apply()
-                        dismiss()
-                    }
-                }
+                .padding(Reel.Space.s4)
             }
         }
+        .reelSheet(Reel.SheetDetent.settings)
     }
 
     // MARK: - Subviews
 
     @ViewBuilder
     private var kindGrid: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
             Text("Kind")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 110, maximum: 160), spacing: 12)], spacing: 12) {
+                .reelLabel()
+            LazyVGrid(
+                columns: Array(
+                    repeating: GridItem(.flexible(), spacing: Reel.Space.s2),
+                    count: Reel.presetGridColumns
+                ),
+                spacing: Reel.Space.s2
+            ) {
                 ForEach(TransitionKind.allCases, id: \.self) { kind in
                     transitionTile(kind: kind)
                 }
@@ -89,22 +92,25 @@ struct TransitionsSheet: View {
         Button {
             selectedKind = kind
         } label: {
-            VStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: Reel.Space.s2) {
                 Image(systemName: kind.systemImage)
-                    .font(.system(size: 32))
+                    .font(.system(size: Reel.Typography.Glyph.md, weight: Reel.Typography.headingWeight))
                 Text(kind.displayLabel)
-                    .font(.caption)
+                    .font(Reel.Typography.bodyEmphasis)
             }
-            .frame(maxWidth: .infinity, minHeight: 80)
-            .padding(8)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isSelected ? Color.accentColor.opacity(0.2) : Color(.secondarySystemBackground))
-            )
+            // Icon over label, both flush left — the system's alignment rule.
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: Reel.minHitTarget + Reel.Space.s6)
+            .padding(Reel.Space.s3)
+            // v0.8 Tier 3 — the selected-cell pattern for the whole app: a
+            // named `accentTint` fill (never an ad-hoc accent opacity) and a
+            // 2pt accent rule.
+            .background(isSelected ? palette.accentTint : palette.surface)
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isSelected ? Color.accentColor : .clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: Reel.Radius.md)
+                    .stroke(isSelected ? palette.accent : .clear, lineWidth: Reel.ruleWidth)
             )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -113,32 +119,36 @@ struct TransitionsSheet: View {
 
     @ViewBuilder
     private var durationSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Duration")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(String(format: "%.2fs", durationSeconds))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            Slider(value: $durationSeconds, in: Self.minDuration...Self.maxDuration)
-                .accessibilityValue(String(format: "%.2f seconds", durationSeconds))
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Duration")
+                .reelLabel()
+            ReelSlider(
+                label: NSLocalizedString("Duration", comment: "Transition duration"),
+                value: $durationSeconds,
+                range: Self.minDuration...Self.maxDuration,
+                valueText: String(format: "%.2fs", durationSeconds)
+            )
+            // The v0.7 spoken value survives the control swap verbatim: the
+            // slider's own combined value would read "0.50s", and VoiceOver
+            // has always said "0.50 seconds" here.
+            .accessibilityValue(String(format: "%.2f seconds", durationSeconds))
         }
     }
 
     @ViewBuilder
     private var removeButton: some View {
+        // Decision 4 — the accent already *is* red, so destructive is the
+        // accent-outlined secondary style plus the trash glyph, never a
+        // second red fill.
         Button(role: .destructive) {
             store.removeTransition(afterClipID: clipID)
             dismiss()
         } label: {
             Label("Remove transition", systemImage: "trash")
-                .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
-        .padding(.top, 4)
+        .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
+        .padding(.top, Reel.Space.s1)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - State
@@ -156,15 +166,7 @@ struct TransitionsSheet: View {
     }
 }
 
-/// `.navigationBarTitleDisplayMode(.inline)` is iOS-only. Same shim pattern
-/// the editor uses.
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
-    }
-}
+// v0.8 Tier 5a — the `navigationBarTitleDisplayModeInline()` shim went with
+// the `NavigationStack` this sheet no longer wraps itself in. The sheet's
+// title is drawn by `ReelSheetHeader`, so there is no system navigation
+// bar left to configure.

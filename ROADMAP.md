@@ -99,18 +99,26 @@ Paired with **kadr v0.12.0** + **kadr-ui v0.10.2** which shipped during the cycl
 
 Platform modernization, not features. Raises the deployment floor to **iOS 17** and migrates the five app stores (`ProjectStore`, `ProjectLibrary`, `AppSettings`, `ToastCenter`, `LibraryHost`) from `ObservableObject` to the `@Observable` macro — the payoff of the coordinated ecosystem iOS 17 move (kadr v0.15 / kadr-ui v0.12 / kadr-captions v0.8 / kadr-photos v0.7 / this). Auto-save debounce rebuilt on structured concurrency (no Combine); the removed kadr `filterAnimation(at:)` call migrated to the keyed API. 291 unit + 5 UI tests pass. No user-facing change; v0.8 features are unaffected.
 
+## Modernist design-system migration
+
+**Status:** ✓ Implemented (Tiers 1–5 + fixes landed on feature/modernist-design-system)
+
+Design-only cycle — zero features, zero state mutations. Visual overhaul of every app screen via a published token layer: `ReelTheme.swift` (two palettes for print chrome + dark studio ground) + `ReelStyles.swift` (reusable component styles), Archivo variable font (400/600/800 instanced), constrained accent picker, and a complete call-site migration across ~25 view files. Five binding decisions shape the system: two grounds one palette, red accent, constrained accent control, collapsed semantic colours, and grayscale footage everywhere except the preview stage. Known gaps include kadr-ui 0.12.0 ceiling on customization (zero-theming API by design policy), swipe-back regression fixed via UIGestureRecognizerDelegate, and Dynamic Type audit deferred to v1.0.
+
+See `DESIGN.md` § Modernist design-system migration for the full RFC.
+
 ## v0.8.0 — Platform polish + import/export *(planned)*
 
-Last cycle before v1.0 App Store submission. No new AI features — auto-captions, person cutout, and Vision-based smart crop all moved to kadr-pro per the [Kadr Pro scope](https://github.com/SteliyanH/kadr/blob/main/ROADMAP.md#kadr-pro). What's left to ship in the OSS app:
+Last cycle before v1.0 App Store submission. **iOS 17 floor and `@Observable` migration shipped in v0.7.1.** No new AI features — auto-captions, person cutout, and Vision-based smart crop all moved to kadr-pro per the [Kadr Pro scope](https://github.com/SteliyanH/kadr/blob/main/ROADMAP.md#kadr-pro). What's left to ship in the OSS app:
 
-1. **iOS 17 floor bump + `@Observable` migration.** Drop iOS 16 support; migrate `ProjectStore` / `ProjectLibrary` / `AppSettings` / `LibraryHost` from `ObservableObject` to `@Observable`. Pairs with **kadr-ui v0.12** which makes the same migration.
-2. **iPad polish.** Split-view layout (project list on the leading column, editor on the trailing), hardware-keyboard shortcuts (⌘N new project, ⌘Z undo / ⇧⌘Z redo, ⌘. cancel export, space play/pause), Apple Pencil scrubbing with hover state.
-3. **Project import/export.** `.kadr` documents — zipped bundle of `ProjectDocument.json` + every embedded image / LUT / caption file referenced. SwiftUI `.fileExporter` / `.fileImporter` on the project list. Enables "share to TestFlight tester" without screen-recording the editor.
-4. **PiP export preview.** While `Exporter.run()` is in flight, render the in-progress frame in a corner-pinned overlay so the user can continue editing the next project. Pairs with kadr v0.13's `AVAssetImageGenerator` reuse (perf cycle).
-5. **Sentry DSN wiring + crash reporting end-to-end.** v0.6 Tier 8 scaffolded `CrashReporter.startIfConfigured()` but never connected to a real DSN. Wire the `SentryDSN` Info.plist entry via fastlane, validate the trace-sample-rate plumbing, ship a "Help → Send diagnostic info" affordance.
+1. **iPad polish.** Split-view layout (project list on the leading column, editor on the trailing), hardware-keyboard shortcuts (⌘N new project, ⌘Z undo / ⇧⌘Z redo, ⌘. cancel export, space play/pause), Apple Pencil scrubbing with hover state.
+2. **Project import/export.** `.kadr` documents — zipped bundle of `ProjectDocument.json` + every embedded image / LUT / caption file referenced. SwiftUI `.fileExporter` / `.fileImporter` on the project list. Enables "share to TestFlight tester" without screen-recording the editor.
+3. **PiP export preview.** While `Exporter.run()` is in flight, render the in-progress frame in a corner-pinned overlay so the user can continue editing the next project. Pairs with kadr v0.13's `AVAssetImageGenerator` reuse (perf cycle).
+4. **Sentry DSN wiring + crash reporting end-to-end.** v0.6 Tier 8 scaffolded `CrashReporter.startIfConfigured()` but never connected to a real DSN. Wire the `SentryDSN` Info.plist entry via fastlane, validate the trace-sample-rate plumbing, ship a "Help → Send diagnostic info" affordance.
+5. **kadr-ui styling RFC** *(upstream, blocks full editor fidelity).* Modernist design cycle exposed hard limits in kadr-ui v0.12.0's zero-theming API. Propose and implement an `EnvironmentValues`-based appearance modifier through existing private helpers, allowing downstream apps to customize playhead / clip-cell colours, lane heights, and waveform rendering. Track as a separate kadr-ui RFC; depends on community demand.
 6. **Release prep + tag v0.8.0.**
 
-Six tiers. Pairs with **kadr v0.13** (engine perf) + **kadr-ui v0.12** (`@Observable` migration), both of which must merge first.
+Six tiers. Pairs with **kadr v0.13** (engine perf); v0.8 doesn't depend on kadr-ui v0.12 anymore (v0.7.1 already uses it).
 
 ## v1.0.0 — App Store *(planned)*
 

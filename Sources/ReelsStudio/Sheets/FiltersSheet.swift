@@ -7,33 +7,33 @@ import Kadr
 /// kadr exposes. Reorder is deferred — list order matches kadr's render
 /// order (declaration order), but the v0.4 surface is tap-to-select, so
 /// drag-to-reorder isn't a primitive yet.
+///
+/// v0.8 Tier 5a wears the app's sheet chrome: grabber, `h3` title, square
+/// corners, print ground. Behaviour is v0.4's, untouched.
 struct FiltersSheet: View {
 
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.reelPalette) private var palette
 
     /// Drives the Chroma Key sub-sheet. Bound to a Bool because the sheet
     /// itself is parameterless (it reads from `clipID` directly). v0.7 Tier 4.
     @State private var showChromaKey = false
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ReelSheetHeader("Filters") {
+                addMenu
+                Button("Done") { dismiss() }
+                    .buttonStyle(ReelGhostButtonStyle())
+            }
             content
-                .navigationTitle("Filters")
-                .navigationBarTitleDisplayModeInline()
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { dismiss() }
-                    }
-                    ToolbarItem(placement: .topBarLeading) {
-                        addMenu
-                    }
-                }
-                .sheet(isPresented: $showChromaKey) {
-                    ChromaKeySheet(store: store, clipID: clipID)
-                }
         }
+        .sheet(isPresented: $showChromaKey) {
+            ChromaKeySheet(store: store, clipID: clipID)
+        }
+        .reelSheet(detents: [.fraction(Reel.SheetDetent.layers), .large])
     }
 
     // MARK: - Body
@@ -44,6 +44,9 @@ struct FiltersSheet: View {
             if clip.filters.isEmpty {
                 emptyState
             } else {
+                // Still a `List`: swipe-to-delete is a `List` primitive, so
+                // the design's row block is reached by stripping the list's
+                // chrome rather than by dropping the container.
                 List {
                     ForEach(Array(clip.filters.enumerated()), id: \.offset) { index, filter in
                         FilterRow(
@@ -52,6 +55,9 @@ struct FiltersSheet: View {
                                 store.applyFilterIntensity(id: clipID, filterIndex: index, value: value)
                             }
                         )
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                     .onDelete { offsets in
                         // Walk from highest to lowest so earlier deletes don't
@@ -61,14 +67,16 @@ struct FiltersSheet: View {
                         }
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         } else {
-            VStack(spacing: 12) {
+            VStack(spacing: Reel.Space.s3) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: Reel.Typography.Glyph.lg, weight: Reel.Typography.headingWeight))
+                    .foregroundStyle(palette.textMuted)
                 Text("Clip not available")
-                    .font(.headline)
+                    .font(Reel.Typography.h5)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -76,17 +84,19 @@ struct FiltersSheet: View {
 
     @ViewBuilder
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Reel.Space.s3) {
             Image(systemName: "camera.filters")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
+                .font(.system(size: Reel.Typography.Glyph.xl, weight: Reel.Typography.headingWeight))
+                .foregroundStyle(palette.textMuted)
             Text("No filters")
-                .font(.headline)
+                .font(Reel.Typography.h5)
             Text("Add a filter from the menu above.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(Reel.Typography.body)
+                .foregroundStyle(palette.textMuted)
+                .frame(maxWidth: Reel.emptyStateMeasure)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(Reel.Space.s4)
     }
 
     // MARK: - Add menu
@@ -111,7 +121,15 @@ struct FiltersSheet: View {
             Button("Chroma Key…") { showChromaKey = true }
         } label: {
             Image(systemName: "plus")
+                .frame(width: Reel.minHitTarget, height: Reel.minHitTarget)
+                .background(palette.surface)
+                .contentShape(Rectangle())
         }
+        // Bare "plus" SF Symbol carried no VoiceOver name at all before this
+        // — the header's other button (Done) is a real word, so the menu was
+        // the one silent control in the sheet's chrome. Reuses the existing
+        // "Add Filter" key (the same phrase the undo stack already shows).
+        .accessibilityLabel("Add Filter")
     }
 
     private func videoClip(matching id: ClipID) -> VideoClip? {
@@ -125,26 +143,31 @@ private struct FilterRow: View {
     let filter: Filter
     let onIntensityChange: (Double) -> Void
 
+    @Environment(\.reelPalette) private var palette
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(label)
-                    .font(.callout)
-                Spacer()
-                if let scalar = scalarValue {
-                    Text(String(format: "%.2f", scalar))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-            }
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
             if let scalar = scalarValue, let range = scalarRange {
-                Slider(
+                // The slider ships its own label + readout row, which is
+                // exactly the "Scale … 1.24×" shape the design asks for — so
+                // the separate title line the `Form` version needed is gone.
+                ReelSlider(
+                    label: label,
                     value: Binding(get: { scalar }, set: { onIntensityChange($0) }),
-                    in: range
+                    range: range,
+                    valueText: String(format: "%.2f", scalar)
                 )
+            } else {
+                Text(label)
+                    .font(Reel.Typography.bodyEmphasis)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.vertical, Reel.Space.s2)
+        .frame(minHeight: Reel.minHitTarget)
+        .background(palette.surface)
+        .reelRule()
     }
 
     private var label: String {
@@ -194,16 +217,5 @@ private struct FilterRow: View {
         case .zoomBlur:                        return 0.0 ... 100.0
         case .mono, .lut, .chromaKey:          return nil
         }
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
     }
 }

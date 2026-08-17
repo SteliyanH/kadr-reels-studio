@@ -6,10 +6,14 @@ import Kadr
 /// Sheet for adding a time-pinned sound effect. User picks an audio file, drags a
 /// slider to set the composition time at which the SFX fires, taps **Add** →
 /// appends an `AudioTrack` pinned via `.at(time:)`.
+///
+/// v0.8 Tier 5a wears the app's sheet chrome and the design's block layout;
+/// the import, the pinning and the mutation are v0.3's.
 struct AddSFXSheet: View {
 
     var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.reelPalette) private var palette
 
     @State private var pickedURL: URL?
     @State private var showImporter = false
@@ -21,60 +25,75 @@ struct AddSFXSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Sound") {
-                    Button {
-                        showImporter = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "speaker.wave.2")
-                            Text(pickedURL?.lastPathComponent ?? "Pick audio file")
-                        }
-                    }
-                }
-                Section("Timing") {
-                    HStack {
-                        Text("Pin at")
-                        Slider(value: $pinTimeSeconds, in: 0...max(compositionDurationSeconds, 0.1))
-                        Text(String(format: "%.1fs", pinTimeSeconds))
-                            .font(.caption.monospacedDigit())
-                            .frame(width: 48, alignment: .trailing)
-                    }
-                    HStack {
-                        Text("Volume")
-                        Slider(value: $volume, in: 0...1)
-                        Text(String(format: "%.2f", volume))
-                            .font(.caption.monospacedDigit())
-                            .frame(width: 40, alignment: .trailing)
-                    }
-                }
-                Section {
-                    Text("SFX play once at the pinned time and don't loop. Total composition is \(String(format: "%.1fs", compositionDurationSeconds)).")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+        VStack(spacing: 0) {
+            ReelSheetHeader("Add SFX") {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(ReelGhostButtonStyle())
+                Button("Add") { addTrack() }
+                    .buttonStyle(ReelPrimaryButtonStyle())
+                    .disabled(pickedURL == nil)
             }
-            .navigationTitle("Add SFX")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+            ScrollView {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
+                    soundSection
+                    timingSection
+                    Text(
+                        String(
+                            format: NSLocalizedString("sfx.composition.footer", comment: "SFX footer"),
+                            compositionDurationSeconds
+                        )
+                    )
+                    .font(Reel.Typography.caption)
+                    .foregroundStyle(palette.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") { addTrack() }
-                        .disabled(pickedURL == nil)
-                }
+                .padding(Reel.Space.s4)
             }
-            .fileImporter(
-                isPresented: $showImporter,
-                allowedContentTypes: [.audio, .mp3, .mpeg4Audio, .wav],
-                allowsMultipleSelection: false
-            ) { result in
-                if case .success(let urls) = result {
-                    pickedURL = urls.first
-                }
+        }
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: [.audio, .mp3, .mpeg4Audio, .wav],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result {
+                pickedURL = urls.first
             }
+        }
+        .reelSheet(Reel.SheetDetent.settings)
+    }
+
+    @ViewBuilder
+    private var soundSection: some View {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Sound").reelLabel()
+            Button {
+                showImporter = true
+            } label: {
+                Label(
+                    pickedURL?.lastPathComponent ?? NSLocalizedString("Pick audio file", comment: "Audio file importer"),
+                    systemImage: "speaker.wave.2"
+                )
+            }
+            .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
+        }
+    }
+
+    @ViewBuilder
+    private var timingSection: some View {
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Timing").reelLabel()
+            ReelSlider(
+                label: NSLocalizedString("Pin at", comment: "SFX pin time"),
+                value: $pinTimeSeconds,
+                range: 0...max(compositionDurationSeconds, 0.1),
+                valueText: String(format: "%.1fs", pinTimeSeconds)
+            )
+            ReelSlider(
+                label: NSLocalizedString("Volume", comment: "SFX volume"),
+                value: $volume,
+                range: 0...1,
+                valueText: String(format: "%.2f", volume)
+            )
         }
     }
 

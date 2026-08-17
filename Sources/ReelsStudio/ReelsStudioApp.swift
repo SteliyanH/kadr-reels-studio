@@ -70,24 +70,35 @@ struct LibraryHostView: View {
 
     var host: LibraryHost
 
+    @Environment(\.reelPalette) private var palette
+
     var body: some View {
         if let library = host.library {
             ProjectListView(library: library)
         } else {
-            VStack(spacing: 12) {
+            // Same centred column the library's empty state uses: glyph,
+            // heading, explainer — leading-aligned inside a measured column.
+            VStack(alignment: .leading, spacing: Reel.Space.s4) {
+                // Decision 4 — the scheme has no warning role; the accent is
+                // the one thing that flags a problem.
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: Reel.Typography.Glyph.lg, weight: Reel.Typography.headingWeight))
+                    .foregroundStyle(palette.accent)
                 Text("Couldn't open project library")
-                    .font(.headline)
+                    .reelHeading(Reel.Typography.h4)
                 if let message = host.setupError {
                     Text(message)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                        .reelBody()
+                        .foregroundStyle(palette.textMuted)
                 }
             }
+            .frame(maxWidth: Reel.emptyStateMeasure, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(Reel.Space.s4)
+            // v0.8 Tier 2 — the library-failure screen is app chrome; chrome
+            // is the print ground. The happy path is `ProjectListView`, which
+            // establishes the same ground at its own root.
+            .reelSurface(.print)
         }
     }
 }

@@ -5,9 +5,13 @@ import SwiftUI
 /// Reads the cached JPEG synchronously in `body` for the hot path; on cache
 /// miss kicks off `ProjectThumbnailRenderer.render(_:)` from `.onAppear` so
 /// the row renders something immediately rather than blocking on
-/// AVAssetImageGenerator. Empty / unrenderable projects fall back to a
-/// deterministic `LinearGradient` keyed off the project id so each
-/// project looks visually distinct even without a real first frame.
+/// AVAssetImageGenerator.
+///
+/// v0.8 Tier 5a: per the approved design, an *empty* project's tile is a 2pt
+/// dashed `divider` frame on `surface` — nothing else — and a tile that can
+/// name the project's length carries a `numeric` duration chip along its
+/// bottom edge. Real thumbnails still go through `.reelGrayscale()`
+/// (Decision 5).
 struct ProjectThumbnailTile: View {
 
     let document: ProjectDocument
@@ -16,28 +20,101 @@ struct ProjectThumbnailTile: View {
     /// `Image` = hit.
     @State private var image: Image?
 
+    @Environment(\.reelPalette) private var palette
+
     var body: some View {
         ZStack {
             if let image {
+                // Decision 5 — every content photograph and video thumbnail
+                // goes through grayscale. (The preview *stage* does not; the
+                // user grades colour there.)
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+                    .reelGrayscale()
             } else {
-                ProjectThumbnailTile.placeholderGradient(for: document.id)
-                if document.clips.isEmpty {
+                // v0.8 Tier 3 — the placeholder was a hue-derived gradient
+                // keyed off the project id. A generated hue is the opposite
+                // of a mono scheme, so an unrendered tile reads as a flat
+                // surface, and an *empty* project as nothing but the dashed
+                // frame below.
+                palette.surface
+                if !document.clips.isEmpty {
                     Image(systemName: "film")
-                        .font(.system(size: 22))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .font(.system(size: Reel.Typography.Glyph.sm, weight: Reel.Typography.headingWeight))
+                        .foregroundStyle(palette.textMuted)
                 }
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(alignment: .bottom) { durationChip }
+        .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(.separator), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: Reel.Radius.md)
+                .strokeBorder(palette.divider, style: frameStroke)
         )
         .onAppear { loadIfNeeded() }
     }
+
+    /// The design's chip along the tile's bottom edge, in tabular figures.
+    /// Hidden when the document can't name its own length — a video clip
+    /// persists no duration until it has been trimmed, and inventing one
+    /// would be worse than omitting it.
+    @ViewBuilder
+    private var durationChip: some View {
+        if let label = ProjectThumbnailTile.durationLabel(for: document) {
+            Text(label)
+                .font(Reel.Typography.numeric)
+                .foregroundStyle(palette.onAccent)
+                .frame(maxWidth: .infinity)
+                .frame(height: Reel.thumbnailChipHeight)
+                .background(palette.text)
+                .accessibilityHidden(true)
+        }
+    }
+
+    /// A rendered frame sits inside a solid 2pt rule; an empty project sits
+    /// inside a dashed one, which is how the approved design distinguishes
+    /// "nothing here yet" from "a frame that happens to be dark".
+    private var frameStroke: StrokeStyle {
+        document.clips.isEmpty
+            ? StrokeStyle(
+                lineWidth: Reel.ruleWidth,
+                dash: [Reel.Space.s1, Reel.Space.s1]
+              )
+            : StrokeStyle(lineWidth: Reel.ruleWidth)
+    }
+
+    // MARK: - Duration
+
+    /// `m:ss` for the tile's chip, or `nil` when the document carries no
+    /// usable duration. Pure so it's testable.
+    nonisolated static func durationLabel(for document: ProjectDocument) -> String? {
+        let seconds = durationSeconds(of: document.clips)
+        guard seconds > 0 else { return nil }
+        let total = Int(seconds.rounded())
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    /// Best-effort composition length straight off the persisted shape.
+    ///
+    /// Image, title and track clips all persist their own length. A video
+    /// clip only does once it has been trimmed (`trimDurationSeconds`);
+    /// before that its length lives in the asset, which a list row must not
+    /// open. Transitions are skipped deliberately — kadr overlaps them into
+    /// their neighbours, so adding them would over-count.
+    nonisolated static func durationSeconds(of clips: [ProjectClip]) -> Double {
+        clips.reduce(into: 0) { total, clip in
+            switch clip {
+            case .video(let data):      total += data.trimDurationSeconds ?? 0
+            case .image(let data):      total += data.durationSeconds
+            case .title(let data):      total += data.durationSeconds
+            case .transition:           break
+            case .track(let data):      total += durationSeconds(of: data.clips)
+            }
+        }
+    }
+
+    // MARK: - Loading
 
     /// Sync cache-only lookup + async render fallback. Runs from
     /// `.onAppear` so the cost is amortized across scroll; no eager render
@@ -55,24 +132,6 @@ struct ProjectThumbnailTile: View {
                 await MainActor.run { self.image = image }
             }
         }
-    }
-
-    /// Pure: produce a deterministic gradient for the placeholder. Hash of
-    /// the project id picks two hues so each empty project looks distinct
-    /// in a long list. v0.7 Tier 5.
-    nonisolated static func placeholderGradient(for projectID: UUID) -> LinearGradient {
-        var hasher = Hasher()
-        hasher.combine(projectID)
-        let hash = abs(hasher.finalize())
-        let h1 = Double(hash % 360) / 360
-        let h2 = Double((hash / 7) % 360) / 360
-        let start = Color(hue: h1, saturation: 0.45, brightness: 0.62)
-        let end = Color(hue: h2, saturation: 0.55, brightness: 0.42)
-        return LinearGradient(
-            gradient: Gradient(colors: [start, end]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 }
 

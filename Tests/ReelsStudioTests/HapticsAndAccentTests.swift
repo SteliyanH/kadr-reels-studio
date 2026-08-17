@@ -118,4 +118,58 @@ final class AccentColorRoundTripTests: XCTestCase {
         XCTAssertTrue(hex?.hasPrefix("#") ?? false)
         XCTAssertTrue([7, 9].contains(hex?.count ?? 0))
     }
+
+    // MARK: - Modernist ramp accents, through the store mutation (schema v5)
+
+    /// The Modernist migration constrains `SettingsView`'s free `ColorPicker`
+    /// to a segmented control over the accent ramp (Decision 3), but the
+    /// control still writes through `store.setAccentColor(_:)` — the
+    /// mutation, the persisted field, and its hex round-trip are unchanged.
+    /// Prove every ramp step the narrowed picker can select survives
+    /// `ProjectDocument` encode/decode at schema v5 exactly, driven through
+    /// the store rather than constructing `Project` directly.
+    func testReelRampAccentsRoundTripThroughSetAccentColorAtSchemaV5() throws {
+        XCTAssertEqual(ProjectDocument.currentSchemaVersion, 5)
+
+        let rampAccents: [(name: String, color: Color)] = [
+            ("a500", Reel.Accent.a500),
+            ("a600", Reel.Accent.a600),
+            ("a700", Reel.Accent.a700),
+        ]
+
+        for (name, accent) in rampAccents {
+            let store = ProjectStore(project: Project())
+            store.setAccentColor(accent)
+
+            let doc = store.project.toDocument()
+            XCTAssertEqual(doc.schemaVersion, 5, "\(name) did not encode at schema v5")
+
+            let restored = try roundTrip(store.project)
+            let restoredAccent = try XCTUnwrap(
+                restored.accentColor,
+                "\(name) did not survive the schema v5 round-trip"
+            )
+
+            let originalHex = ProjectDocument.hexString(from: PlatformColor(accent))
+            let restoredHex = ProjectDocument.hexString(from: PlatformColor(restoredAccent))
+            XCTAssertEqual(originalHex, restoredHex, "\(name) hex drifted across the round-trip")
+        }
+    }
+
+    /// Decision 3's fourth segment — "System" — clears the project accent by
+    /// writing `nil` through the same `setAccentColor(_:)` mutation. `nil`
+    /// round-trips as `nil`: no field is written, no field is read, at
+    /// schema v5 exactly as before the picker was narrowed.
+    func testClearingAccentToSystemRoundTripsAsNilThroughSetAccentColor() throws {
+        let store = ProjectStore(project: Project(accentColor: Reel.Accent.a500))
+        store.setAccentColor(nil)
+        XCTAssertNil(store.project.accentColor)
+
+        let doc = store.project.toDocument()
+        XCTAssertEqual(doc.schemaVersion, 5)
+        XCTAssertNil(doc.accentColorHex)
+
+        let restored = try roundTrip(store.project)
+        XCTAssertNil(restored.accentColor)
+    }
 }

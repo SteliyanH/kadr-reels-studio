@@ -18,7 +18,14 @@ struct ChromaKeySheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.reelPalette) private var palette
 
+    /// The one chromatic literal left in view code, deliberately. This is not
+    /// chrome — it's the sampled key colour the filter matches against, and
+    /// green is the canonical green-screen start. The v0.8 Tier 3 mono sweep
+    /// styles the chrome around this control and leaves the control (and its
+    /// default) whole: constraining it to the ramp would be a functional
+    /// regression, not a style call.
     @State private var keyColor: Color = .green
     @State private var threshold: Double = 0.4
 
@@ -29,47 +36,46 @@ struct ChromaKeySheet: View {
     private static let defaultThreshold: Double = 0.4
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ReelSheetHeader("Chroma Key") {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(ReelGhostButtonStyle())
+                Button("Apply") {
+                    apply()
+                    dismiss()
+                }
+                .buttonStyle(ReelPrimaryButtonStyle())
+            }
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
                     colorPreviewSection
                     thresholdSection
                     helpText
                 }
-                .padding()
-            }
-            .navigationTitle("Chroma Key")
-            .navigationBarTitleDisplayModeInline()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
-                        apply()
-                        dismiss()
-                    }
-                }
+                .padding(Reel.Space.s4)
             }
         }
+        .reelSheet(Reel.SheetDetent.layers)
     }
 
     // MARK: - Subviews
 
     @ViewBuilder
     private var colorPreviewSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
             Text("Key color")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8)
+                .reelLabel()
+            HStack(spacing: Reel.Space.s3) {
+                Rectangle()
                     .fill(keyColor)
-                    .frame(width: 64, height: 64)
+                    .frame(width: Reel.swatchSize, height: Reel.swatchSize)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(.separator), lineWidth: 1)
+                        Rectangle()
+                            .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
                     )
+                // Commander's ruling: this picker is functional, not chrome.
+                // The sheet around it is restyled; the control itself is left
+                // whole so arbitrary key colours stay reachable.
                 ColorPicker("Pick color", selection: $keyColor, supportsOpacity: false)
                     .labelsHidden()
                 Spacer()
@@ -79,26 +85,24 @@ struct ChromaKeySheet: View {
 
     @ViewBuilder
     private var thresholdSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Threshold")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(String(format: "%.2f", threshold))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            Slider(value: $threshold, in: 0...1)
-                .accessibilityValue(String(format: "%.2f", threshold))
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Threshold")
+                .reelLabel()
+            ReelSlider(
+                label: NSLocalizedString("Threshold", comment: "Chroma key tolerance"),
+                value: $threshold,
+                range: 0...1,
+                valueText: String(format: "%.2f", threshold)
+            )
+            .accessibilityValue(String(format: "%.2f", threshold))
         }
     }
 
     @ViewBuilder
     private var helpText: some View {
         Text("Picks any pixel near the key color and replaces it with transparency. Lower threshold keeps more of the subject; higher keys out more background.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .font(Reel.Typography.caption)
+            .foregroundStyle(palette.textMuted)
     }
 
     // MARK: - Apply
@@ -114,16 +118,8 @@ struct ChromaKeySheet: View {
 
 // MARK: - Bridges
 
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
-    }
-}
+// v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
+// sheet no longer wraps itself in; `ReelSheetHeader` draws the title.
 
 private extension PlatformColor {
     convenience init(_ color: Color) {
