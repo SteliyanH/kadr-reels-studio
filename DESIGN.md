@@ -813,7 +813,7 @@ Hiding the system navigation bar during the design migration killed the interact
 ### Dynamic Type and snapshot baselines
 
 - **Dynamic Type.** Fixed Modernist scale makes a Dynamic Type audit *more* necessary, not less, for v1.0 prep. Deferred.
-- **Snapshot tests.** None exist. Re-recording was skipped by standing ruling (UIImage baselines drift between contributor laptops and CI runners; deferred until a pinned-Xcode re-record job lands).
+- **Snapshot tests.** Re-recording was deferred by standing ruling until a pinned-Xcode re-record job landed — the job is now live. v0.10 implements the harness end-to-end with seven baseline images (recorded and reviewed via `.github/workflows/snapshot-record.yml`). See v0.10 section below for the full determinism seam, why baselines are not committed, and why tests self-skip locally.
 
 ### Compatibility
 
@@ -855,6 +855,58 @@ Out of scope:
 - **kadr-ui ≥ 0.14.0** (no floor change; already required by chroma-key work). Requires `VideoPreview(isPlaying:currentTime:)` two-way bindings.
 - **No schema changes.** `ProjectDocument` v5 persists identically.
 - **No undo impact.** Loop and play state are transient; session-level state does not enter undo timeline.
+
+---
+
+## v0.10.0 — Snapshot testing harness
+
+**Status:** ✓ Implemented
+
+A thin slice of pixel-snapshot coverage over the editor view group (`EditorView`, `PreviewArea`, `TransportBand`, `EditorToolbar`). Proves layout, colour, and spacing invariants the unit/UI suite cannot reach — every other test is behavior (a binding wired, a computed string, a selection slot). First harness ship over one screen group; foundation for v1.0's pixel-perfect audit.
+
+### The determinism seam
+
+The live stage is an AVKit player built asynchronously inside `.task` on `VideoPreview` appear, racing a loading spinner against a failure glyph. A baseline captured during that race is unrepeatable. `StageRendering` is an `EnvironmentKey` with two cases: `.live` (default, never written in production) and `.placeholder` (test-only). Snapshot tests set it to `.placeholder`, swapping the player for the stage's own letterbox ground — no `AVPlayer`, no async load, no spinner-versus-glyph race. Every store is built from a fixed fixture (one `/dev/null` clip trimmed to 6 seconds) with `currentTime` and `isPlaying` pinned, so nothing in the tree is mid-animation or mid-load when the frame is captured. See `Sources/ReelsStudio/Editor/StageRendering.swift` for the seam; production is unaffected by its existence — the app never writes the key, and `Tests/ReelsStudioTests/StageRenderingTests.swift` asserts the default is `.live`, so a silent flip would fail a test.
+
+### Why baselines are not in the repo
+
+A fresh checkout has ZERO baseline images. That is the intended state, not a bug. Baselines live only in CI's pinned-runtime job and land via a PR where a human reviews each PNG as an image before merge. The `snapshot:` job is knowingly RED until that first record PR merges — a missing baseline is a failure, not a pass. This is honest: snapshot tests that never ran are not a feature; snapshot tests that always pass without anyone reviewing them are dangerous.
+
+### Two runtimes, on purpose
+
+The main `test:` job (ci.yml) keeps its documented highest-available-runtime float — unit assertions do not care which iOS point release renders them. The `snapshot:` job pins Xcode 26.3 + iOS 26.2 + iPhone 17 Pro and refuses to fall back. Pixel baselines drift across iOS point releases and device screen geometry. A fallback to a different runtime or device would be drift wearing green, silently unreviewed.
+
+### A documented trap
+
+`PreviewArea` and `EditorToolbar` declare `@Environment(ToastCenter.self)`. SwiftUI's Observation lookup TRAPS AT HOST TIME even when the value is never read — including in the `.placeholder` branch that never touches `toasts`. Standing up any SwiftUI host or snapshot test against these views crashes with "No Observable object of type ToastCenter found" unless the test injects `.environment(ToastCenter())`. **RULED: production will NOT be changed to tolerate its absence** — trapping is correct fail-fast, and making it optional would silently swallow the auto-save and preview-load error toasts users depend on. Tests inject a real `ToastCenter`. This is not a bug in the seam; it is intentional harness surface.
+
+### The harness's first catch
+
+The snapshot harness caught a real, user-visible defect in already-merged code on its first recording run (issue #75): `TransportBand` used SF Symbol names `gobackward.1` and `goforward.1`, which have never existed. The numbered "go" family runs `.5 / .10 / .15 / .30 / .45 / .60 / .75 / .90` — there is no `.1` member. Both skip buttons rendered a missing-symbol placeholder on device. It shipped in PR #84 and passed every existing gate: a11y tests assert spoken labels, ViewInspector asserts structure, the compiler only ever sees a `String`. Nothing looked at pixels. Fixed to `gobackward` / `goforward` with a regression test asserting `UIImage(systemName:)` resolves for both. The skip interval (1.0 second) did not change — it rested on kadr-ui's 0.05s seek floor, never on a glyph.
+
+### Scope lock — v0.10.0
+
+In scope:
+- **Snapshot test harness** — seven test cases (`SnapshotTests.swift`) covering the editor view group on CI's pinned runtime (Xcode 26.3 + iOS 26.2 + iPhone 17 Pro).
+  - `EditorView` in default session state.
+  - `PreviewArea` alone, placeholder-rendered, with and without overlay.
+  - `TransportBand` at composition start and mid-composition (both skip states).
+  - `EditorToolbar` in root mode and clip-selected mode.
+- **Determinism via `StageRendering` seam** — environment key with `.live` (default) and `.placeholder` (test-only) cases.
+- **Baseline recording** — manual workflow (`.github/workflows/snapshot-record.yml`) for human-reviewed baseline PRs. Pinned Xcode 26.3 / iOS 26.2 / iPhone 17 Pro, no auto-heal, no fallback.
+- **CI execution** — `snapshot:` job in ci.yml; knowingly red until first baselines land, then green on pixel match.
+- **Local skip guard** — every snapshot test calls `requireCIPinnedRuntime()` and self-skips unless `SNAPSHOT_RUNTIME_PINNED=1` is set in the booted simulator's launchd.
+
+Out of scope:
+- **Baselines on disk** — deferred to recorded PR; fresh checkout has none.
+- **Snapshot coverage outside editor group** — sliced to the one screen group the approved design cares about pixel-for-pixel. Other screens' behavior is proven by unit/UI.
+- **Portrait + landscape variants** — v0.10 captures one size (390×844 for full editor, 270×480 for preview). Additional device / orientation coverage deferred.
+
+### Compatibility
+
+- **No schema changes.** `ProjectDocument` v5 persists identically.
+- **No app changes outside tests.** `StageRendering` key added; production always uses `.live`, never written by app code.
+- **swift-snapshot-testing ≥ 1.19.4** — added to test target dependencies.
 
 ---
 

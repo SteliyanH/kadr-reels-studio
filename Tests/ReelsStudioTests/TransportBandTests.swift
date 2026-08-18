@@ -1,6 +1,7 @@
 import XCTest
 import CoreMedia
 import SwiftUI
+import UIKit
 import ViewInspector
 import Kadr
 @testable import ReelsStudio
@@ -88,6 +89,35 @@ final class TransportBandTests: XCTestCase {
     func testSkipIntervalIsOneSecondAndClearsThePreviewSeekFloor() {
         XCTAssertEqual(TransportBand.skipInterval, 1.0)
         XCTAssertGreaterThan(TransportBand.skipInterval, 0.05)
+    }
+
+    // MARK: - Glyphs
+
+    /// The two skip cells draw symbols that actually exist.
+    ///
+    /// Why this test is here: PR #84 shipped `gobackward.1` / `goforward.1`.
+    /// Neither name has ever existed — the numbered SF Symbols "go" family is
+    /// .5 / .10 / .15 / .30 / .45 / .60 / .75 / .90 and has no `.1` member —
+    /// so both transport cells rendered the missing-glyph placeholder on
+    /// device while every gate stayed green. The a11y tests assert spoken
+    /// labels, ViewInspector asserts structure, and the compiler only ever
+    /// sees a `String`; nothing in the suite looked at what was drawn. #75's
+    /// snapshot harness caught it, on its first real run, after the merge.
+    ///
+    /// `UIImage(systemName:)` is a live lookup against the running system's
+    /// symbol set: it returns nil for a name the catalogue does not have. That
+    /// is the whole gate — no ViewInspector, no pixels, no baseline — and it
+    /// would have failed the day `.1` was typed. This is not trivia; it is the
+    /// only assertion in the suite about which glyphs the band carries.
+    func testSkipGlyphsExistInTheSystemSymbolSet() {
+        XCTAssertNotNil(
+            UIImage(systemName: TransportBand.skipBackSymbol),
+            "No system symbol named '\(TransportBand.skipBackSymbol)'"
+        )
+        XCTAssertNotNil(
+            UIImage(systemName: TransportBand.skipForwardSymbol),
+            "No system symbol named '\(TransportBand.skipForwardSymbol)'"
+        )
     }
 
     // MARK: - Skip targets

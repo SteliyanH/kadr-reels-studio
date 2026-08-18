@@ -31,6 +31,9 @@ packages:
   ViewInspector:
     url: https://github.com/nalexn/ViewInspector.git
     from: 0.9.11
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    from: 1.19.4
 
 targets:
   ReelsStudio:
@@ -88,6 +91,8 @@ targets:
     dependencies:
       - target: ReelsStudio
       - package: ViewInspector
+      - package: SnapshotTesting
+        product: SnapshotTesting
 
   ReelsStudioUITests:
     type: bundle.ui-testing
