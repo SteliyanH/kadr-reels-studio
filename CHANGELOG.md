@@ -91,9 +91,19 @@ kadr-ui 0.14 exposes tap-to-sample on `VideoPreview`, so `ChromaKeySheet` now sh
 - **Real eyedropper tool** — "Pick from preview" for chroma key / colour overlays. Pre-existing `ColorPicker` stands in; needs `VideoPreview` tap-coordinate API.
 - **Editor rename affordance** — navigation pencil glyph was decorative, a11y-hidden. Dropped.
 
+### Accessibility — Dynamic Type, bounded
+
+The fixed type scale silently removed Dynamic Type support: before the migration the app used system text styles and scaled for free, so this was not "un-audited" but *unsupported*. Restored, with a ceiling.
+
+- `Typography.font(size:weight:relativeTo:)` uses `relativeTo:` instead of `fixedSize:`. Each role names the system text style whose default size sits nearest its own, so growth follows the curve users know from every other app.
+- Growth is capped at `Reel.maxDynamicTypeSize` (`.accessibility1`), applied once in `.reelSurface(_:)` — the one modifier every screen root already calls, so no screen can be missed.
+- The `isFamilyBundled` branch is gone: `.custom` already falls back to the system face at the requested size, and unlike the old branch that fallback now scales too. `isFamilyBundled` remains as a diagnostic.
+
+**The cap is a real limit, named as one.** A user at `accessibility3` gets less than they asked for. The alternative — honouring every size and letting a grid drawn against fixed sizes come apart — serves them worse. Raising it is one line; the work is re-checking layouts, not the token.
+
 ### Deferred
 
-- **Dynamic Type audit.** Fixed Modernist scale makes DT audit *more* necessary for v1.0, not less. Deferred to v1.0 prep.
+- **Dynamic Type on device.** The unit tests prove text scales and stops. Whether every layout *holds* at the ceiling needs eyes on a device — folded into the accessibility pass (#71).
 - **Snapshot test baselines.** None existed. Re-recording skipped (UIImage baselines drift between contributor laptops and CI runners; deferred until pinned-Xcode re-record job).
 
 ### Tests

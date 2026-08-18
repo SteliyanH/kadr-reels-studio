@@ -28,6 +28,10 @@ extension View {
             .background(palette.bg.ignoresSafeArea())
             .tint(palette.accent)
             .foregroundStyle(palette.text)
+            // v0.8.2 — every screen root already calls this, so it is the one
+            // place the Dynamic Type clamp belongs. Setting it per-screen would
+            // guarantee a screen gets missed.
+            .dynamicTypeSize(...Reel.maxDynamicTypeSize)
     }
 }
 
