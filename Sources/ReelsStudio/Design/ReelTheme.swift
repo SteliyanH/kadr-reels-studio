@@ -147,29 +147,55 @@ enum Reel {
             #endif
         }
 
-        /// Every text style routes through here, so a missing font degrades to
-        /// the system face at the same size and weight rather than silently
-        /// falling back to a different scale.
-        static func font(size: CGFloat, weight: Font.Weight) -> Font {
-            isFamilyBundled
-                ? .custom(family, fixedSize: size).weight(weight)
-                : .system(size: size, weight: weight)
+        /// Every text style routes through here.
+        ///
+        /// **v0.8.2 — Dynamic Type.** This used `fixedSize:`, which pins the
+        /// size and ignores the user's text-size setting entirely. Before the
+        /// design migration the app used system text styles and scaled for
+        /// free; the fixed scale silently removed that, which made Dynamic Type
+        /// not merely un-audited but actively unsupported.
+        ///
+        /// `relativeTo:` restores it. Each role names the system text style
+        /// whose default size sits nearest its own, so the growth curve is the
+        /// one users already know from every other app.
+        ///
+        /// Growth is bounded — see ``Reel/maxDynamicTypeSize``, applied once in
+        /// `.reelSurface(_:)`. Unbounded, the Modernist proportions come apart:
+        /// a 42pt h1 at accessibility5 is roughly 100pt, and the grid was drawn
+        /// against fixed sizes.
+        ///
+        /// The `fixedSize:` branch on `isFamilyBundled` is gone deliberately.
+        /// `.custom` already falls back to the system face at the requested
+        /// size when the family is missing — and unlike the old branch, the
+        /// fallback now scales too. `isFamilyBundled` stays as a diagnostic and
+        /// is asserted by `ReelTypographyTests`.
+        static func font(
+            size: CGFloat,
+            weight: Font.Weight,
+            relativeTo style: Font.TextStyle
+        ) -> Font {
+            .custom(family, size: size, relativeTo: style).weight(weight)
         }
 
-        static var h1: Font { font(size: 42, weight: headingWeight) }
-        static var h2: Font { font(size: 32, weight: headingWeight) }
-        static var h3: Font { font(size: 25, weight: headingWeight) }
-        static var h4: Font { font(size: 20, weight: headingWeight) }
-        static var h5: Font { font(size: 16, weight: headingWeight) }
+        // Each role is paired with the system text style whose default size is
+        // nearest its own, so scaling follows a familiar curve rather than an
+        // invented one.
+        static var h1: Font { font(size: 42, weight: headingWeight, relativeTo: .largeTitle) }
+        static var h2: Font { font(size: 32, weight: headingWeight, relativeTo: .title) }
+        static var h3: Font { font(size: 25, weight: headingWeight, relativeTo: .title2) }
+        static var h4: Font { font(size: 20, weight: headingWeight, relativeTo: .title3) }
+        static var h5: Font { font(size: 16, weight: headingWeight, relativeTo: .headline) }
         /// The uppercase micro-label — see `.reelLabel()`.
-        static var h6: Font { font(size: 13, weight: headingWeight) }
+        static var h6: Font { font(size: 13, weight: headingWeight, relativeTo: .caption) }
 
-        static var body: Font { font(size: 15, weight: bodyWeight) }
-        static var bodyEmphasis: Font { font(size: 15, weight: emphasisWeight) }
-        static var buttonLabel: Font { font(size: 15, weight: emphasisWeight) }
-        static var caption: Font { font(size: 11, weight: bodyWeight) }
+        static var body: Font { font(size: 15, weight: bodyWeight, relativeTo: .body) }
+        static var bodyEmphasis: Font { font(size: 15, weight: emphasisWeight, relativeTo: .body) }
+        static var buttonLabel: Font { font(size: 15, weight: emphasisWeight, relativeTo: .body) }
+        static var caption: Font { font(size: 11, weight: bodyWeight, relativeTo: .caption2) }
         /// Timecodes, durations, percentages, px/s readouts. Tabular, always.
-        static var numeric: Font { font(size: 11, weight: bodyWeight).monospacedDigit() }
+        static var numeric: Font {
+            font(size: 11, weight: bodyWeight, relativeTo: .caption2).monospacedDigit()
+        }
 
         /// Display glyph sizes.
         ///
@@ -401,6 +427,24 @@ extension Reel {
     /// future edge-to-edge layout that *does* ignore the safe area has the
     /// number to reach for.
     static let libraryTopInset: CGFloat = 52
+
+    /// Upper bound on Dynamic Type growth.
+    ///
+    /// v0.8.2 — the type scale now scales with the user's setting, but not
+    /// without limit. The Modernist grid was drawn against fixed sizes: at
+    /// `accessibility5` an h1 lands near 100pt, the two-line nav title block
+    /// stops fitting beside the undo/redo cells, and the timeline's 44pt clip
+    /// cells cannot hold a legible label.
+    ///
+    /// `accessibility1` is the first accessibility step, so every standard size
+    /// is honoured in full plus one step beyond. That is a real limit and worth
+    /// naming as one: a user at `accessibility3` gets less than they asked for.
+    /// The alternative was honouring it everywhere and letting the layout break,
+    /// which serves them worse.
+    ///
+    /// Applied once, in `.reelSurface(_:)`. Raising it is a one-line change
+    /// here — the work is re-checking the layouts, not the token.
+    static let maxDynamicTypeSize: DynamicTypeSize = .accessibility1
 
     /// Edge of a project row's leading thumbnail. Square, per the design.
     static let projectThumbnailSize: CGFloat = 56
