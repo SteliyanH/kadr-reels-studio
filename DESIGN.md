@@ -813,7 +813,7 @@ Hiding the system navigation bar during the design migration killed the interact
 ### Dynamic Type and snapshot baselines
 
 - **Dynamic Type.** Fixed Modernist scale makes a Dynamic Type audit *more* necessary, not less, for v1.0 prep. Deferred.
-- **Snapshot tests.** Re-recording was deferred by standing ruling until a pinned-Xcode re-record job landed — the job is now live. v0.10 implements the harness end-to-end with seven baseline images (recorded and reviewed via `.github/workflows/snapshot-record.yml`). See v0.10 section below for the full determinism seam, why baselines are not committed, and why tests self-skip locally.
+- **Snapshot tests.** Re-recording was deferred by standing ruling until a pinned-Xcode re-record job landed — the job is now live. v0.10 lands the harness end-to-end: the determinism seam, seven snapshot test cases, the pinned `snapshot:` CI job, and the recording workflow (`.github/workflows/snapshot-record.yml`). **No baseline images are committed** — a fresh checkout has zero, and that is the intended state. Baselines are produced by dispatching that workflow after this lands, and arrive through a PR where a human reviews each PNG by eye. See v0.10 section below for the full determinism seam, why baselines are not committed, and why tests self-skip locally.
 
 ### Compatibility
 

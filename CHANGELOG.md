@@ -104,7 +104,7 @@ The fixed type scale silently removed Dynamic Type support: before the migration
 ### Deferred
 
 - **Dynamic Type on device.** The unit tests prove text scales and stops. Whether every layout *holds* at the ceiling needs eyes on a device — folded into the accessibility pass (#71).
-- **Snapshot test baselines.** None existed. Re-recording skipped (UIImage baselines drift between contributor laptops and CI runners; deferred until pinned-Xcode re-record job).
+- **Snapshot test baselines.** None existed. Re-recording skipped (UIImage baselines drift between contributor laptops and CI runners; deferred until pinned-Xcode re-record job). **Deferral discharged in v0.10** — the pinned-Xcode re-record job now lands; see the v0.10 entry.
 
 ### Tests
 
@@ -155,7 +155,7 @@ Transport band — playback controls for the editor. The editor shipped with sta
 ### Added
 
 - **Transport band UI** — play/pause button (26pt glyph, accent fill), skip-back and skip-forward buttons (fixed 1.0-second intervals, disabled at composition bounds), timecode readout, loop toggle, fullscreen button.
-- **Skip step is 1.0 second, not frame-step.** `VideoPreview` only seeks when time differences exceed 0.05s; one frame at 30fps is 0.033s, below the floor. A frame-step button would silently fail on every press. The 1.0-second interval is well clear of the seek floor and matches the timecode unit. ~~**Note:** This originally claimed it "aligns with the skip-button glyphs (`gobackward.1` / `goforward.1`)," which was incorrect — SF Symbols has no `.1` member in the "go" family (runs .5 / .10 / .15 / .30 / .45 / .60 / .75 / .90 instead). The glyph choice was independent of the interval, a defect caught in v0.10.~~ See `TransportBand.skipInterval` and comments in the implementation.
+- **Skip step is 1.0 second, not frame-step.** `VideoPreview` only seeks when time differences exceed 0.05s; one frame at 30fps is 0.033s, below the floor. A frame-step button would silently fail on every press. The 1.0-second interval is well clear of the seek floor and matches the timecode unit. **Correction (v0.10):** this entry originally added that the interval "aligns with the skip-button glyphs (`gobackward.1` / `goforward.1`)". That was never true. SF Symbols has no `.1` member in the "go" family — the ladder runs .5 / .10 / .15 / .30 / .45 / .60 / .75 / .90 — so both names resolved to nothing and both cells drew a missing-glyph placeholder on device. The interval always rested on the 0.05s seek floor alone; the glyph names were corrected in v0.10. See `TransportBand.skipInterval` and comments in the implementation.
 - **Loop implemented in the app, not `VideoPreview(loops:)`.** kadr-ui 0.14 captures the `loops` parameter at player construction and does not rebuild on change, making a UI toggle inert. The app detects playback end and restarts if loop is on. `loops: false` is always passed to the preview; the app handles the restart. See `TransportBand.restartForLoopIfNeeded`.
 - **Loop is session state.** `ProjectStore.isLooping` lives on the store alongside `isPlaying` and `currentTime`. No persistence to disk, no `ProjectDocument` schema change (v5 unchanged), and loop state does not enter the undo timeline.
 - **Playhead scene-storage flush gating.** The editor's existing scene-storage playhead write is gated to not fire on every playback tick (~10 times per second during video preview). Explicit flushes fire on playback stop and `scenePhase: .background`. Prevents excessive I/O during playback.

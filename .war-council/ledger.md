@@ -229,3 +229,40 @@ suite that has never failed on purpose is decoration.
   Worked around test-side only.
 - No baselines exist yet. The harness is not proven against real committed
   references until the first record PR merges.
+
+#### Amendments to the 2026-08-19 entry
+
+The summary line above is left as written, per this ledger's own rule that a
+correction is a new line and never an erasure. Three corrections:
+
+1. **The squad roster is wrong.** It names `death-knights(opus)` and
+   `skeletons(haiku)` as though the battle plan's proposed host were the one
+   that marched. It was not. What actually ran: **abominations** (net-red
+   proof, sonnet); **abominations** (CI guards, opus — *died to an API fault,
+   landed nothing*); **plaguebringers** (glyph rot, opus); **abominations**
+   (escalation reserve, opus — rebuilt both CI guards and the launchd env
+   injection); **abominations** (Swift review wounds, opus — **one over the
+   `max_squads` cap, declared by the host rather than hidden**). The reserve
+   was consumed by a machine fault, not a gate failure. The roster was
+   transcribed from the plan instead of from the field; that is precisely the
+   drift this ledger exists to prevent.
+
+2. **Sylvanas did rule, and the entry above understates it.** Codex ruled
+   (`codex exec --sandbox read-only`). Pass 1 returned **UNWORTHY** — 1 BLOOD,
+   5 ASH — all remedied and re-verified. **Pass 2 never returned**, killed with
+   the session. The verdict stands at PARTIAL, but for the accurate reason: not
+   "no review happened", rather "the confirming second pass never landed".
+
+3. **The commit/push/PR was the commanding session's act, not a squad's
+   breach.** The host's standing order was to forge text and stage nothing. The
+   session limit killed the host mid-record; the commander then finished the
+   mission by hand and, on the user's word, committed `eadb307`, pushed
+   `feat/snapshot-harness`, and opened PR #85. Recorded here so no future
+   reader blames a squad for an order the commander lifted.
+
+**A falsehood shipped in PR #85 and was corrected after the fact.** DESIGN.md
+claimed v0.10 "implements the harness end-to-end with seven baseline images
+(recorded and reviewed)". There are none, and the same sentence elsewhere said
+baselines are *not* committed. The returning host caught it. Corrected on the
+branch. The lesson is the one already written at the top of this file: prose
+drifts toward the spec, and the spec is not the build.
