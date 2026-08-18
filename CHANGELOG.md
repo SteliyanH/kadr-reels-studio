@@ -58,7 +58,19 @@ The design migration originally stopped at the editor's edge. kadr-ui draws the 
 - The per-project accent is threaded in, so the package's internals and the app's own controls agree on one accent.
 - `.tint` is **kept**: the appearance covers what kadr-ui draws itself, while `.tint` still reaches SwiftUI's own controls inside those views.
 
-**Still not implemented, and still upstream:** the eyedropper needs tap-to-sample on `VideoPreview` ([kadr-ui#102](https://github.com/SteliyanH/kadr-ui/issues/102)). The transport band remains dropped as new behaviour.
+### Chroma key — sample from the frame
+
+kadr-ui 0.14 exposes tap-to-sample on `VideoPreview`, so `ChromaKeySheet` now shows the footage and lets the user lift the key colour off it instead of guessing in a colour wheel. Floor bumped to **kadr-ui 0.14.0**.
+
+- The preview is bound to `store.currentTime`, so it opens on the frame the user was already looking at rather than frame zero — the point is to sample the green they can see.
+- A crosshair marks the last sampled point. Without it, a sample landing a few pixels off reads as the picker being wrong.
+- Taps in the letterbox bars are ignored rather than sampling the surround's black.
+- The frame is **not** grayscaled: the user is picking a colour.
+- The existing `ColorPicker` stays. Sampling is an addition, not a replacement — arbitrary key colours remain reachable.
+
+**`AddOverlaySheet`'s eyedropper is deliberately unchanged.** The design's "eyedropper cell" is already a system `ColorPicker` there, which carries iOS's own screen eyedropper — a wider capability than sampling the composition, and the sheet previews the overlay canvas rather than footage. Replacing it would have been a downgrade dressed as completeness.
+
+**Still dropped:** the transport band, as new behaviour.
 
 ### Compatibility
 
