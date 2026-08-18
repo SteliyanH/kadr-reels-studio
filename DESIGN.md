@@ -790,7 +790,7 @@ The Modernist design exposed hard limits in kadr-ui's customization surface. kad
 
 **Proposed upstream shape:** An `EnvironmentValues`-based appearance modifier layered through the existing private helpers, allowing downstream consumers to set colour / radius / typography / layer height at the cost of a new protocol adoption. Carve out as a separate RFC if community demand surfaces.
 
-**Package.resolved decay.** The root `Package.resolved` points to kadr-ui 0.6.0 (SPM residue). The `.xcodeproj` resolves 0.12.0 correctly. Regenerate `Package.resolved` or accept it as technical debt (it doesn't affect the xcodegen build).
+**Where dependency versions live.** `ReelsStudio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. This is an Xcode-project app with no `Package.swift`, so a root `Package.resolved` is never authoritative here — if one appears it is local residue from someone running `swift build` in the directory, it is gitignored, and it will drift (a stale one pinned kadr-ui 0.6.0 while the build used 0.13.0). Read the `.xcodeproj` one.
 
 ### Dropped by ruling
 
