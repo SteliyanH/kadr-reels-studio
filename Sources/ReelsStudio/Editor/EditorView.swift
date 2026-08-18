@@ -58,6 +58,17 @@ struct EditorView: View {
     /// alert instead of presenting an empty picker.
     @State private var showPhotosDeniedAlert = false
 
+    /// v0.9 — full screen. Not a route and not a presentation: the chrome
+    /// around the stage is simply dropped from the stack and the stage takes
+    /// the space. Plain `@State` rather than store state — it's a view mode,
+    /// it means nothing to the project, and it should not survive a relaunch.
+    ///
+    /// ``TransportBand`` deliberately stays in the stack while this is true:
+    /// it holds the only way back out. There is no gesture, no system bar and
+    /// no other affordance behind it — hiding the band with the rest of the
+    /// chrome would strand the user.
+    @State private var isFullscreen = false
+
     /// Debounce window for auto-save. Half a second swallows rapid edits
     /// (slider drags, inspector typing) while still feeling near-instant.
     private static let autoSaveDebounce: TimeInterval = 0.5
@@ -82,22 +93,30 @@ struct EditorView: View {
             // `.reelSurface(.studio)` applied at the bottom of this body
             // only reaches the subtree. A child reads the studio ground; the
             // enclosing struct cannot.
-            EditorNavBar(
-                title: document.name,
-                statusMetrics: EditorView.statusMetrics(
-                    preset: store.project.preset,
-                    duration: store.video.duration
-                ),
-                canUndo: store.canUndo,
-                canRedo: store.canRedo,
-                onUndo: { store.undo() },
-                onRedo: { store.redo() },
-                onSettings: { showSettings = true }
-            )
+            if !isFullscreen {
+                EditorNavBar(
+                    title: document.name,
+                    statusMetrics: EditorView.statusMetrics(
+                        preset: store.project.preset,
+                        duration: store.video.duration
+                    ),
+                    canUndo: store.canUndo,
+                    canRedo: store.canRedo,
+                    onUndo: { store.undo() },
+                    onRedo: { store.redo() },
+                    onSettings: { showSettings = true }
+                )
+            }
             stageBand
-            TimelineArea(store: store)
-            inspectorBands
-            toolbarBand
+            // v0.9 — the transport band, between the stage and the timeline
+            // where the approved design puts it. It is the one band that
+            // survives full screen: see `isFullscreen` above.
+            TransportBand(store: store, isFullscreen: $isFullscreen)
+            if !isFullscreen {
+                TimelineArea(store: store)
+                inspectorBands
+                toolbarBand
+            }
         }
         // v0.4 Tier 3: per-project accent threads through every `.tint`-aware
         // surface. v0.8 Tier 2 retargeted the fallback from the system tint to
@@ -200,9 +219,16 @@ struct EditorView: View {
             }
         }
         .onAppear { restoreSceneStateIfMatching() }
-        .onChange(of: store.currentTime) { _, newValue in
-            savedPlayheadSeconds = CMTimeGetSeconds(newValue)
-            savedDocumentID = document.id.uuidString
+        .onChange(of: store.currentTime) {
+            // v0.9 — every scene-storage playhead write in this view now routes
+            // through `persistPlayhead(_:)`, whose whole rule lives in the pure
+            // `EditorView.playheadRecord(for:isPlaying:currentTime:documentID:)`
+            // below. The four triggers and the reason each one exists are
+            // documented there rather than restated at four call sites.
+            persistPlayhead(.playheadMoved)
+        }
+        .onChange(of: store.isPlaying) {
+            persistPlayhead(.playbackStateChanged)
         }
         .onChange(of: store.selectedClipID) { _, newValue in
             savedSelectedClipID = newValue?.rawValue ?? ""
@@ -216,7 +242,19 @@ struct EditorView: View {
             // quit while the debounce timer is in-flight doesn't lose work.
             if phase == .background {
                 autoSave()
+                persistPlayhead(.sceneBackgrounded)
             }
+        }
+        // v0.9 — the dismissal flush, and the one this view most needs.
+        // `EditorView` is torn down by the nav bar's back button *and* by the
+        // restored interactive edge-swipe pop, and neither route passes through
+        // `scenePhase` or through an `isPlaying` change. Before playback
+        // existed every playhead write was immediate, so a dismissal could
+        // never lose one; with the write gated on `!isPlaying`, leaving the
+        // editor mid-play would silently drop the position and a cold relaunch
+        // would restore a stale earlier one.
+        .onDisappear {
+            persistPlayhead(.editorDismissed)
         }
         // v0.8 Tier 2 — the editor's ground. Set once, at the root, outermost
         // so the whole subtree (stage, timeline, inspector, the AddClipFlow
@@ -294,6 +332,20 @@ struct EditorView: View {
     }
 
     // MARK: - Behaviour (unchanged)
+
+    /// Route every scene-storage playhead write through the one pure rule.
+    /// Returns without writing when ``EditorView/playheadRecord(for:isPlaying:currentTime:documentID:)``
+    /// suppresses the trigger.
+    private func persistPlayhead(_ trigger: EditorView.PlayheadTrigger) {
+        guard let record = EditorView.playheadRecord(
+            for: trigger,
+            isPlaying: store.isPlaying,
+            currentTime: store.currentTime,
+            documentID: document.id
+        ) else { return }
+        savedPlayheadSeconds = record.seconds
+        savedDocumentID = record.documentID
+    }
 
     /// Re-apply scene-stored playhead / selection when re-entering the same
     /// project (cold launch, app restart). Gated on `savedDocumentID` to
@@ -394,6 +446,76 @@ extension EditorView {
         var (x, y) = (abs(a), abs(b))
         while y != 0 { (x, y) = (y, x % y) }
         return max(x, 1)
+    }
+}
+
+// MARK: - Playhead persistence (pure)
+
+extension EditorView {
+
+    /// The moments at which the editor may write the playhead to
+    /// `@SceneStorage`. Each exists for a reason the others don't cover.
+    enum PlayheadTrigger: Equatable {
+        /// `store.currentTime` changed — a user scrub, or a tick from
+        /// playback. The hot one.
+        case playheadMoved
+        /// `store.isPlaying` changed. Matters on the fall: when playback stops,
+        /// no further `currentTime` change is coming to carry the final
+        /// position across.
+        case playbackStateChanged
+        /// The scene went to `.background` — home, swipe-up or lock, which the
+        /// system may follow with a kill.
+        case sceneBackgrounded
+        /// The editor left the screen: the nav bar's back button, or the
+        /// restored interactive edge-swipe pop. Neither passes through any
+        /// other trigger.
+        case editorDismissed
+    }
+
+    /// What a flush writes to scene storage.
+    struct PlayheadRecord: Equatable {
+        let seconds: Double
+        let documentID: String
+    }
+
+    /// The whole scene-storage playhead rule, in one pure function. `nil`
+    /// means "do not write".
+    ///
+    /// **Why anything is suppressed at all.** Until v0.9 the playhead only
+    /// moved when the user scrubbed, so a write per change was a write per
+    /// gesture. Playback changes that completely: kadr-ui's periodic observer
+    /// pushes a new `currentTime` about ten times a second for the entire
+    /// length of a play, and every one of those would land in a
+    /// UserDefaults-backed store — hundreds of writes for one tap on play, not
+    /// one of which is the value restore wants.
+    ///
+    /// **Why gated and not throttled.** A throttle still persists intermediate
+    /// positions that are never the answer to "where did the user leave off",
+    /// and it needs a timer to own and to cancel on teardown. What restore
+    /// wants is the *parked* playhead — the value at rest. So the two triggers
+    /// that can fire during playback are suppressed while it runs, and the two
+    /// that mark the end of a session always write: those are precisely the
+    /// moments the position stops changing.
+    ///
+    /// Non-finite times record as zero rather than writing a NaN into scene
+    /// storage, which would come back as a garbage seek on the next launch.
+    nonisolated static func playheadRecord(
+        for trigger: PlayheadTrigger,
+        isPlaying: Bool,
+        currentTime: CMTime,
+        documentID: UUID
+    ) -> PlayheadRecord? {
+        switch trigger {
+        case .playheadMoved, .playbackStateChanged:
+            guard !isPlaying else { return nil }
+        case .sceneBackgrounded, .editorDismissed:
+            break
+        }
+        let seconds = CMTimeGetSeconds(currentTime)
+        return PlayheadRecord(
+            seconds: seconds.isFinite ? max(0, seconds) : 0,
+            documentID: documentID.uuidString
+        )
     }
 }
 

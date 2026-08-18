@@ -114,6 +114,31 @@ New coverage: `ReelTokenTests` / `ReelTypographyTests` (radius 0, 2pt rules, bot
 
 ---
 
+## [0.9.0]
+
+Transport band — playback controls for the editor. The editor shipped with stage and timeline but no affordance between them to *run* a composition — playback controls were missing. This release adds the transport band: a horizontal strip below the stage with skip-back · play/pause · skip-forward buttons, elapsed/total timecode readout ("0:01 / 0:06" in the numeric type token, with elapsed at full text colour and total at muted), and loop / fullscreen toggles.
+
+### Added
+
+- **Transport band UI** — play/pause button (26pt glyph, accent fill), skip-back and skip-forward buttons (fixed 1.0-second intervals, disabled at composition bounds), timecode readout, loop toggle, fullscreen button.
+- **Skip step is 1.0 second, not frame-step.** `VideoPreview` only seeks when time differences exceed 0.05s; one frame at 30fps is 0.033s, below the floor. A frame-step button would silently fail on every press. The 1.0-second interval is well clear of the seek floor, matches the timecode unit, and aligns with the skip-button glyphs (`gobackward.1` / `goforward.1`). See `TransportBand.skipInterval` and comments in the implementation.
+- **Loop implemented in the app, not `VideoPreview(loops:)`.** kadr-ui 0.14 captures the `loops` parameter at player construction and does not rebuild on change, making a UI toggle inert. The app detects playback end and restarts if loop is on. `loops: false` is always passed to the preview; the app handles the restart. See `TransportBand.restartForLoopIfNeeded`.
+- **Loop is session state.** `ProjectStore.isLooping` lives on the store alongside `isPlaying` and `currentTime`. No persistence to disk, no `ProjectDocument` schema change (v5 unchanged), and loop state does not enter the undo timeline.
+- **Playhead scene-storage flush gating.** The editor's existing scene-storage playhead write is gated to not fire on every playback tick (~10 times per second during video preview). Explicit flushes fire on playback stop and `scenePhase: .background`. Prevents excessive I/O during playback.
+- **Fullscreen mode.** Tapping the fullscreen button collapses editor chrome in place (no new route or screen push). The transport band remains visible so its exit control stays reachable. True full-screen video playback (black bars, no UI) is out of scope.
+
+### Dependencies
+
+- **kadr-ui ≥ 0.14.0** (no floor change; already required by chroma-key work). Requires `VideoPreview(isPlaying:currentTime:)` two-way bindings for playback state binding without rebuilding the player.
+- kadr ≥ 0.15.0, kadr-captions ≥ 0.8.0, kadr-photos ≥ 0.7.0 unchanged (from v0.7.1).
+
+### Compatibility
+
+- **No schema changes.** `ProjectDocument` v5 persists identically; loop state is transient.
+- **No undo timeline impact.** Play state and loop toggle are session-level, never recorded in the undo stack.
+
+---
+
 ## [0.7.1] - 2026-07-17
 
 Platform modernization — raises the deployment floor to **iOS 17** and migrates the app's stores from `ObservableObject` to the `@Observable` macro. The payoff of the coordinated ecosystem iOS 17 move (kadr v0.15 / kadr-ui v0.12 / kadr-captions v0.8 / kadr-photos v0.7 / **this**). No user-facing feature change.

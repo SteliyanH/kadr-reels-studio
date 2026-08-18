@@ -279,3 +279,22 @@
 /* v0.8.3 — chroma key: sample the key colour off the footage */
 "Sample from frame" = "Sample from frame";
 "Tap the picture to lift its colour. Taps outside the frame are ignored." = "Tap the picture to lift its colour. Taps outside the frame are ignored.";
+
+/* v0.9 — the transport band beneath the editor stage.
+ *
+ * Dotted keys, not literal-English ones: these are spoken labels resolved
+ * through `NSLocalizedString` at the call site (see `TransportBand`'s spoken-
+ * copy extension) rather than `Text("…")` literals SwiftUI looks up for us,
+ * and a key that differs from its value is what makes a missing entry visible
+ * instead of silent.
+ */
+"transport.play" = "Play";
+"transport.pause" = "Pause";
+"transport.skipBack" = "Skip back";
+"transport.skipForward" = "Skip forward";
+"transport.loop" = "Loop";
+"transport.loop.on" = "On";
+"transport.loop.off" = "Off";
+"transport.fullscreen.enter" = "Enter full screen";
+"transport.fullscreen.exit" = "Exit full screen";
+"transport.time.a11y" = "%1$@ of %2$@";
