@@ -149,3 +149,83 @@ Follow-ups: none filed.
 `.war-council/` is untracked and carries the mission anchor
 (`last-mission-start`) and this ledger. It is War Council infrastructure, not
 part of the #73 feature, and is excluded from the mission commit.
+
+---
+
+2026-08-19 | feature | squads: death-knights(opus), abominations-harness(sonnet), abominations-ci(sonnet), skeletons(haiku) | gates: pre PASS, analyze SKIPPED, tests PASS (469 unit executed / 7 skipped by design / 0 fail; 6 UI / 0 fail), a11y PASS (47 / 0 fail), build PASS (0 warnings) | verdict: PARTIAL
+
+### Mission
+
+Issue #75 — snapshot harness over the editor view group. Framework, pinned CI
+job, recording workflow, review discipline, proven end-to-end on one group.
+PR #85 → `develop`. Commit `eadb307`. Anchor `2b5140c`.
+
+### Verdict is PARTIAL, and why
+
+The work is complete and every gate is green. **Sylvanas never ruled on this
+diff.** She was mid-flight routing two record wounds when the session limit
+ended the run, and could not be re-raised. A partial review was performed by
+the commanding session in her place — seam production-safety, CI guard
+integrity, dependency claims — which found one real wound (below). That is not
+her pass and this entry does not record it as one. A mission whose review was
+cut short is PARTIAL even when the gates are green.
+
+### Thrones
+
+**Throne demoted: fable → opus (limits).** The first Lich King fell to an API
+529 mid-mission; the demotion rule was applied and a second was raised on opus.
+The second fell to a session limit during the record. Two infrastructure
+deaths, zero defeats in the work itself.
+
+### Rulings
+
+- Slice = the **editor group**, not the easier `ProjectListView`. A slice that
+  dodges the hard problem (a deterministic stage) proves nothing end-to-end.
+- `StageRendering` environment seam, default `.live`. Production reads, never
+  writes; `StageRenderingTests` asserts the default so a flip fails a test.
+- Snapshot-only CI job, runtime pinned, **fail loud, never fall back**. The
+  main `test:` job keeps its documented highest-runtime float — 0 deleted
+  lines in `ci.yml`.
+- Baselines recorded on **CI only**. A fresh checkout has zero baselines and
+  the snapshot job is knowingly red until the first record PR merges.
+
+### The harness's first catch — the mission's own justification
+
+`TransportBand` used SF Symbol names `gobackward.1` / `goforward.1`, which do
+not exist (the family runs .5 / .10 / .15 / .30 / .45 / .60 / .75 / .90). Both
+skip buttons drew missing-glyph placeholders on device. It merged in #84 the
+previous day past the build gate, 47 a11y assertions, ViewInspector and a
+Codex review — none of which look at pixels. Fixed to the unnumbered glyphs
+with a regression test resolving each name against the system symbol set, and
+the doc comment that justified the 1.0s interval by those glyphs corrected.
+
+### The net was proven red
+
+Required before belief: record (7/7, 7 PNGs) → perturb one fixture → **6
+passed / 1 failed, "Snapshot does not match reference"** → revert (7/7) →
+delete local baselines → no-env run (**7/7 skipped**, suite green). A snapshot
+suite that has never failed on purpose is decoration.
+
+### Wounds
+
+- **BLOOD (CI, remedied):** the render-collect path looked for
+  `Devices/<UDID>/tmp`, which does not exist. Real renders live under the app
+  container's `tmp`. Replaced with a search; proved on a synthetic tree, on
+  real PNGs from this machine, and on a filename-collision case.
+- **Found by the commanding session in Sylvanas's absence:** DESIGN.md and
+  CHANGELOG.md both claimed `swift-snapshot-testing ≥ 1.14.0` against a
+  `1.19.4` pin in `project.yml`. Corrected in both files.
+- **ASH:** exact executed-count assertion added to both workflows, so a
+  snapshot that quietly stops running is a red. This closes the
+  skipped-reads-as-coverage hole in config rather than in prose.
+
+### Standing risks
+
+- **Gates were run against a simulator UDID, not the `name=iPhone 17 Pro` in
+  `war-council.yaml`.** Two devices on this machine share that name, so the
+  configured selector is ambiguous and non-deterministic. Unfixed; it affects
+  every gate, not just this mission.
+- `@Environment(ToastCenter.self)` traps at host time even when never read.
+  Worked around test-side only.
+- No baselines exist yet. The harness is not proven against real committed
+  references until the first record PR merges.
