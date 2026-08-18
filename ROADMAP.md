@@ -120,6 +120,12 @@ Last cycle before v1.0 App Store submission. **iOS 17 floor and `@Observable` mi
 
 Six tiers. Pairs with **kadr v0.13** (engine perf); v0.8 doesn't depend on kadr-ui v0.12 anymore (v0.7.1 already uses it).
 
+## v0.9.0 — Transport band
+
+Playback controls missing since v0.1 — the editor had a stage and a timeline but no affordance between them to run a composition. A single-tier cycle scoped at the transport band (skip-back · play/pause · skip-forward · time readout · loop · fullscreen). Targets **kadr-ui 0.14.0** (VideoPreview bindings already ship); no upstream kadr changes needed (#73).
+
+1. **Transport band UI** — horizontal strip between stage and timeline. Leading group: skip-back / play/pause (26pt prominent accent fill) / skip-forward. Center: elapsed/total timecode readout ("0:01 / 0:06") in numeric type token (elapsed full text, total muted). Trailing: loop toggle and fullscreen button. Skip step is 1.0 second (fixed, not frame-step — VideoPreview ignores seeks under 0.05s and one frame at 30fps is 0.033s, so the button would silently do nothing; a second is clear of the floor and matches the timecode unit). Play on a finished composition restarts at zero. Loop is implemented in the app rather than `VideoPreview(loops:)` because kadr-ui captures that parameter at player construction and does not rebuild on change, which would make the toggle inert; the app restarts playback itself when `isPlaying` falls. Loop is session state on `ProjectStore` — no persistence, no schema change (ProjectDocument stays v5), no undo timeline. Scene-storage playhead write is gated so it does not fire on every playback tick; flushes fire when playback stops and when the app backgrounds. Fullscreen collapses editor chrome in place (no new route); the band stays visible so the exit control stays reachable.
+
 ## v1.0.0 — App Store *(planned)*
 
 - Final name lock (revisit "Reels Studio" before submission — likely conflicts with Meta trademarks).
