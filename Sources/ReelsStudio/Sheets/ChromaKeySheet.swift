@@ -1,5 +1,6 @@
 import SwiftUI
 import Kadr
+import KadrUI
 
 /// Pick a key color + threshold for a Chroma Key filter, then add it to the
 /// selected clip's filter stack. v0.7 Tier 4.
@@ -10,9 +11,11 @@ import Kadr
 /// `ProjectStore.addChromaKey(id:color:threshold:)` and dismisses; Cancel
 /// just dismisses.
 ///
-/// "Pick from preview" (tap the video preview to sample a color) is a
-/// follow-up — needs `VideoPreview` to expose tap → color sampling, which
-/// the current kadr-ui surface doesn't offer.
+/// v0.8.3 — "sample from frame" landed. kadr-ui 0.14 exposes tap → colour
+/// sampling on `VideoPreview`, so the user can lift the key colour off the
+/// footage instead of guessing it in a colour wheel. The preview is bound to
+/// the editor's playhead, so it shows the frame the user was already looking
+/// at rather than frame zero.
 struct ChromaKeySheet: View {
 
     var store: ProjectStore
@@ -28,6 +31,11 @@ struct ChromaKeySheet: View {
     /// regression, not a style call.
     @State private var keyColor: Color = .green
     @State private var threshold: Double = 0.4
+
+    /// Where the last sample was taken, normalised. Drives the reticle, so the
+    /// user can see which pixel produced the swatch — without it, a sample that
+    /// lands a few pixels off reads as the picker simply being wrong.
+    @State private var samplePoint: CGPoint?
 
     /// Canonical chroma-key starting threshold. 0.0 = exact-match (no
     /// tolerance — chips off only literal pixel-equal hits); 1.0 = max
@@ -48,6 +56,7 @@ struct ChromaKeySheet: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: Reel.Space.s6) {
+                    sampleFromFrameSection
                     colorPreviewSection
                     thresholdSection
                     helpText
@@ -59,6 +68,62 @@ struct ChromaKeySheet: View {
     }
 
     // MARK: - Subviews
+
+    /// The footage, tappable. Bound to the editor's playhead so it opens on the
+    /// frame the user was looking at, not frame zero — the whole point is to
+    /// sample the green they can actually see.
+    @ViewBuilder
+    private var sampleFromFrameSection: some View {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Sample from frame")
+                .reelLabel()
+
+            VideoPreview(
+                store.video,
+                currentTime: Binding(
+                    get: { store.currentTime },
+                    set: { store.currentTime = $0 }
+                ),
+                onSampleColor: { sample in
+                    keyColor = sample.color
+                    samplePoint = sample.point
+                    // Same light tap the timeline uses for a discrete pick.
+                    HapticEngine.shared.snap()
+                }
+            )
+            .aspectRatio(
+                store.video.preset.resolution.width / store.video.preset.resolution.height,
+                contentMode: .fit
+            )
+            .frame(maxHeight: Reel.chromaSampleHeight)
+            .overlay { reticle }
+            // The stage is never grayscaled and neither is this: the user is
+            // picking a colour, so showing them a desaturated frame would make
+            // the task impossible.
+            .accessibilityElement(children: .contain)
+
+            Text("Tap the picture to lift its colour. Taps outside the frame are ignored.")
+                .font(Reel.Typography.caption)
+                .foregroundStyle(palette.textMuted)
+        }
+    }
+
+    /// Crosshair over the last sampled point.
+    @ViewBuilder
+    private var reticle: some View {
+        if let samplePoint {
+            GeometryReader { proxy in
+                Rectangle()
+                    .strokeBorder(palette.text, lineWidth: Reel.ruleWidth)
+                    .frame(width: Reel.reticleSize, height: Reel.reticleSize)
+                    .position(
+                        x: samplePoint.x * proxy.size.width,
+                        y: samplePoint.y * proxy.size.height
+                    )
+                    .allowsHitTesting(false)
+            }
+        }
+    }
 
     @ViewBuilder
     private var colorPreviewSection: some View {

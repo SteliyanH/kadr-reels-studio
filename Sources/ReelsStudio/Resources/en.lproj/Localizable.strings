@@ -275,3 +275,7 @@
 "Couldn't read file" = "Couldn't read file";
 "skipped.reason.unsupportedSchema" = "Project uses a newer schema (v%lld)";
 "skipped.reason.unsupportedSchemaDetail" = "This project was saved by a newer build (schema v%lld). Update Reels Studio to open it.";
+
+/* v0.8.3 — chroma key: sample the key colour off the footage */
+"Sample from frame" = "Sample from frame";
+"Tap the picture to lift its colour. Taps outside the frame are ignored." = "Tap the picture to lift its colour. Taps outside the frame are ignored.";

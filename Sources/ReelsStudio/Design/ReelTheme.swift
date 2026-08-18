@@ -428,6 +428,14 @@ extension Reel {
     /// number to reach for.
     static let libraryTopInset: CGFloat = 52
 
+    /// Height cap for the chroma-key sampling preview. Big enough to aim at a
+    /// pixel, small enough to leave the swatch, threshold and help text on
+    /// screen in a 400pt sheet.
+    static let chromaSampleHeight: CGFloat = 180
+
+    /// Edge of the crosshair marking the last sampled point.
+    static let reticleSize: CGFloat = 16
+
     /// Upper bound on Dynamic Type growth.
     ///
     /// v0.8.2 — the type scale now scales with the user's setting, but not

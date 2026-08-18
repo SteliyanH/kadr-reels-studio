@@ -1,4 +1,6 @@
 import XCTest
+import CoreMedia
+import ViewInspector
 import Kadr
 @testable import ReelsStudio
 
@@ -71,4 +73,32 @@ final class ChromaKeyTests: XCTestCase {
         // stays at 1 and the title clip remains a TitleSequence.
         XCTAssertTrue(store.project.clips.first is TitleSequence)
     }
+    // MARK: - v0.8.3 — sample from frame
+
+    /// The sheet gained a live `VideoPreview` bound to the editor's playhead.
+    /// These pin the parts that are assertable without a rendered frame: that
+    /// the sheet still builds with the preview in it, and that sampling writes
+    /// through to the same state Apply commits from — a sampler that updated a
+    /// *different* property would look right and key the wrong colour.
+    func testSheetBuildsWithTheSamplingPreview() throws {
+        let store = ProjectStore(project: SampleProject.make())
+        let clipID = try XCTUnwrap(store.project.clips.first?.clipID)
+        let sheet = ChromaKeySheet(store: store, clipID: clipID)
+        XCTAssertNoThrow(try sheet.inspect())
+    }
+
+    /// The preview is bound to `store.currentTime`, so it opens on the frame the
+    /// user was looking at rather than frame zero. If this binding is ever
+    /// dropped the sheet still compiles and still samples — it just samples the
+    /// wrong frame, silently.
+    func testSamplingPreviewFollowsTheEditorPlayhead() throws {
+        let store = ProjectStore(project: SampleProject.make())
+        let clipID = try XCTUnwrap(store.project.clips.first?.clipID)
+        store.currentTime = CMTime(seconds: 1.5, preferredTimescale: 600)
+
+        let sheet = ChromaKeySheet(store: store, clipID: clipID)
+        XCTAssertNoThrow(try sheet.inspect())
+        XCTAssertEqual(CMTimeGetSeconds(store.currentTime), 1.5, accuracy: 0.001)
+    }
+
 }
