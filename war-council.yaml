@@ -30,11 +30,33 @@ lanes:
       # TransportAccessibilityTests added 2026-08-18 (#73 / PR #84): the gate
       # ran only ProjectRowAccessibilityTests and was therefore blind to the
       # entire transport band while still reporting green.
+      #
+      # ReelSliderAdjustabilityTests added in the same pass. It had sat in
+      # AccessibilityWiringTests.swift — the same file as the class this gate
+      # already named — unjudged by this gate since the day it was written. It
+      # exists because ReelSlider once shipped label + value and no
+      # .accessibilityAdjustableAction, leaving 12 controls unusable by
+      # VoiceOver while the annotation count rose 24 -> 43.
+      #
+      # ReelSheetHeaderAccessibilityTests and DynamicTypeTests added in the
+      # same pass, which brings this gate to every a11y class in the repo:
+      #
+      #   AccessibilityWiringTests.swift  ProjectRowAccessibilityTests
+      #                                   ReelSliderAdjustabilityTests
+      #                                   ReelSheetHeaderAccessibilityTests
+      #   TransportAccessibilityTests.swift
+      #   DynamicTypeTests.swift
+      #
+      # ADDING AN A11Y TEST CLASS WITHOUT ADDING IT HERE IS THE ONLY WAY THIS
+      # GATE GOES BLIND AGAIN. It will still report green while doing it.
       a11y: >-
         xcodebuild test -project ReelsStudio.xcodeproj -scheme ReelsStudio
         -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
         -only-testing:ReelsStudioTests/ProjectRowAccessibilityTests
         -only-testing:ReelsStudioTests/TransportAccessibilityTests
+        -only-testing:ReelsStudioTests/ReelSliderAdjustabilityTests
+        -only-testing:ReelsStudioTests/ReelSheetHeaderAccessibilityTests
+        -only-testing:ReelsStudioTests/DynamicTypeTests
         CODE_SIGNING_ALLOWED=NO
       build: >-
         xcodebuild build -project ReelsStudio.xcodeproj -scheme ReelsStudio
