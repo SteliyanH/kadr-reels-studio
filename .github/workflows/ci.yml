@@ -79,3 +79,320 @@ jobs:
             -scheme ReelsStudio \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             CODE_SIGNING_ALLOWED=NO
+
+  snapshot:
+    runs-on: macos-15
+
+    # Sibling to `test`, not a replacement: `test` floats its simulator
+    # runtime on purpose (see its comment above) because unit/UI assertions
+    # don't care which iOS point release renders them. Snapshot tests are the
+    # opposite case — swift-snapshot-testing's reference PNGs are pixel-exact,
+    # and font hinting / rendering details drift across iOS point releases.
+    # A floating runtime here would make green mean "matched whatever runtime
+    # happened to be newest today," not "matched the committed baseline" —
+    # drift wearing green. So this job pins the runtime too. See issue #75.
+    #
+    # Known-red until the first record PR merges: before any baseline exists
+    # under Tests/ReelsStudioTests/__Snapshots__/, swift-snapshot-testing
+    # writes the reference image and deliberately reports the test as
+    # *failed* (a missing baseline is not a pass). That is honest, not a
+    # bug in this job — do not soften it to tolerate a missing baseline.
+    # Use the manual snapshot-record.yml workflow (workflow_dispatch) to
+    # produce the first baselines via a reviewed PR, then this job goes green.
+    timeout-minutes: 20
+
+    env:
+      # The iOS simulator runtime bundled INSIDE the pinned Xcode 26.3 (not a
+      # separately-downloaded runtime — there is deliberately no download
+      # step here; runtime downloads on CI are slow and flaky, and were
+      # rejected by ruling on #75). Confirmed from Apple's Xcode 26.3 release
+      # notes: "Xcode 26.3 includes Swift 6.2.3 and SDKs for iOS 26.2, ...".
+      #
+      # This value and the `xcode-version` pin below are ONE unit that must
+      # move in lockstep. Bumping either alone silently renders baselines on
+      # a runtime nobody reviewed them against. If you bump either:
+      #   1. Bump both together.
+      #   2. Re-record every baseline via snapshot-record.yml.
+      #   3. Have a human review every changed PNG in the resulting PR before
+      #      merging — a silently accepted re-record is a lost test.
+      SNAPSHOT_IOS_RUNTIME: '26.2'
+      # Pixel-exact baselines depend on device screen geometry too, not just
+      # the runtime. Picking "any iPhone under the pinned runtime" isn't
+      # enough — a first cut of the picker below fell back to a plain name
+      # sort and landed on "iPhone Air" purely because "Air" outsorts "17
+      # Pro" alphabetically, an accident that would silently re-pick a
+      # different model if the runner's device list ever reordered. Match
+      # the repo's existing convention (war-council.yaml's `tests` gate) so
+      # there is one deliberately-chosen device, not a sort-order accident.
+      SNAPSHOT_IOS_DEVICE: 'iPhone 17 Pro'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          # Same pin as `test`, same reason (see that job's comment). This
+          # job additionally requires this exact version to be the one that
+          # bundles SNAPSHOT_IOS_RUNTIME above — the two are a matched pair.
+          xcode-version: '26.3'
+      - name: Install xcodegen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Assert pinned iOS runtime is installed
+        run: |
+          # Fail loud instead of silently rendering on the wrong runtime. A
+          # runner image can drop or swap runtimes (it has happened upstream
+          # on actions/runner-images); if the exact pinned runtime is gone,
+          # that is a real problem to fix — either by re-pinning Xcode to a
+          # version that still bundles it, or accepting the runner's new
+          # runtime and re-recording baselines — never something to route
+          # around by falling back to "whatever's available".
+          RUNTIME_ID="com.apple.CoreSimulator.SimRuntime.iOS-${SNAPSHOT_IOS_RUNTIME//./-}"
+          export RUNTIME_ID
+          if ! xcrun simctl list runtimes -j | python3 -c "
+          import json, os, sys
+          data = json.load(sys.stdin)
+          target = os.environ['RUNTIME_ID']
+          ok = any(r.get('identifier') == target and r.get('isAvailable') for r in data['runtimes'])
+          sys.exit(0 if ok else 1)
+          "; then
+            echo "::error::Pinned iOS runtime $SNAPSHOT_IOS_RUNTIME ($RUNTIME_ID) is not installed on this runner. Snapshot baselines are locked to this exact runtime paired with Xcode 26.3 — see the SNAPSHOT_IOS_RUNTIME comment on this job. Not falling back to another runtime: that would render on an unreviewed runtime and pass silently."
+            echo "Available runtimes:"
+            xcrun simctl list runtimes
+            exit 1
+          fi
+      - name: Pick an iPhone simulator UDID on the pinned runtime + device
+        id: simulator
+        run: |
+          # Adapted from `test`'s picker, but filtered to the exact pinned
+          # runtime identifier AND the exact pinned device name — this job
+          # cannot float on either axis. Filtering by identifier also
+          # sidesteps this machine's two simulators both named
+          # "iPhone 17 Pro" under different runtimes: the destination below
+          # is a UDID, never a name.
+          RUNTIME_ID="com.apple.CoreSimulator.SimRuntime.iOS-${SNAPSHOT_IOS_RUNTIME//./-}"
+          export RUNTIME_ID
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, os, sys
+          data = json.load(sys.stdin)
+          target_runtime = os.environ['RUNTIME_ID']
+          target_device = os.environ['SNAPSHOT_IOS_DEVICE']
+          for runtime, devices in data['devices'].items():
+              if runtime != target_runtime:
+                  continue
+              for d in devices:
+                  if d['name'] == target_device:
+                      print(d['udid'])
+                      break
+          ")
+          if [ -z "$UDID" ]; then
+            echo "::error::No '$SNAPSHOT_IOS_DEVICE' simulator found under pinned runtime $RUNTIME_ID. The runtime itself is present (the previous step asserted that) but no matching device profile exists for it on this runner — not substituting a different device model, since that would silently change the pixel geometry baselines were recorded against."
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator UDID: $UDID ($SNAPSHOT_IOS_DEVICE, runtime $SNAPSHOT_IOS_RUNTIME)"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+      - name: Boot the pinned simulator and inject SNAPSHOT_RUNTIME_PINNED
+        run: |
+          # SnapshotTests self-skip unless SNAPSHOT_RUNTIME_PINNED=1 is visible
+          # to the TEST PROCESS. The obvious lever for that — passing
+          # TEST_RUNNER_SNAPSHOT_RUNTIME_PINNED=1 to xcodebuild — DOES NOT WORK
+          # on this toolchain (Xcode 26.x). Measured, not guessed: xcodebuild
+          # accepts the argument, echoes it back under "Build settings from
+          # command line", and then silently drops it. Dumping all 73 env vars
+          # from inside the running test host showed neither
+          # SNAPSHOT_RUNTIME_PINNED nor a control variable
+          # (TEST_RUNNER_FOOBAR=hello) had arrived — with plain `xcodebuild
+          # test` and with `build-for-testing` + `test-without-building` alike.
+          # The TEST_RUNNER_ argument is still passed below as belt-and-braces
+          # should a future Xcode honour it again, but correctness does NOT
+          # depend on it: this step is what actually makes the tests run.
+          #
+          # What does work, verified end-to-end: set the variable in the
+          # simulator's own launchd environment before the test host launches,
+          # so the host inherits it. `simctl spawn` requires a booted device,
+          # hence boot + `bootstatus -b` (block until boot completes) first.
+          UDID="${{ steps.simulator.outputs.udid }}"
+          # `simctl boot` exits non-zero (SimError 405) when the device is
+          # already booted, which is a perfectly fine state to be in — the
+          # bootstatus call below is the real "is it ready" gate.
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl spawn "$UDID" launchctl setenv SNAPSHOT_RUNTIME_PINNED 1
+          # Read it back. If injection failed, fail HERE, where the cause is
+          # named, instead of ten minutes later as a mystery all-skipped run.
+          INJECTED=$(xcrun simctl spawn "$UDID" launchctl getenv SNAPSHOT_RUNTIME_PINNED | tr -d '[:space:]')
+          if [ "$INJECTED" != "1" ]; then
+            echo "::error::Could not inject SNAPSHOT_RUNTIME_PINNED into simulator $UDID (read back: '$INJECTED'). Without it every SnapshotTests case self-skips, and a run that skips everything proves nothing. Not continuing."
+            exit 1
+          fi
+          echo "SNAPSHOT_RUNTIME_PINNED=1 injected into simulator $UDID"
+      - name: Build + test SnapshotTests (pinned runtime)
+        run: |
+          # `-e` is on by default for run steps on this runner; turn it off
+          # for this pipeline only so a real snapshot mismatch (or, before
+          # the first baselines exist, the expected missing-baseline
+          # failure) doesn't short-circuit the executed/skipped checks
+          # below.
+          set +e
+          xcodebuild test \
+            -project ReelsStudio.xcodeproj \
+            -scheme ReelsStudio \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
+            -only-testing:ReelsStudioTests/SnapshotTests \
+            -resultBundlePath ./TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            TEST_RUNNER_SNAPSHOT_RUNTIME_PINNED=1 \
+            2>&1 | tee xcodebuild-snapshot.log
+          # ^ that TEST_RUNNER_ argument is belt-and-braces ONLY; it is
+          # silently dropped by this toolchain. The simulator launchd
+          # injection in the step above is what actually un-skips the tests.
+          XCODEBUILD_EXIT=${PIPESTATUS[0]}
+
+          # This repo has already shipped a permanently-green gate that ran
+          # 0 tests (see war-council.yaml's history on the a11y gate) — a
+          # "TEST SUCCEEDED" or even a clean exit code proves nothing on its
+          # own. An executed-count check ALONE is not enough either: the
+          # first cut of this guard was itself permanently green. When every
+          # case self-skips, xcodebuild prints, verbatim and measured on this
+          # toolchain:
+          #   Executed 7 tests, with 7 tests skipped and 0 failures (0 unexpected) in 0.029 (0.031) seconds
+          # and exits 0 with ** TEST SUCCEEDED **. Skipped cases are counted
+          # in the executed number, so `Executed 7` read as "7 tests ran" for
+          # a run in which nothing ran at all.
+          #
+          # So parse BOTH numbers, and red the run on any of three conditions:
+          #   * no summary line at all — a missing line must never default to
+          #     success; it means the bundle never got far enough to report
+          #   * executed == 0
+          #   * skipped > 0 — a skipped snapshot test is not a passing
+          #     snapshot test, and here a skip means the env injection step
+          #     above stopped working
+          # The EXACT number of test methods in
+          # Tests/ReelsStudioTests/SnapshotTests.swift. Asserting "> 0" is not
+          # a gate: silently losing a test method — a bad merge, a rename, an
+          # `-only-testing` typo — would still report green as long as one
+          # case ran. MUST be updated in the same PR whenever SnapshotTests
+          # gains or loses a test method (and in snapshot-record.yml, which
+          # carries the same constant). If this number is wrong, the job is
+          # red until a human reconciles it; that is the intended behaviour.
+          EXPECTED_TESTS=7
+          SUMMARY=$(grep -E 'Executed [0-9]+ test' xcodebuild-snapshot.log | tail -1)
+          if [ -z "$SUMMARY" ]; then
+            echo "::error::No 'Executed N tests' summary line in xcodebuild's output at all. A missing summary is a red, never a green — the test bundle never got far enough to report. See the uploaded snapshot-diffs artifact for the full log."
+            exit 1
+          fi
+          EXECUTED=$(printf '%s\n' "$SUMMARY" | sed -nE 's/.*Executed ([0-9]+) tests?.*/\1/p')
+          EXECUTED=${EXECUTED:-0}
+          # Skips are counted across EVERY summary line in the log, not just
+          # the last, and the highest count wins: a per-suite line reporting
+          # skips must red the run even if the aggregate line somehow does
+          # not. `tests? skipped` covers xcodebuild's singular form too.
+          SKIPPED=$(grep -oE '[0-9]+ tests? skipped' xcodebuild-snapshot.log | grep -oE '^[0-9]+' | sort -rn | head -1)
+          SKIPPED=${SKIPPED:-0}
+          echo "Summary line: $SUMMARY"
+          echo "Executed: $EXECUTED  Skipped: $SKIPPED"
+
+          if [ "$EXECUTED" -eq 0 ]; then
+            echo "::error::SnapshotTests executed 0 tests. Nothing ran, so nothing was proved — that is a red, never a green."
+            exit 1
+          fi
+
+          if [ "$SKIPPED" -gt 0 ]; then
+            echo "::error::SnapshotTests reported $SKIPPED skipped test(s) out of $EXECUTED. A skipped snapshot test is NOT a passing snapshot test. These cases self-skip unless SNAPSHOT_RUNTIME_PINNED=1 is visible to the test process, so a skip here means the simulator env injection step broke — fix the injection, do not tolerate the skip."
+            exit 1
+          fi
+
+          if [ "$EXECUTED" -ne "$EXPECTED_TESTS" ]; then
+            echo "::error::SnapshotTests executed $EXECUTED test(s) but $EXPECTED_TESTS were expected. A snapshot test that quietly stopped running is a lost test, so this is a red even though every case that DID run passed. Either a test method was added/removed/renamed in Tests/ReelsStudioTests/SnapshotTests.swift — in which case update EXPECTED_TESTS in this job AND in snapshot-record.yml — or a test is failing to be discovered, which is a real bug to chase."
+            exit 1
+          fi
+
+          if [ "$XCODEBUILD_EXIT" -ne 0 ]; then
+            echo "::error::SnapshotTests ran ($EXECUTED executed, 0 skipped) but xcodebuild reported failure — a real snapshot mismatch, or (before the first baselines are recorded) the expected missing-baseline failure. Download the uploaded snapshot-diffs artifact and compare rendered-snapshots/ (what THIS run rendered) against Tests/ReelsStudioTests/__Snapshots__/ (the committed references) by eye."
+            exit $XCODEBUILD_EXIT
+          fi
+      - name: Collect the snapshots this run actually rendered
+        if: failure()
+        run: |
+          # swift-snapshot-testing emits NO diff image — there is no
+          # third "here is what changed" PNG to upload, and any comment
+          # claiming otherwise is wrong. On a mismatch it prints two paths:
+          # the committed reference PNG, and the newly-rendered PNG it just
+          # wrote into the simulator's temporary directory. That path is
+          # outside the repo, so the artifact glob below never matched it:
+          # the artifact used to contain only the OLD references and nothing
+          # this run produced, making an eyeball review impossible. Copy the
+          # renders into the workspace first.
+          #
+          # DO NOT hardcode a subpath here. An earlier cut of this step used
+          #   Devices/<UDID>/tmp/...
+          # which does not exist and cannot exist: a live device directory
+          # holds exactly `data`, `device.plist` (and a modelcatalog dir),
+          # with no `tmp` at that level — so the copy silently found zero
+          # files on every failure. ReelsStudioTests is a bundle.unit-test
+          # with a TEST_HOST, so the renders land in the APP CONTAINER's tmp:
+          #   Devices/<UDID>/data/Containers/Data/Application/<UUID>/tmp/SnapshotTests/*.png
+          # and that <UUID> is generated per install — unknowable in advance.
+          # Verified against a real render on this machine. Hence: search the
+          # device directory for PNGs under any tmp/, never guess the path.
+          UDID="${{ steps.simulator.outputs.udid }}"
+          DEV_DIR="$HOME/Library/Developer/CoreSimulator/Devices/$UDID"
+          LIST="${RUNNER_TEMP:-/tmp}/rendered-pngs.txt"
+          mkdir -p rendered-snapshots
+          find "$DEV_DIR" -type f -name '*.png' -path '*/tmp/*' > "$LIST" 2>/dev/null || true
+          COUNT=0
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            # Rebuild as <last-dir>/<file>, i.e. SnapshotTests/testFoo.1.png,
+            # which mirrors the layout under Tests/.../__Snapshots__/ so a
+            # reviewer can open the two side by side.
+            SUBDIR=$(basename "$(dirname "$f")")
+            DEST="rendered-snapshots/$SUBDIR/$(basename "$f")"
+            if [ -e "$DEST" ]; then
+              # Two app containers rendered the same-named image. Keep both,
+              # tagged by container UUID, rather than silently clobbering one.
+              CONTAINER=$(basename "$(dirname "$(dirname "$(dirname "$f")")")")
+              DEST="rendered-snapshots/$SUBDIR/$CONTAINER-$(basename "$f")"
+            fi
+            mkdir -p "$(dirname "$DEST")"
+            cp "$f" "$DEST"
+            COUNT=$((COUNT + 1))
+          done < "$LIST"
+          echo "Copied $COUNT rendered PNG(s) out of $DEV_DIR"
+          find rendered-snapshots -type f -name '*.png' | sort
+          if [ "$COUNT" -eq 0 ]; then
+            # Not fatal: an all-skipped run or a build break legitimately
+            # renders nothing. Say so rather than leaving a silent empty dir.
+            echo "::warning::No rendered PNGs found under any tmp/ in $DEV_DIR — this run rendered nothing (a skip, a build failure, or a missing-baseline run that wrote straight to __Snapshots__). Fall back to the .xcresult in the artifact, which carries whatever attachments the assertions recorded."
+          fi
+      - name: Upload snapshot failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          # Name kept as `snapshot-diffs` deliberately: it is referenced by
+          # the error messages in the step above and renaming it would only
+          # churn. Note what it does and does NOT contain — there is no diff
+          # image in here, because swift-snapshot-testing does not produce
+          # one. What IS here:
+          #   rendered-snapshots/ ...... the PNGs THIS run rendered, copied
+          #                              out of the app container's tmp dir
+          #                              inside the simulator, and laid out
+          #                              to mirror __Snapshots__/ so the two
+          #                              line up file-for-file
+          #   __Snapshots__/ ........... the committed reference PNGs, i.e.
+          #                              what those renders were compared to
+          #   TestResults.xcresult/ .... the result bundle, including any
+          #                              XCTAttachments the assertions
+          #                              recorded (open it in Xcode)
+          #   xcodebuild-snapshot.log .. the full build/test log
+          # Reviewing means opening a rendered-snapshots/ PNG next to its
+          # __Snapshots__/ counterpart and comparing them by eye.
+          name: snapshot-diffs
+          path: |
+            rendered-snapshots/**
+            Tests/ReelsStudioTests/__Snapshots__/**
+            TestResults.xcresult/**
+            xcodebuild-snapshot.log
+          if-no-files-found: ignore
+          retention-days: 14

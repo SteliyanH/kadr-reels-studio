@@ -104,13 +104,47 @@ The fixed type scale silently removed Dynamic Type support: before the migration
 ### Deferred
 
 - **Dynamic Type on device.** The unit tests prove text scales and stops. Whether every layout *holds* at the ceiling needs eyes on a device — folded into the accessibility pass (#71).
-- **Snapshot test baselines.** None existed. Re-recording skipped (UIImage baselines drift between contributor laptops and CI runners; deferred until pinned-Xcode re-record job).
+- **Snapshot test baselines.** None existed. Re-recording skipped (UIImage baselines drift between contributor laptops and CI runners; deferred until pinned-Xcode re-record job). **Deferral discharged in v0.10** — the pinned-Xcode re-record job now lands; see the v0.10 entry.
 
 ### Tests
 
 Suite grows from 296 to 401 test functions; **395 execute green** on a clean simulator, with 0 build warnings. No test file or test function was deleted.
 
 New coverage: `ReelTokenTests` / `ReelTypographyTests` (radius 0, 2pt rules, both accents, line-height deltas, and on-simulator proof that `h2` resolves to Archivo-ExtraBold); `ReelSliderAdjustabilityTests` (VoiceOver step increments, bound clamping, grid adherence); `ReelSheetHeaderAccessibilityTests`; an edge-swipe UI test guarding the interactive pop gesture; and a `setAccentColor` → `ProjectDocument` round-trip at schema v5.
+
+---
+
+## v0.10.0 — Snapshot testing harness
+
+Pixel-snapshot coverage over the editor view group — the one screen the approved design cares about pixel-for-pixel. Seven snapshot test cases prove layout, colour, and spacing invariants that unit/UI tests cannot reach. Baseline recording workflow (`snapshot-record.yml`) gates baselines to CI's pinned Xcode + runtime; tests self-skip locally to avoid false positives on contributor renderers.
+
+### Added
+
+- **Snapshot test harness (issue #75)** — `Tests/ReelsStudioTests/SnapshotTests.swift` with seven test methods covering the editor view group (`EditorView`, `PreviewArea`, `TransportBand`, `EditorToolbar`) on CI's pinned runtime (Xcode 26.3 + iOS 26.2 + iPhone 17 Pro). One view state per test; fresh checkout has zero baseline images (that is intentional, not a bug — baselines land via a reviewed PR).
+- **Determinism via `StageRendering` seam** — `Sources/ReelsStudio/Editor/StageRendering.swift` adds an `EnvironmentKey` with `.live` (default, production only) and `.placeholder` (test-only). Placeholder removes the asynchronous `AVPlayer` that races a loading spinner and failure glyph, leaving a static letterbox field. Production is unaffected: the app never writes the key, and `StageRenderingTests.swift` asserts the default is `.live` (a silent flip fails the test).
+- **Baseline recording workflow** — `.github/workflows/snapshot-record.yml` (manual dispatch) records baselines on CI's pinned runtime and opens a PR for human review. A fresh clone has zero images; CI's `snapshot:` job is knowingly red until the first record PR merges. No baselines are auto-healed or generated locally.
+- **CI `snapshot:` job** — sibling to `test:` in `ci.yml`. Pins Xcode 26.3 + iOS 26.2 + iPhone 17 Pro (no float, no fallback) and injects `SNAPSHOT_RUNTIME_PINNED=1` into the booted simulator's `launchd` so tests run. Red on any executed-count mismatch, any skip, or any pixel diff against committed baselines.
+- **Local skip guard** — `SnapshotTests.requireCIPinnedRuntime()` opens every test. Unless `SNAPSHOT_RUNTIME_PINNED=1` is set in the simulator's launchd, the suite self-skips locally — no false positives on laptop renderers.
+- **Regression test for glyph resolution** — `TransportBandTests.testSkipGlyphsExistInTheSystemSymbolSet()` uses `UIImage(systemName:)` to assert both skip glyphs resolve. PR #84 shipped `gobackward.1` / `goforward.1` (non-existent in SF Symbols; the numbered family runs .5 / .10 / .15 / .30 / .45 / .60 / .75 / .90), rendering placeholders on device while every other gate stayed green. Only pixels would catch it; snapshot harness caught it on first run. Fixed to `gobackward` / `goforward`.
+- **`StageRenderingTests.testStageRenderingDefaultsToLive()`** — runs on every test pass (never skipped). Asserts the default is `.live` so a silent flip is impossible.
+
+### Changed
+
+- **v0.9 glyph notation corrected** — the CHANGELOG entry originally claimed the 1.0-second skip interval "aligns with the skip-button glyphs (`gobackward.1` / `goforward.1`)", which was never true. SF Symbols has no `.1` member. Amended in place with the correction and date.
+
+### Fixed
+
+- **Missing skip glyphs** — PR #84's `TransportBand` used `gobackward.1` / `goforward.1`. Neither exists; both rendered missing-symbol placeholders on device. A11y tests assert labels, ViewInspector asserts structure, the compiler only sees a `String` — nothing looked at pixels. Snapshot harness caught it on first recording run. Fixed to `gobackward` / `goforward`. Skip interval (1.0 second) unchanged and did not depend on the glyph.
+
+### Compatibility
+
+- **No schema changes.** `ProjectDocument` v5 persists identically.
+- **No app changes outside tests.** `StageRendering` key added to test targets only; production never writes it.
+- **swift-snapshot-testing ≥ 1.19.4** — added to ReelsStudioTests target.
+
+### Tests
+
+Suite grows from 460 unit + 6 UI to 462 unit + 6 UI net coverage on development machines (469 test methods executed locally, of which 7 snapshot tests skip = 462 real passes; on CI's pinned runtime, all 7 snapshot tests execute). Two new always-run unit tests: skip-glyph resolution regression test, and `StageRendering` default-value assertion.
 
 ---
 
@@ -121,7 +155,7 @@ Transport band — playback controls for the editor. The editor shipped with sta
 ### Added
 
 - **Transport band UI** — play/pause button (26pt glyph, accent fill), skip-back and skip-forward buttons (fixed 1.0-second intervals, disabled at composition bounds), timecode readout, loop toggle, fullscreen button.
-- **Skip step is 1.0 second, not frame-step.** `VideoPreview` only seeks when time differences exceed 0.05s; one frame at 30fps is 0.033s, below the floor. A frame-step button would silently fail on every press. The 1.0-second interval is well clear of the seek floor, matches the timecode unit, and aligns with the skip-button glyphs (`gobackward.1` / `goforward.1`). See `TransportBand.skipInterval` and comments in the implementation.
+- **Skip step is 1.0 second, not frame-step.** `VideoPreview` only seeks when time differences exceed 0.05s; one frame at 30fps is 0.033s, below the floor. A frame-step button would silently fail on every press. The 1.0-second interval is well clear of the seek floor and matches the timecode unit. **Correction (v0.10):** this entry originally added that the interval "aligns with the skip-button glyphs (`gobackward.1` / `goforward.1`)". That was never true. SF Symbols has no `.1` member in the "go" family — the ladder runs .5 / .10 / .15 / .30 / .45 / .60 / .75 / .90 — so both names resolved to nothing and both cells drew a missing-glyph placeholder on device. The interval always rested on the 0.05s seek floor alone; the glyph names were corrected in v0.10. See `TransportBand.skipInterval` and comments in the implementation.
 - **Loop implemented in the app, not `VideoPreview(loops:)`.** kadr-ui 0.14 captures the `loops` parameter at player construction and does not rebuild on change, making a UI toggle inert. The app detects playback end and restarts if loop is on. `loops: false` is always passed to the preview; the app handles the restart. See `TransportBand.restartForLoopIfNeeded`.
 - **Loop is session state.** `ProjectStore.isLooping` lives on the store alongside `isPlaying` and `currentTime`. No persistence to disk, no `ProjectDocument` schema change (v5 unchanged), and loop state does not enter the undo timeline.
 - **Playhead scene-storage flush gating.** The editor's existing scene-storage playhead write is gated to not fire on every playback tick (~10 times per second during video preview). Explicit flushes fire on playback stop and `scenePhase: .background`. Prevents excessive I/O during playback.

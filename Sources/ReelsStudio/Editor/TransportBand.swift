@@ -92,7 +92,7 @@ struct TransportBand: View {
             Button {
                 seek(by: -TransportBand.skipInterval, duration: duration)
             } label: {
-                Image(systemName: "gobackward.1")
+                Image(systemName: TransportBand.skipBackSymbol)
             }
             .buttonStyle(ReelIconButtonStyle())
             // Disabled *at* the bound rather than silently clamping, so what
@@ -105,7 +105,7 @@ struct TransportBand: View {
             Button {
                 seek(by: TransportBand.skipInterval, duration: duration)
             } label: {
-                Image(systemName: "goforward.1")
+                Image(systemName: TransportBand.skipForwardSymbol)
             }
             .buttonStyle(ReelIconButtonStyle())
             .disabled(TransportBand.isAtEnd(store.currentTime, duration: duration))
@@ -263,9 +263,33 @@ extension TransportBand {
     /// differs from the player's by more than 0.05s, and one frame at the
     /// presets' 30fps is 0.0333s — under the floor. A frame-step button would
     /// be silently swallowed on every press and do nothing at all. A second is
-    /// well clear of the floor, is the unit the readout is already in, and
-    /// matches the `gobackward.1` / `goforward.1` glyphs the cells carry.
+    /// well clear of the floor and is the unit the readout is already in.
+    ///
+    /// The glyphs have nothing to do with it. The cells carry the *unnumbered*
+    /// ``skipBackSymbol`` / ``skipForwardSymbol``. Until v0.9.1 this note
+    /// claimed the second "matches the `gobackward.1` / `goforward.1` glyphs
+    /// the cells carry" — it never did: SF Symbols has no `.1` member in that
+    /// family and never has (the ladder runs .5 / .10 / .15 / .30 / .45 / .60
+    /// / .75 / .90), so both names resolved to nothing and both cells drew a
+    /// missing-glyph placeholder on device. The interval stands on the seek
+    /// floor alone.
     nonisolated static let skipInterval: Double = 1.0
+
+    /// The skip-back glyph.
+    ///
+    /// Unnumbered on purpose: the SF Symbols "go" family carries .5 / .10 /
+    /// .15 / .30 / .45 / .60 / .75 / .90 and **no `.1`**, so a numbered name
+    /// here resolves to nothing and renders a placeholder.
+    ///
+    /// Hoisted out of the call site so a test can assert the running system
+    /// actually vends it. `Image(systemName:)` fails silently — it logs and
+    /// draws a placeholder — and the compiler only ever sees a `String`, so
+    /// nothing else in the build catches a name that does not exist.
+    nonisolated static let skipBackSymbol = "gobackward"
+
+    /// The skip-forward glyph. Same rule, and same reason for being named, as
+    /// ``skipBackSymbol``.
+    nonisolated static let skipForwardSymbol = "goforward"
 
     /// The play/pause glyph, in points.
     ///

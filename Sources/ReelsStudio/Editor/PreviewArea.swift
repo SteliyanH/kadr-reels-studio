@@ -25,45 +25,16 @@ struct PreviewArea: View {
     var store: ProjectStore
     @Environment(\.reelPalette) private var palette
     @Environment(ToastCenter.self) private var toasts
+    /// Test-only seam (issue #75). Defaults to `.live`; nothing in the app
+    /// writes it, so production always takes the `VideoPreview` branch below.
+    @Environment(\.stageRendering) private var stageRendering
 
     var body: some View {
         let video = store.video
         let aspect = video.preset.resolution.width / video.preset.resolution.height
 
         ZStack {
-            // v0.9 — the stage is now driven, not just shown. `isPlaying` and
-            // `currentTime` are two-way with the store, so the transport band
-            // starts and stops the player by writing state and the player's
-            // periodic observer writes the playhead back. Same shape as
-            // `TimelineArea` / `KeyframeArea`'s bindings; no coordinator, no
-            // player handle held anywhere in the app.
-            VideoPreview(
-                video,
-                isPlaying: Binding(
-                    get: { store.isPlaying },
-                    set: { store.isPlaying = $0 }
-                ),
-                currentTime: Binding(
-                    get: { store.currentTime },
-                    set: { store.currentTime = $0 }
-                ),
-                // Always false, never `store.isLooping`. kadr-ui 0.14 freezes
-                // `loops` into the player when it builds it — `.task(id:)`'s
-                // identity doesn't include the flag — so a value passed here
-                // can't be changed for the life of the player, and the loop
-                // button would do nothing. `TransportBand` loops app-side by
-                // restarting playback when it ends. See `ProjectStore.isLooping`.
-                loops: false,
-                // v0.9 — without this a failed load strands the transport: the
-                // band would read "Pause" over kadr-ui's failure glyph forever
-                // because nothing ever clears `isPlaying`, and the error itself
-                // would go nowhere. Clear the state, then surface it on the
-                // same toast path the editor's auto-save failures use.
-                onLoadFailure: { error in
-                    store.isPlaying = false
-                    toasts.show(.transient(error, prefix: "Couldn't load preview"))
-                }
-            )
+            picture(video: video)
             // VoiceOver's other door to the same chrome the blocker below
             // closes. Hit-testing stops a *touch* reaching AVKit's buttons; it
             // does nothing about an accessibility activation, which is
@@ -123,6 +94,79 @@ struct PreviewArea: View {
         // width without measuring anything.
         .overlay(alignment: .topLeading) { specChip }
         .reelElevation(.lg)
+    }
+
+    // MARK: - Picture layer
+
+    /// The stage's picture: kadr-ui's player, or — under the test-only
+    /// ``StageRendering/placeholder`` seam — the bare letterbox field.
+    ///
+    /// The branch is the whole of issue #75's stage seam. `VideoPreview`'s
+    /// initialiser is pure (it only stores its arguments); every effect it has
+    /// — building the `AVPlayer`, attaching the periodic time observer,
+    /// reporting a load failure — happens inside its `.task` on appear. So not
+    /// constructing it is enough to remove all asynchronous work from the
+    /// stage, and with it the loading-spinner-versus-failure-glyph race that
+    /// makes a snapshot baseline of the editor unrepeatable. Nothing else in
+    /// `body` changes: the chrome blocker, the overlay host, the spec chip and
+    /// the letterbox all render from project data alone.
+    ///
+    /// ``StageRendering/live`` is the default and the only value the app ever
+    /// resolves, so this branch is invisible to production.
+    ///
+    /// Takes the composition as a parameter rather than reading `store.video`
+    /// itself: `body` already derived it once, and `Project.makeVideo()` runs
+    /// afresh on every read. This view re-renders roughly ten times a second
+    /// while the transport is running (see ``TransportBand``), so the house
+    /// rule is one read of the derived composition per body pass — the same
+    /// value that feeds the aspect ratio and the rebuild fingerprint feeds the
+    /// player.
+    @ViewBuilder
+    private func picture(video: Video) -> some View {
+        switch stageRendering {
+        case .live:
+            // v0.9 — the stage is now driven, not just shown. `isPlaying` and
+            // `currentTime` are two-way with the store, so the transport band
+            // starts and stops the player by writing state and the player's
+            // periodic observer writes the playhead back. Same shape as
+            // `TimelineArea` / `KeyframeArea`'s bindings; no coordinator, no
+            // player handle held anywhere in the app.
+            VideoPreview(
+                video,
+                isPlaying: Binding(
+                    get: { store.isPlaying },
+                    set: { store.isPlaying = $0 }
+                ),
+                currentTime: Binding(
+                    get: { store.currentTime },
+                    set: { store.currentTime = $0 }
+                ),
+                // Always false, never `store.isLooping`. kadr-ui 0.14 freezes
+                // `loops` into the player when it builds it — `.task(id:)`'s
+                // identity doesn't include the flag — so a value passed here
+                // can't be changed for the life of the player, and the loop
+                // button would do nothing. `TransportBand` loops app-side by
+                // restarting playback when it ends. See `ProjectStore.isLooping`.
+                loops: false,
+                // v0.9 — without this a failed load strands the transport: the
+                // band would read "Pause" over kadr-ui's failure glyph forever
+                // because nothing ever clears `isPlaying`, and the error itself
+                // would go nowhere. Clear the state, then surface it on the
+                // same toast path the editor's auto-save failures use.
+                onLoadFailure: { error in
+                    store.isPlaying = false
+                    toasts.show(.transient(error, prefix: "Couldn't load preview"))
+                }
+            )
+        case .placeholder:
+            // The same true black the letterbox behind it already uses, so the
+            // stubbed frame is the stage with its picture switched off rather
+            // than a stand-in drawn on top of it. A `Color` takes all offered
+            // space exactly as the player does, so the ZStack, the aspect fit
+            // and the chip's corner are unaffected. Deliberately carries no
+            // text: a test fixture must not invent user-facing copy.
+            Reel.stageInk
+        }
     }
 
     // MARK: - AVKit chrome blocker

@@ -1,0 +1,279 @@
+name: Snapshot Baseline Record
+
+# Manual companion to the `snapshot` job in ci.yml (issue #75). That job can
+# never fall back or auto-heal a mismatch — by design, a red snapshot job
+# means "look at the diff," not "re-record and move on." This workflow is
+# the deliberate, human-invoked door for the second half of that: producing
+# new baselines, as a reviewed PR rather than a commit straight to a branch.
+#
+# Recording runs are EXPECTED to make xcodebuild report failure. In
+# SNAPSHOT_TESTING_RECORD=all mode, swift-snapshot-testing writes a fresh
+# reference PNG for every snapshot assertion and then fails that assertion
+# on purpose — its way of saying "I changed the reference, a human must look
+# before this is trusted again." Do not gate this workflow on xcodebuild's
+# exit status; gate on: the SnapshotTests class actually executed AND
+# nothing was skipped, and PNGs actually landed under
+# Tests/ReelsStudioTests/__Snapshots__/. The skip half of that matters as
+# much as the executed half: these tests self-skip unless
+# SNAPSHOT_RUNTIME_PINNED=1 reaches the test process, and an all-skipped
+# run still prints "Executed 7 tests" and exits 0.
+#
+# Every baseline this workflow proposes lands in a PR, never a direct push,
+# because GitHub renders PNG diffs inline on the PR — that is where the
+# by-eye design review actually happens. See the PR body template below.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  record:
+    runs-on: macos-15
+    timeout-minutes: 20
+
+    env:
+      # Must equal ci.yml's `snapshot` job value exactly, for the same
+      # lockstep-with-xcode-version reason explained there. Confirmed via
+      # Apple's Xcode 26.3 release notes: "Xcode 26.3 includes Swift 6.2.3
+      # and SDKs for iOS 26.2, ...". If you bump this, you are the one
+      # dispatching the re-record — that is the whole point of this workflow.
+      SNAPSHOT_IOS_RUNTIME: '26.2'
+      # Must equal ci.yml's `snapshot` job value exactly — see that job's
+      # comment on why "any iPhone under the runtime" isn't safe (a plain
+      # alphabetical sort landed on "iPhone Air" by accident there).
+      SNAPSHOT_IOS_DEVICE: 'iPhone 17 Pro'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          # Same pin as ci.yml's `test` and `snapshot` jobs. Must bundle
+          # SNAPSHOT_IOS_RUNTIME above — the two are a matched pair.
+          xcode-version: '26.3'
+      - name: Install xcodegen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Assert pinned iOS runtime is installed
+        run: |
+          # Same assertion as ci.yml's `snapshot` job — recording on the
+          # wrong runtime would produce baselines that job then fails against
+          # on its own correctly-pinned runtime. No fallback, no download.
+          RUNTIME_ID="com.apple.CoreSimulator.SimRuntime.iOS-${SNAPSHOT_IOS_RUNTIME//./-}"
+          export RUNTIME_ID
+          if ! xcrun simctl list runtimes -j | python3 -c "
+          import json, os, sys
+          data = json.load(sys.stdin)
+          target = os.environ['RUNTIME_ID']
+          ok = any(r.get('identifier') == target and r.get('isAvailable') for r in data['runtimes'])
+          sys.exit(0 if ok else 1)
+          "; then
+            echo "::error::Pinned iOS runtime $SNAPSHOT_IOS_RUNTIME ($RUNTIME_ID) is not installed on this runner. Recording on an unpinned runtime would produce baselines the pinned 'snapshot' job in ci.yml would then fail against. Fix the pin (and re-run), don't route around it."
+            echo "Available runtimes:"
+            xcrun simctl list runtimes
+            exit 1
+          fi
+      - name: Pick an iPhone simulator UDID on the pinned runtime + device
+        id: simulator
+        run: |
+          # Same picker as ci.yml's `snapshot` job — UDID-based, scoped to
+          # the exact pinned runtime identifier AND device name, never a
+          # bare device name lookup (this machine alone has two simulators
+          # both named "iPhone 17 Pro" under different runtimes) and never
+          # a "highest/any" sort across device models (pixel geometry
+          # differs by model too).
+          RUNTIME_ID="com.apple.CoreSimulator.SimRuntime.iOS-${SNAPSHOT_IOS_RUNTIME//./-}"
+          export RUNTIME_ID
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, os, sys
+          data = json.load(sys.stdin)
+          target_runtime = os.environ['RUNTIME_ID']
+          target_device = os.environ['SNAPSHOT_IOS_DEVICE']
+          for runtime, devices in data['devices'].items():
+              if runtime != target_runtime:
+                  continue
+              for d in devices:
+                  if d['name'] == target_device:
+                      print(d['udid'])
+                      break
+          ")
+          if [ -z "$UDID" ]; then
+            echo "::error::No '$SNAPSHOT_IOS_DEVICE' simulator found under pinned runtime $RUNTIME_ID."
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator UDID: $UDID ($SNAPSHOT_IOS_DEVICE, runtime $SNAPSHOT_IOS_RUNTIME)"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+      - name: Boot the pinned simulator and inject the recording env vars
+        run: |
+          # Same mechanism, and the same hard-won reason, as the equivalent
+          # step in ci.yml's `snapshot` job — read that comment for the full
+          # measurement. Short version: `TEST_RUNNER_*=...` arguments to
+          # xcodebuild DO NOT reach the test process on this toolchain
+          # (Xcode 26.x). xcodebuild accepts them, echoes them under "Build
+          # settings from command line", then silently drops them; a dump of
+          # all 73 env vars inside the running test host found neither the
+          # real variables nor a control variable. They are still passed
+          # below as belt-and-braces, but nothing here may depend on them.
+          #
+          # This workflow needs TWO variables injected, not one:
+          #   SNAPSHOT_RUNTIME_PINNED=1 .... or every SnapshotTests case
+          #                                  self-skips and records nothing
+          #   SNAPSHOT_TESTING_RECORD=all .. or the tests run in COMPARE mode
+          #                                  and recording silently no-ops,
+          #                                  which is the failure this
+          #                                  workflow exists to avoid
+          UDID="${{ steps.simulator.outputs.udid }}"
+          # Non-zero exit here just means "already booted" (SimError 405),
+          # which is fine; bootstatus below is the real readiness gate.
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl spawn "$UDID" launchctl setenv SNAPSHOT_RUNTIME_PINNED 1
+          xcrun simctl spawn "$UDID" launchctl setenv SNAPSHOT_TESTING_RECORD all
+          # Read both back, and fail here — where the cause is named — rather
+          # than opening a PR full of nothing later.
+          PINNED=$(xcrun simctl spawn "$UDID" launchctl getenv SNAPSHOT_RUNTIME_PINNED | tr -d '[:space:]')
+          RECORD=$(xcrun simctl spawn "$UDID" launchctl getenv SNAPSHOT_TESTING_RECORD | tr -d '[:space:]')
+          if [ "$PINNED" != "1" ] || [ "$RECORD" != "all" ]; then
+            echo "::error::Could not inject the recording env vars into simulator $UDID (SNAPSHOT_RUNTIME_PINNED read back '$PINNED', expected '1'; SNAPSHOT_TESTING_RECORD read back '$RECORD', expected 'all'). Without the first, every case self-skips; without the second, the run compares instead of recording and writes no baselines."
+            exit 1
+          fi
+          echo "Injected SNAPSHOT_RUNTIME_PINNED=1 and SNAPSHOT_TESTING_RECORD=all into simulator $UDID"
+      - name: Record SnapshotTests baselines (pinned runtime)
+        run: |
+          set +e
+          xcodebuild test \
+            -project ReelsStudio.xcodeproj \
+            -scheme ReelsStudio \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
+            -only-testing:ReelsStudioTests/SnapshotTests \
+            -resultBundlePath ./TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            TEST_RUNNER_SNAPSHOT_RUNTIME_PINNED=1 \
+            TEST_RUNNER_SNAPSHOT_TESTING_RECORD=all \
+            2>&1 | tee xcodebuild-record.log
+          # ^ those two TEST_RUNNER_ arguments are belt-and-braces ONLY; this
+          # toolchain drops them silently. The simulator launchd injection in
+          # the step above is what actually un-skips the tests and turns on
+          # record mode.
+          # Deliberately not checking $? / PIPESTATUS here — see the workflow
+          # comment: swift-snapshot-testing is SUPPOSED to fail every
+          # assertion in record mode. The real gate is below.
+
+          # Parse BOTH the executed and the skipped count. An executed-count
+          # check alone is not a gate: when every case self-skips, xcodebuild
+          # prints, verbatim and measured on this toolchain,
+          #   Executed 7 tests, with 7 tests skipped and 0 failures (0 unexpected) in 0.029 (0.031) seconds
+          # and exits 0 with ** TEST SUCCEEDED **. Skipped cases are counted
+          # in the executed number, so `Executed 7` read as "7 tests ran" for
+          # a run in which nothing ran — and here that would mean opening a
+          # baseline PR off a recording session that recorded nothing.
+          # Red on: no summary line at all (a missing line must never default
+          # to success), executed == 0, or skipped > 0.
+          # The EXACT number of test methods in
+          # Tests/ReelsStudioTests/SnapshotTests.swift. Must equal the
+          # EXPECTED_TESTS constant in ci.yml's `snapshot` job — the two move
+          # together, in the same PR that adds or removes a test method.
+          # "> 0" is not a gate: a recording run that silently lost a test
+          # method would propose a baseline PR missing that baseline, and the
+          # `snapshot` job would then be green against a test that no longer
+          # exists.
+          EXPECTED_TESTS=7
+          SUMMARY=$(grep -E 'Executed [0-9]+ test' xcodebuild-record.log | tail -1)
+          if [ -z "$SUMMARY" ]; then
+            echo "::error::No 'Executed N tests' summary line in xcodebuild's output at all. A missing summary is a red, never a green — the test bundle never got far enough to report, so nothing was recorded. See the uploaded snapshot-record-log artifact."
+            exit 1
+          fi
+          EXECUTED=$(printf '%s\n' "$SUMMARY" | sed -nE 's/.*Executed ([0-9]+) tests?.*/\1/p')
+          EXECUTED=${EXECUTED:-0}
+          # Skips counted across EVERY summary line, highest wins, so a
+          # per-suite skip reds the run even if the aggregate line hides it.
+          # `tests? skipped` covers xcodebuild's singular form too.
+          SKIPPED=$(grep -oE '[0-9]+ tests? skipped' xcodebuild-record.log | grep -oE '^[0-9]+' | sort -rn | head -1)
+          SKIPPED=${SKIPPED:-0}
+          echo "Summary line: $SUMMARY"
+          echo "Executed: $EXECUTED  Skipped: $SKIPPED"
+
+          PNG_COUNT=$(find Tests/ReelsStudioTests/__Snapshots__ -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
+          echo "PNG count under __Snapshots__: $PNG_COUNT"
+
+          if [ "$EXECUTED" -eq 0 ]; then
+            echo "::error::SnapshotTests executed 0 tests during recording. Nothing ran, so nothing was (re-)recorded — red, never green. Same failure mode as ci.yml's snapshot job."
+            exit 1
+          fi
+
+          if [ "$SKIPPED" -gt 0 ]; then
+            echo "::error::SnapshotTests reported $SKIPPED skipped test(s) out of $EXECUTED during recording. A skipped snapshot test is NOT a passing snapshot test, and a skipped recording records nothing. These cases self-skip unless SNAPSHOT_RUNTIME_PINNED=1 is visible to the test process, so a skip here means the simulator env injection step broke — fix the injection and re-dispatch, do not open a PR off this run."
+            exit 1
+          fi
+
+          if [ "$EXECUTED" -ne "$EXPECTED_TESTS" ]; then
+            echo "::error::SnapshotTests executed $EXECUTED test(s) during recording but $EXPECTED_TESTS were expected. Not opening a baseline PR off a partial recording: the missing test's baseline would be absent, and ci.yml's snapshot job would report green against a test that never ran. Either update EXPECTED_TESTS here AND in ci.yml (if SnapshotTests.swift really changed), or chase why a test was not discovered."
+            exit 1
+          fi
+          if [ "$PNG_COUNT" -eq 0 ]; then
+            echo "::error::No PNGs found under Tests/ReelsStudioTests/__Snapshots__/ after a recording run with SNAPSHOT_TESTING_RECORD=all. The tests ran but recording silently no-opped — do not open a PR with nothing to review."
+            exit 1
+          fi
+
+          echo "executed=$EXECUTED" >> "$GITHUB_OUTPUT"
+          echo "png_count=$PNG_COUNT" >> "$GITHUB_OUTPUT"
+        id: record
+      - name: Upload recording log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-record-log
+          path: |
+            xcodebuild-record.log
+            TestResults.xcresult/**
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Commit baselines to a new branch
+        id: branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # run_id alone is NOT unique per attempt: GitHub's "Re-run jobs"
+          # reuses the same run_id, so a rerun after a run that already
+          # pushed would collide with the existing remote branch and the push
+          # below would fail with "already exists". run_attempt increments on
+          # every rerun, so each attempt gets its own branch and its own PR.
+          BRANCH="snapshot-baselines/${{ github.run_id }}-${{ github.run_attempt }}"
+          git checkout -b "$BRANCH"
+          git add Tests/ReelsStudioTests/__Snapshots__/
+          if git diff --cached --quiet; then
+            echo "::error::Recording produced PNGs, but nothing changed relative to the committed baselines — either the record run wrote outside the tracked path, or the baselines already matched. Not opening an empty PR."
+            exit 1
+          fi
+          git commit -m "Record snapshot baselines (run ${{ github.run_id }} attempt ${{ github.run_attempt }})"
+          git push origin "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+      - name: Open baseline review PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --base "${{ github.ref_name }}" \
+            --head "${{ steps.branch.outputs.branch }}" \
+            --title "Record snapshot baselines (run ${{ github.run_id }} attempt ${{ github.run_attempt }})" \
+            --body "$(cat <<'EOF'
+          Baselines recorded by the manual `snapshot-record.yml` workflow
+          (`SNAPSHOT_TESTING_RECORD=all`), pinned to the same Xcode 26.3 /
+          iOS runtime pair as the `snapshot` job in `ci.yml`.
+
+          ## Review discipline
+
+          EVERY baseline image in this PR must be reviewed by eye as a
+          design check before merge. GitHub renders the PNG diffs inline —
+          look at each one before approving. A silently re-recorded snapshot
+          is a lost test: if this merges without a human actually looking,
+          the check that image was protecting is gone, and the `snapshot`
+          job will just report green against whatever is in this diff next
+          time, correct or not.
+
+          Ref: #75
+          EOF
+          )"
