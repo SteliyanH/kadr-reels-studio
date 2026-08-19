@@ -153,7 +153,7 @@ final class SnapshotTests: XCTestCase {
             .environment(AppSettings.shared)
             .environment(\.stageRendering, .placeholder)
 
-        assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 844)))
+        assertSnapshot(of: view, as: .image(layout: .fixed(width: 402, height: 874)))
     }
 
     // Every isolated view below carries `.reelSurface(.studio)`.
@@ -168,6 +168,25 @@ final class SnapshotTests: XCTestCase {
     // reviews the next diff. Do not remove these — an isolated snapshot
     // must be taken in the ground the view actually lives in.
 
+    // Two framing rules, both learned from the first reviewed baseline set.
+    //
+    // **Width is 402, not 390.** 402x874 is the logical size of the iPhone 17
+    // Pro that the pinned CI job actually renders on. The first set was framed
+    // at 390 and clipped the toolbar's longest label to "Captio…", which read
+    // as a layout defect in the app. It was not: at the device's real width
+    // "Captions" fits with room to spare. Framing a snapshot narrower than the
+    // device it claims to represent manufactures defects that do not exist,
+    // and the fix for one of those would have been to shrink shipping text.
+    //
+    // **The isolated stage is padded inside the studio ground.** `PreviewArea`
+    // ends in `.reelElevation(.lg)`, and a shadow needs somewhere to fall. In
+    // the editor the stage is inset, so it falls on the ground behind it; in an
+    // isolated snapshot the stage filled the canvas edge to edge and the shadow
+    // clipped against the image bounds, leaving a smudge in the corners that
+    // looked like a rendering artifact. The padding gives it that room, and the
+    // `.frame(maxWidth:maxHeight:)` before `.reelSurface(.studio)` makes the
+    // ground cover the whole canvas rather than only the aspect-fitted stage.
+
     // MARK: - PreviewArea
 
     /// The stage alone, placeholder-rendered, with no overlay in the
@@ -179,6 +198,8 @@ final class SnapshotTests: XCTestCase {
         let view = PreviewArea(store: store)
             .environment(ToastCenter())
             .environment(\.stageRendering, .placeholder)
+            .padding(Reel.Space.s3)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 270, height: 480)))
@@ -195,6 +216,8 @@ final class SnapshotTests: XCTestCase {
         let view = PreviewArea(store: store)
             .environment(ToastCenter())
             .environment(\.stageRendering, .placeholder)
+            .padding(Reel.Space.s3)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 270, height: 480)))
@@ -211,7 +234,7 @@ final class SnapshotTests: XCTestCase {
         let view = TransportBand(store: store)
             .reelSurface(.studio)
 
-        assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 96)))
+        assertSnapshot(of: view, as: .image(layout: .fixed(width: 402, height: 96)))
     }
 
     /// Playhead three seconds into the six-second composition: both skip
@@ -223,7 +246,7 @@ final class SnapshotTests: XCTestCase {
         let view = TransportBand(store: store)
             .reelSurface(.studio)
 
-        assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 96)))
+        assertSnapshot(of: view, as: .image(layout: .fixed(width: 402, height: 96)))
     }
 
     // MARK: - EditorToolbar
@@ -243,7 +266,7 @@ final class SnapshotTests: XCTestCase {
         .environment(ToastCenter())
         .reelSurface(.studio)
 
-        assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 140)))
+        assertSnapshot(of: view, as: .image(layout: .fixed(width: 402, height: 140)))
     }
 
     /// The clip-action row: `store.selectedClipID` set to the fixture clip
@@ -262,6 +285,6 @@ final class SnapshotTests: XCTestCase {
         .environment(ToastCenter())
         .reelSurface(.studio)
 
-        assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 140)))
+        assertSnapshot(of: view, as: .image(layout: .fixed(width: 402, height: 140)))
     }
 }
