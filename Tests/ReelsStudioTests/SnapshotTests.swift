@@ -156,6 +156,18 @@ final class SnapshotTests: XCTestCase {
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 844)))
     }
 
+    // Every isolated view below carries `.reelSurface(.studio)`.
+    //
+    // `EditorView` applies it internally (EditorView.swift:263), so the
+    // full-editor case gets the studio ground for free — but a view
+    // snapshotted on its own does not, and renders on the default print
+    // ground instead: light surface, pure-red accent. The first recorded
+    // set had exactly that wrong, and it is the worse kind of wrong: a
+    // baseline that pins an appearance the app never ships turns a real
+    // theming regression into an expected result, and misleads whoever
+    // reviews the next diff. Do not remove these — an isolated snapshot
+    // must be taken in the ground the view actually lives in.
+
     // MARK: - PreviewArea
 
     /// The stage alone, placeholder-rendered, with no overlay in the
@@ -167,6 +179,7 @@ final class SnapshotTests: XCTestCase {
         let view = PreviewArea(store: store)
             .environment(ToastCenter())
             .environment(\.stageRendering, .placeholder)
+            .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 270, height: 480)))
     }
@@ -182,6 +195,7 @@ final class SnapshotTests: XCTestCase {
         let view = PreviewArea(store: store)
             .environment(ToastCenter())
             .environment(\.stageRendering, .placeholder)
+            .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 270, height: 480)))
     }
@@ -195,6 +209,7 @@ final class SnapshotTests: XCTestCase {
 
         let store = makeStore(currentTime: .zero)
         let view = TransportBand(store: store)
+            .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 96)))
     }
@@ -206,6 +221,7 @@ final class SnapshotTests: XCTestCase {
 
         let store = makeStore(currentTime: CMTime(seconds: 3, preferredTimescale: 600))
         let view = TransportBand(store: store)
+            .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 96)))
     }
@@ -225,6 +241,7 @@ final class SnapshotTests: XCTestCase {
             onExport: {}, onSpeedCurve: { _ in }
         )
         .environment(ToastCenter())
+        .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 140)))
     }
@@ -243,6 +260,7 @@ final class SnapshotTests: XCTestCase {
             onExport: {}, onSpeedCurve: { _ in }
         )
         .environment(ToastCenter())
+        .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 140)))
     }
