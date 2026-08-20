@@ -15,16 +15,16 @@ settings:
 packages:
   Kadr:
     url: https://github.com/SteliyanH/kadr.git
-    from: 0.15.0
+    minorVersion: 0.15.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
-    from: 0.14.0
+    minorVersion: 0.14.0
   KadrCaptions:
     url: https://github.com/SteliyanH/kadr-captions.git
-    from: 0.8.0
+    minorVersion: 0.8.0
   KadrPhotos:
     url: https://github.com/SteliyanH/kadr-photos.git
-    from: 0.7.0
+    minorVersion: 0.7.0
   Sentry:
     url: https://github.com/getsentry/sentry-cocoa.git
     from: 8.36.0
