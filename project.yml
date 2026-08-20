@@ -18,7 +18,7 @@ packages:
     minorVersion: 0.15.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
-    minorVersion: 0.14.0
+    minorVersion: 0.15.0
   KadrCaptions:
     url: https://github.com/SteliyanH/kadr-captions.git
     minorVersion: 0.8.0

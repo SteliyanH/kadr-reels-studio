@@ -4,6 +4,7 @@ import SwiftUI
 import UIKit
 import ViewInspector
 import Kadr
+import KadrUI
 @testable import ReelsStudio
 
 /// v0.9 — the transport band beneath the editor stage.
@@ -487,6 +488,10 @@ final class EditorPlayheadPersistenceTests: XCTestCase {
 /// replacement. `PreviewArea` stops playback on the same fingerprint kadr-ui
 /// rebuilds on; these pin that fingerprint.
 @MainActor
+/// These used to pin the app's own copy of kadr-ui's rebuild fingerprint. As
+/// of kadr-ui 0.15 the fingerprint is public, so they pin the real one — which
+/// means a change upstream now surfaces here as a failing test instead of as
+/// playback silently surviving a rebuild it should not have.
 final class CompositionIdentityTests: XCTestCase {
 
     private func makeClip(id: ClipID, length: Double = 5) -> VideoClip {
@@ -497,16 +502,16 @@ final class CompositionIdentityTests: XCTestCase {
 
     func testAddingAClipChangesTheIdentity() {
         let store = ProjectStore(project: Project(clips: [makeClip(id: "a")]))
-        let before = PreviewArea.compositionIdentity(of: store.video)
+        let before = VideoPreview.compositionIdentity(of: store.video)
         store.append(clip: makeClip(id: "b"))
-        XCTAssertNotEqual(before, PreviewArea.compositionIdentity(of: store.video))
+        XCTAssertNotEqual(before, VideoPreview.compositionIdentity(of: store.video))
     }
 
     func testAddingAnOverlayChangesTheIdentity() {
         let store = ProjectStore(project: Project(clips: [makeClip(id: "a")]))
-        let before = PreviewArea.compositionIdentity(of: store.video)
+        let before = VideoPreview.compositionIdentity(of: store.video)
         store.append(overlay: TextOverlay("hi").id(LayerID("o1")))
-        XCTAssertNotEqual(before, PreviewArea.compositionIdentity(of: store.video))
+        XCTAssertNotEqual(before, VideoPreview.compositionIdentity(of: store.video))
     }
 
     /// Same counts, different length — a trim. kadr-ui rebuilds on duration
@@ -515,8 +520,8 @@ final class CompositionIdentityTests: XCTestCase {
         let short = ProjectStore(project: Project(clips: [makeClip(id: "a", length: 5)]))
         let long = ProjectStore(project: Project(clips: [makeClip(id: "a", length: 6)]))
         XCTAssertNotEqual(
-            PreviewArea.compositionIdentity(of: short.video),
-            PreviewArea.compositionIdentity(of: long.video)
+            VideoPreview.compositionIdentity(of: short.video),
+            VideoPreview.compositionIdentity(of: long.video)
         )
     }
 
@@ -525,16 +530,16 @@ final class CompositionIdentityTests: XCTestCase {
     /// preview. A filter changes no count and no duration.
     func testANonStructuralEditLeavesTheIdentityAlone() {
         let store = ProjectStore(project: Project(clips: [makeClip(id: "a")]))
-        let before = PreviewArea.compositionIdentity(of: store.video)
+        let before = VideoPreview.compositionIdentity(of: store.video)
         store.addFilter(id: "a", .brightness(0.2))
-        XCTAssertEqual(before, PreviewArea.compositionIdentity(of: store.video))
+        XCTAssertEqual(before, VideoPreview.compositionIdentity(of: store.video))
     }
 
     func testIdentityIsStableAcrossRepeatedReads() {
         let store = ProjectStore(project: Project(clips: [makeClip(id: "a")]))
         XCTAssertEqual(
-            PreviewArea.compositionIdentity(of: store.video),
-            PreviewArea.compositionIdentity(of: store.video)
+            VideoPreview.compositionIdentity(of: store.video),
+            VideoPreview.compositionIdentity(of: store.video)
         )
     }
 }
