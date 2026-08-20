@@ -283,19 +283,11 @@ extension TimelineArea {
     // fixed clip- and audio-lane heights it uses on its single-lane path
     // (where `laneHeight` is ignored entirely), and its internal stack
     // spacing. They are upstream constants, not design values: they don't
-    // belong in `ReelTheme`, which is this app's system, not kadr-ui's.
-    // Both facts are on the gap list.
+    // belong in `ReelTheme`, which is this app's system, not kadr-ui's — and
+    // as of kadr-ui 0.15 they no longer live here either. `TimelineView.Metrics`
+    // publishes them, so the band reads the numbers the component actually
+    // lays out with instead of a copy that could drift.
 
-    /// The scrub strip drawn above every lane stack whenever a `currentTime`
-    /// binding is passed — which the editor always does.
-    private static let upstreamScrubStripHeight: CGFloat = 14
-    /// The clip lane's height on the single-lane path. `laneHeight` does not
-    /// apply there; the component hard-codes this.
-    private static let upstreamSingleLaneClipHeight: CGFloat = 40
-    /// The audio lane's height on the single-lane path.
-    private static let upstreamSingleLaneAudioHeight: CGFloat = 12
-    /// The component's internal stack spacing on the single-lane path.
-    private static let upstreamSingleLaneSpacing: CGFloat = 4
 
     /// Height the band gives the component.
     ///
@@ -312,17 +304,17 @@ extension TimelineArea {
         let nonAudio = nonAudioLaneCount(clips: clips)
 
         guard nonAudio > 1 else {
-            var height = upstreamScrubStripHeight
-                + upstreamSingleLaneSpacing
-                + upstreamSingleLaneClipHeight
+            var height = TimelineView.Metrics.scrubStripHeight
+                + TimelineView.Metrics.defaultLaneSpacing
+                + TimelineView.Metrics.defaultLaneHeight
             if audioLanes > 0 {
-                height += upstreamSingleLaneSpacing + upstreamSingleLaneAudioHeight
+                height += TimelineView.Metrics.defaultLaneSpacing + TimelineView.Metrics.chainAudioLaneHeight
             }
             return height
         }
 
         let lanes = min(nonAudio + audioLanes, Reel.timelineMaxVisibleLanes)
-        return upstreamScrubStripHeight
+        return TimelineView.Metrics.scrubStripHeight
             + CGFloat(lanes) * Reel.timelineLaneHeight
             + CGFloat(lanes) * Reel.Space.s1
     }

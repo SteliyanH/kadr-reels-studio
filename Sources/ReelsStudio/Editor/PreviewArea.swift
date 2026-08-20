@@ -35,18 +35,6 @@ struct PreviewArea: View {
 
         ZStack {
             picture(video: video)
-            // VoiceOver's other door to the same chrome the blocker below
-            // closes. Hit-testing stops a *touch* reaching AVKit's buttons; it
-            // does nothing about an accessibility activation, which is
-            // delivered straight to the UIKit element. Hiding the preview
-            // subtree leaves the transport band as the only playback control
-            // in the tree, which is the point. What is lost with it — kadr-ui's
-            // "Loading preview" and "Preview failed to load" labels — is
-            // transient in the first case and now carried by the toast above in
-            // the second.
-            .accessibilityHidden(true)
-
-            transportChromeBlocker
 
             OverlayHost(video, currentTime: store.currentTime)
                 // v0.4 Tier 6: tap an overlay's hit region to select it.
@@ -55,9 +43,9 @@ struct PreviewArea: View {
                 // is tapped. v0.3's LayersSheet stays as the secondary
                 // affordance (still useful for stacked or off-screen layers).
                 //
-                // Sits *above* the blocker in the ZStack, so it still gets
-                // first refusal on every touch — overlay tap-to-select and
-                // drag are unaffected. Only what falls through it is eaten.
+                // Sits above the picture in the ZStack, so it gets first
+                // refusal on every touch — overlay tap-to-select and drag are
+                // unaffected by the preview declining AVKit's own transport.
                 .onLayerTap { id in
                     store.selectedOverlayID = id
                 }
@@ -78,7 +66,7 @@ struct PreviewArea: View {
         // This watches exactly what kadr-ui watches, so it triggers exactly
         // when a rebuild does. It writes only session state, so nothing enters
         // the undo timeline.
-        .onChange(of: PreviewArea.compositionIdentity(of: video)) {
+        .onChange(of: VideoPreview.compositionIdentity(of: video)) {
             store.isPlaying = false
         }
         .aspectRatio(aspect, contentMode: .fit)
@@ -141,13 +129,23 @@ struct PreviewArea: View {
                     get: { store.currentTime },
                     set: { store.currentTime = $0 }
                 ),
-                // Always false, never `store.isLooping`. kadr-ui 0.14 freezes
-                // `loops` into the player when it builds it — `.task(id:)`'s
-                // identity doesn't include the flag — so a value passed here
-                // can't be changed for the life of the player, and the loop
-                // button would do nothing. `TransportBand` loops app-side by
-                // restarting playback when it ends. See `ProjectStore.isLooping`.
+                // Still false, but no longer *forced* false. kadr-ui 0.15 made
+                // `loops` live — the observer reads the current value rather
+                // than a copy frozen at player construction — so threading
+                // `store.isLooping` through here would now work.
+                //
+                // Not doing it in this change: the app-side restart in
+                // `TransportBand` is covered by unit tests, and real playback
+                // cannot be exercised on a virtualised runner, so swapping
+                // tested behaviour for behaviour nothing here can verify is a
+                // bad trade. Worth revisiting on a device.
                 loops: false,
+                // kadr-ui 0.15 — decline AVKit's own transport rather than
+                // covering it. This blocks hit-testing and hides the preview
+                // from accessibility upstream, which is what the app used to do
+                // for itself with a transparent tap-eater plus a blanket
+                // `.accessibilityHidden` over the whole subtree.
+                showsPlaybackControls: false,
                 // v0.9 — without this a failed load strands the transport: the
                 // band would read "Pause" over kadr-ui's failure glyph forever
                 // because nothing ever clears `isPlaying`, and the error itself
@@ -183,19 +181,6 @@ struct PreviewArea: View {
     /// ``ProjectStore/isPlaying`` never hears about it — the band would then
     /// show "Pause" over a stopped frame, keep skip-forward enabled past the
     /// end, and never see the `isPlaying` fall that app-side loop watches for.
-    /// Two transports, one player, no synchronisation.
-    ///
-    /// A `Color.clear` is already hit-testable and would block on its own; the
-    /// explicit content shape and the empty tap handler are there so the intent
-    /// survives a future sweep that might otherwise read this as a decorative
-    /// spacer and delete it.
-    private var transportChromeBlocker: some View {
-        Color.clear
-            .contentShape(Rectangle())
-            .onTapGesture { }
-            .accessibilityHidden(true)
-    }
-
     // MARK: - Spec chip
 
     /// "1080×1920 · 30 fps", flush in the stage's top-left corner.
@@ -239,10 +224,4 @@ extension PreviewArea {
     ///
     /// A `String` rather than a tuple so it drops straight into
     /// `.onChange(of:)`, which needs `Equatable`. Pure for testability.
-    nonisolated static func compositionIdentity(of video: Video) -> String {
-        let seconds = CMTimeGetSeconds(video.duration)
-        let duration = seconds.isFinite ? seconds : 0
-        return "\(video.clips.count)|\(video.overlays.count)"
-            + "|\(video.audioTracks.count)|\(duration)"
-    }
 }
