@@ -7,26 +7,32 @@ struct ToastView: View {
     let toast: TransientToast
     var onTap: (() -> Void)? = nil
 
+    @Environment(\.reelPalette) private var palette
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        // v0.8 Tier 3 — the banner is an inverted block: ink ground, ground-
+        // coloured type. Same read as the old black-at-85% panel, but stated
+        // in palette roles, so it inverts correctly on the studio ground.
+        VStack(alignment: .leading, spacing: Reel.Space.s1) {
             Text(toast.message)
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(.white)
+                .font(Reel.Typography.bodyEmphasis)
+                .foregroundStyle(palette.bg)
             if let detail = toast.detail {
                 Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .font(Reel.Typography.caption)
+                    .foregroundStyle(palette.bg.opacity(0.85))
                     .lineLimit(2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Reel.Space.s4)
+        .padding(.vertical, Reel.Space.s3)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.black.opacity(0.85))
+            RoundedRectangle(cornerRadius: Reel.Radius.md)
+                .fill(palette.text)
         )
-        .padding(.horizontal, 16)
+        .reelElevation(.md)
+        .padding(.horizontal, Reel.Space.s4)
         .onTapGesture { onTap?() }
         .transition(.move(edge: .top).combined(with: .opacity))
     }
@@ -57,7 +63,7 @@ private struct ToastHostModifier: ViewModifier {
                     ToastView(toast: toast) {
                         center.dismissTransient()
                     }
-                    .padding(.top, 8)
+                    .padding(.top, Reel.Space.s2)
                     .zIndex(100)
                     // Collapse the toast content into one VoiceOver element so
                     // message + detail read together instead of as siblings.
@@ -102,29 +108,34 @@ private struct ResumableErrorSheet: View {
     let error: ResumableError
     var center: ToastCenter
 
+    @Environment(\.reelPalette) private var palette
+
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: Reel.Space.s4) {
+            ReelSheetGrabber()
+            // Decision 4 — no warning role; the accent is what flags a
+            // problem in this scheme.
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.orange)
+                .font(.system(size: Reel.Typography.Glyph.xl, weight: Reel.Typography.headingWeight))
+                .foregroundStyle(palette.accent)
             Text(error.message)
-                .font(.headline)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            HStack(spacing: 12) {
+                .reelHeading(Reel.Typography.h4)
+            HStack(spacing: Reel.Space.s2) {
                 Button("Cancel", role: .cancel) {
                     center.dismissResumable()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(ReelGhostButtonStyle())
                 Button("Retry") {
                     let retry = error.retry
                     center.dismissResumable()
                     Task { await retry() }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(ReelPrimaryButtonStyle())
             }
         }
-        .padding(.vertical, 32)
-        .presentationDetents([.medium])
+        .padding(Reel.Space.s4)
+        // No documented detent for this one — `.medium` is what v0.5 shipped
+        // and the sheet's content hasn't changed size.
+        .reelSheet(detents: [.medium])
     }
 }

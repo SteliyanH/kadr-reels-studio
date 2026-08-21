@@ -5,10 +5,14 @@ import Kadr
 /// Sheet for adding a background music track. User picks an audio file via
 /// `.fileImporter`, sets volume + ducking, taps **Add** → appends an `AudioTrack`
 /// with sensible defaults (fade-in 0.5s, fade-out 1.0s, optional ducking 0.3).
+///
+/// v0.8 Tier 5a wears the app's sheet chrome and the design's block layout;
+/// the import, the defaults and the mutation are v0.3's.
 struct AddMusicSheet: View {
 
     var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.reelPalette) private var palette
 
     @State private var pickedURL: URL?
     @State private var showImporter = false
@@ -16,54 +20,69 @@ struct AddMusicSheet: View {
     @State private var enableDucking: Bool = true
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Audio") {
-                    Button {
-                        showImporter = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "music.note")
-                            Text(pickedURL?.lastPathComponent ?? "Pick audio file")
-                        }
-                    }
-                }
-                Section("Mix") {
-                    HStack {
-                        Text("Volume")
-                        Slider(value: $volume, in: 0...1)
-                        Text(String(format: "%.2f", volume))
-                            .font(.caption.monospacedDigit())
-                            .frame(width: 40, alignment: .trailing)
-                    }
-                    Toggle("Auto-duck during clip audio", isOn: $enableDucking)
-                }
-                Section {
+        VStack(spacing: 0) {
+            ReelSheetHeader("Add Music") {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(ReelGhostButtonStyle())
+                Button("Add") { addTrack() }
+                    .buttonStyle(ReelPrimaryButtonStyle())
+                    .disabled(pickedURL == nil)
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: Reel.Space.s6) {
+                    audioSection
+                    mixSection
                     Text("Music auto-fades in over 0.5s and out over 1.0s. Auto-ducking lowers music to 30% while clip audio plays.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .font(Reel.Typography.caption)
+                        .foregroundStyle(palette.textMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .padding(Reel.Space.s4)
             }
-            .navigationTitle("Add Music")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") { addTrack() }
-                        .disabled(pickedURL == nil)
-                }
+        }
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: [.audio, .mp3, .mpeg4Audio, .wav],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result {
+                pickedURL = urls.first
             }
-            .fileImporter(
-                isPresented: $showImporter,
-                allowedContentTypes: [.audio, .mp3, .mpeg4Audio, .wav],
-                allowsMultipleSelection: false
-            ) { result in
-                if case .success(let urls) = result {
-                    pickedURL = urls.first
-                }
+        }
+        .reelSheet(Reel.SheetDetent.settings)
+    }
+
+    @ViewBuilder
+    private var audioSection: some View {
+        VStack(alignment: .leading, spacing: Reel.Space.s2) {
+            Text("Audio").reelLabel()
+            Button {
+                showImporter = true
+            } label: {
+                Label(
+                    pickedURL?.lastPathComponent ?? NSLocalizedString("Pick audio file", comment: "Audio file importer"),
+                    systemImage: "music.note"
+                )
             }
+            .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
+        }
+    }
+
+    @ViewBuilder
+    private var mixSection: some View {
+        VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Mix").reelLabel()
+            ReelSlider(
+                label: NSLocalizedString("Volume", comment: "Music volume"),
+                value: $volume,
+                range: 0...1,
+                valueText: String(format: "%.2f", volume)
+            )
+            Toggle("Auto-duck during clip audio", isOn: $enableDucking)
+                .font(Reel.Typography.body)
+                // Decision 4 — no success role; the switch's "on" fill is the
+                // one accent, never the system green.
+                .tint(palette.accent)
         }
     }
 

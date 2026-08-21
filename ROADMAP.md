@@ -72,7 +72,7 @@ Bumped kadr floor to **≥ 0.11.0** and kadr-ui floor to **≥ 0.10.1**. Cross-p
 2. **Schema v4 migration shim + library recovery** — additive `filterIDs: [String]?` on `VideoClipData`; `ProjectLibrary.skippedProjects` surfaces corrupt / future-schema files; `ProjectListView` recovery section with swipe-to-Details / swipe-to-Discard.
 3. **`@SceneStorage` + `scenePhase` flush** — `lastOpenedProjectID` re-pushes the editor on cold launch; `EditorView` persists playhead + selection gated on `documentID`; `.background` force-flushes `autoSave()`.
 4. **Error sanitization + Photos permission pre-check** — `ErrorSanitizer` strips file URLs / sandbox paths from messages; `PhotosAuthorizationGate.ensureAccess()` routes `.denied` / `.restricted` to a Settings-redirect alert.
-5. **Gesture-driver tests** — `GestureWiringTests` ViewInspector smokes. Snapshot tests trialed mid-cycle and dropped — `swift-snapshot-testing` UIImage baselines drift between contributor laptops and `macos-15` runners; deferred until a pinned-Xcode re-record job lands.
+5. **Gesture-driver tests** — `GestureWiringTests` ViewInspector smokes. Snapshot tests trialed mid-cycle and dropped — UIImage baselines drift between contributor laptops and `macos-15` runners; deferred until a pinned-Xcode re-record job lands. **Deferral discharged in v0.10:** the pinned-Xcode re-record job now lands (`.github/workflows/snapshot-record.yml` + pinned `snapshot:` job in ci.yml).
 6. **XCUITest integration / E2E suite** — `ReelsStudioUITests` with five critical flows (empty state, new project, sample, settings gear, back navigation). `--ui-test-reset` launch arg wipes the projects directory between runs.
 7. **Localization extraction** — `Resources/en.lproj/Localizable.strings` catalogues ~150 user-facing strings; SwiftUI's `LocalizedStringKey` auto-bridges literal call sites. Parameterized keys (counts / percentages / paths) carry format specifiers for future call-site migration.
 8. **Release engineering** — `PrivacyInfo.xcprivacy` with FileTimestamp / UserDefaults / DiskSpace required-reason API categories; fastlane scaffolding (`Gemfile`, `Appfile`, `Matchfile`, `Fastfile` beta / release / refresh_match lanes); Sentry SDK wired with DSN-gated boot.
@@ -99,18 +99,47 @@ Paired with **kadr v0.12.0** + **kadr-ui v0.10.2** which shipped during the cycl
 
 Platform modernization, not features. Raises the deployment floor to **iOS 17** and migrates the five app stores (`ProjectStore`, `ProjectLibrary`, `AppSettings`, `ToastCenter`, `LibraryHost`) from `ObservableObject` to the `@Observable` macro — the payoff of the coordinated ecosystem iOS 17 move (kadr v0.15 / kadr-ui v0.12 / kadr-captions v0.8 / kadr-photos v0.7 / this). Auto-save debounce rebuilt on structured concurrency (no Combine); the removed kadr `filterAnimation(at:)` call migrated to the keyed API. 291 unit + 5 UI tests pass. No user-facing change; v0.8 features are unaffected.
 
-## v0.8.0 — Platform polish + import/export *(planned)*
+## Modernist design-system migration
 
-Last cycle before v1.0 App Store submission. No new AI features — auto-captions, person cutout, and Vision-based smart crop all moved to kadr-pro per the [Kadr Pro scope](https://github.com/SteliyanH/kadr/blob/main/ROADMAP.md#kadr-pro). What's left to ship in the OSS app:
+**Status:** ✓ Implemented (Tiers 1–5 + fixes landed on feature/modernist-design-system)
 
-1. **iOS 17 floor bump + `@Observable` migration.** Drop iOS 16 support; migrate `ProjectStore` / `ProjectLibrary` / `AppSettings` / `LibraryHost` from `ObservableObject` to `@Observable`. Pairs with **kadr-ui v0.12** which makes the same migration.
-2. **iPad polish.** Split-view layout (project list on the leading column, editor on the trailing), hardware-keyboard shortcuts (⌘N new project, ⌘Z undo / ⇧⌘Z redo, ⌘. cancel export, space play/pause), Apple Pencil scrubbing with hover state.
-3. **Project import/export.** `.kadr` documents — zipped bundle of `ProjectDocument.json` + every embedded image / LUT / caption file referenced. SwiftUI `.fileExporter` / `.fileImporter` on the project list. Enables "share to TestFlight tester" without screen-recording the editor.
-4. **PiP export preview.** While `Exporter.run()` is in flight, render the in-progress frame in a corner-pinned overlay so the user can continue editing the next project. Pairs with kadr v0.13's `AVAssetImageGenerator` reuse (perf cycle).
-5. **Sentry DSN wiring + crash reporting end-to-end.** v0.6 Tier 8 scaffolded `CrashReporter.startIfConfigured()` but never connected to a real DSN. Wire the `SentryDSN` Info.plist entry via fastlane, validate the trace-sample-rate plumbing, ship a "Help → Send diagnostic info" affordance.
+Design-only cycle — zero features, zero state mutations. Visual overhaul of every app screen via a published token layer: `ReelTheme.swift` (two palettes for print chrome + dark studio ground) + `ReelStyles.swift` (reusable component styles), Archivo variable font (400/600/800 instanced), constrained accent picker, and a complete call-site migration across ~25 view files. Five binding decisions shape the system: two grounds one palette, red accent, constrained accent control, collapsed semantic colours, and grayscale footage everywhere except the preview stage. Known gaps include kadr-ui 0.12.0 ceiling on customization (zero-theming API by design policy), swipe-back regression fixed via UIGestureRecognizerDelegate, and Dynamic Type audit deferred to v1.0.
+
+See `DESIGN.md` § Modernist design-system migration for the full RFC.
+
+## v0.8.0 — Platform polish + import/export *(deferred — not shipped)*
+
+> **This cycle was never released.** The work that actually shipped after v0.7.1
+> was the Modernist design migration, the transport band and the snapshot
+> harness, tagged together as **v0.10.0**. The scope below — iPad split-view,
+> `.kadr` import/export, PiP export preview, Sentry DSN — is still open and
+> moves to a later cycle. Recorded rather than renumbered so the version history
+> stays legible.
+
+Last cycle before v1.0 App Store submission. **iOS 17 floor and `@Observable` migration shipped in v0.7.1.** No new AI features — auto-captions, person cutout, and Vision-based smart crop all moved to kadr-pro per the [Kadr Pro scope](https://github.com/SteliyanH/kadr/blob/main/ROADMAP.md#kadr-pro). What's left to ship in the OSS app:
+
+1. **iPad polish.** Split-view layout (project list on the leading column, editor on the trailing), hardware-keyboard shortcuts (⌘N new project, ⌘Z undo / ⇧⌘Z redo, ⌘. cancel export, space play/pause), Apple Pencil scrubbing with hover state.
+2. **Project import/export.** `.kadr` documents — zipped bundle of `ProjectDocument.json` + every embedded image / LUT / caption file referenced. SwiftUI `.fileExporter` / `.fileImporter` on the project list. Enables "share to TestFlight tester" without screen-recording the editor.
+3. **PiP export preview.** While `Exporter.run()` is in flight, render the in-progress frame in a corner-pinned overlay so the user can continue editing the next project. Pairs with kadr v0.13's `AVAssetImageGenerator` reuse (perf cycle).
+4. **Sentry DSN wiring + crash reporting end-to-end.** v0.6 Tier 8 scaffolded `CrashReporter.startIfConfigured()` but never connected to a real DSN. Wire the `SentryDSN` Info.plist entry via fastlane, validate the trace-sample-rate plumbing, ship a "Help → Send diagnostic info" affordance.
+5. **kadr-ui styling RFC** *(upstream, blocks full editor fidelity).* Modernist design cycle exposed hard limits in kadr-ui v0.12.0's zero-theming API. Propose and implement an `EnvironmentValues`-based appearance modifier through existing private helpers, allowing downstream apps to customize playhead / clip-cell colours, lane heights, and waveform rendering. Track as a separate kadr-ui RFC; depends on community demand.
 6. **Release prep + tag v0.8.0.**
 
-Six tiers. Pairs with **kadr v0.13** (engine perf) + **kadr-ui v0.12** (`@Observable` migration), both of which must merge first.
+Six tiers. Pairs with **kadr v0.13** (engine perf); v0.8 doesn't depend on kadr-ui v0.12 anymore (v0.7.1 already uses it).
+
+## v0.9.0 — Transport band ✓ shipped in v0.10.0
+
+Playback controls missing since v0.1 — the editor had a stage and a timeline but no affordance between them to run a composition. A single-tier cycle scoped at the transport band (skip-back · play/pause · skip-forward · time readout · loop · fullscreen). Targets **kadr-ui 0.14.0** (VideoPreview bindings already ship); no upstream kadr changes needed (#73).
+
+1. **Transport band UI** — horizontal strip between stage and timeline. Leading group: skip-back / play/pause (26pt prominent accent fill) / skip-forward. Center: elapsed/total timecode readout ("0:01 / 0:06") in numeric type token (elapsed full text, total muted). Trailing: loop toggle and fullscreen button. Skip step is 1.0 second (fixed, not frame-step — VideoPreview ignores seeks under 0.05s and one frame at 30fps is 0.033s, so the button would silently do nothing; a second is clear of the floor and matches the timecode unit). Play on a finished composition restarts at zero. Loop is implemented in the app rather than `VideoPreview(loops:)` because kadr-ui captures that parameter at player construction and does not rebuild on change, which would make the toggle inert; the app restarts playback itself when `isPlaying` falls. Loop is session state on `ProjectStore` — no persistence, no schema change (ProjectDocument stays v5), no undo timeline. Scene-storage playhead write is gated so it does not fire on every playback tick; flushes fire when playback stops and when the app backgrounds. Fullscreen collapses editor chrome in place (no new route); the band stays visible so the exit control stays reachable.
+
+## v0.10.0 — Snapshot testing harness ✓ shipped
+
+A thin pixel-snapshot test harness over the editor view group — the one screen the approved design cares about pixel-for-pixel. Seven snapshot test cases (SnapshotTests.swift) prove layout, colour, and spacing invariants the unit/UI suite cannot reach. Baseline recording workflow (snapshot-record.yml) gates baselines to CI's pinned runtime (Xcode 26.3 + iOS 26.2 + iPhone 17 Pro); tests self-skip locally to avoid false positives on any contributor's renderer. The harness's first real run caught a user-visible defect in merged code: TransportBand used non-existent SF Symbol names `gobackward.1` and `goforward.1` (the numbered family runs .5 / .10 / .15 / .30 / .45 / .60 / .75 / .90), rendering missing-symbol placeholders on device while every other gate stayed green. Fixed to `gobackward` / `goforward` with a regression test. No new kadr dependencies; swift-snapshot-testing added to test target.
+
+Scope: editor view group (EditorView, PreviewArea, TransportBand, EditorToolbar) on one device / orientation / state per view. Out of scope: baselines on disk (recorded via PR), coverage outside editor group, portrait + landscape variants.
+
+Suite: 460 unit + 6 UI → 462 unit + 6 UI net (7 snapshot tests skip on development machines, execute on CI; 2 new always-run unit tests: glyph resolution regression + StageRendering default-value assertion).
 
 ## v1.0.0 — App Store *(planned)*
 

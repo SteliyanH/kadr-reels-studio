@@ -21,6 +21,7 @@ struct AddCaptionsSheet: View {
     @Environment(ToastCenter.self) private var toasts
 
     @State private var selectedTab: Tab
+    @Environment(\.reelPalette) private var palette
 
     init(store: ProjectStore) {
         self.store = store
@@ -34,34 +35,29 @@ struct AddCaptionsSheet: View {
     enum Tab: Hashable { case edit, `import` }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                Picker("Mode", selection: $selectedTab) {
-                    Text("Edit").tag(Tab.edit)
-                    Text("Import").tag(Tab.import)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.top, 8)
-
-                Divider()
-                    .padding(.top, 8)
-
-                Group {
-                    switch selectedTab {
-                    case .edit:    editTab
-                    case .import:  importTab
-                    }
-                }
+        VStack(spacing: 0) {
+            ReelSheetHeader("Captions") {
+                Button("Done") { dismiss() }
+                    .buttonStyle(ReelGhostButtonStyle())
             }
-            .navigationTitle("Captions")
-            .navigationBarTitleDisplayModeInline()
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+
+            ReelSegmentedControl(
+                options: [
+                    (Tab.edit, NSLocalizedString("Edit", comment: "Caption edit tab")),
+                    (Tab.import, NSLocalizedString("Import", comment: "Caption import tab")),
+                ],
+                selection: $selectedTab
+            )
+            .padding(Reel.Space.s4)
+
+            switch selectedTab {
+            case .edit:    editTab
+            case .import:  importTab
             }
         }
+        // The design gives no fixed height for this one; the cue editor is a
+        // full working surface, so it takes the full-height stop.
+        .reelSheet(detents: [.large])
     }
 
     // MARK: - Edit tab
@@ -80,8 +76,7 @@ struct AddCaptionsSheet: View {
                     store.setCaptions(newCaptions)
                 }
             )
-            .padding(.horizontal)
-            .padding(.top, 12)
+            .padding(.horizontal, Reel.Space.s4)
         }
     }
 
@@ -106,40 +101,48 @@ struct AddCaptionsSheet: View {
 
     @ViewBuilder
     private var importTab: some View {
-        Form {
-            Section("Caption file") {
-                Button {
-                    showImporter = true
-                } label: {
-                    HStack {
-                        Image(systemName: "captions.bubble")
-                        Text(pickedURL?.lastPathComponent ?? "Pick caption file")
+        ScrollView {
+            VStack(alignment: .leading, spacing: Reel.Space.s6) {
+                VStack(alignment: .leading, spacing: Reel.Space.s2) {
+                    Text("Caption file").reelLabel()
+                    Button {
+                        showImporter = true
+                    } label: {
+                        Label(
+                            pickedURL?.lastPathComponent
+                                ?? NSLocalizedString("Pick caption file", comment: "Caption importer"),
+                            systemImage: "captions.bubble"
+                        )
+                    }
+                    .buttonStyle(ReelSecondaryButtonStyle(isBlock: true))
+                    if let pickedURL {
+                        Text(pickedURL.pathExtension.uppercased())
+                            .font(Reel.Typography.numeric)
+                            .foregroundStyle(palette.textMuted)
                     }
                 }
-                if let pickedURL {
-                    Text(pickedURL.pathExtension.uppercased())
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                }
-            }
-            if lastImportedCount > 0 {
-                Section("Imported") {
-                    Label(
-                        "\(lastImportedCount) cue\(lastImportedCount == 1 ? "" : "s") appended",
-                        systemImage: "checkmark.circle"
-                    )
-                    .foregroundStyle(.green)
-                    Button("Switch to Edit") {
-                        selectedTab = .edit
+                if lastImportedCount > 0 {
+                    VStack(alignment: .leading, spacing: Reel.Space.s2) {
+                        Text("Imported").reelLabel()
+                        Label(
+                            importedCountText,
+                            systemImage: "checkmark.circle"
+                        )
+                        .font(Reel.Typography.body)
+                        // Decision 4 — no success role; a confirmation is ink.
+                        .foregroundStyle(palette.text)
+                        Button("Switch to Edit") {
+                            selectedTab = .edit
+                        }
+                        .buttonStyle(ReelGhostButtonStyle())
                     }
-                    .font(.callout)
                 }
-            }
-            Section {
                 Text("Supported formats: SRT, VTT, iTT, ASS, SSA. Cues append to the project's caption list — switch to Edit to retime / rename / delete.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(Reel.Typography.caption)
+                    .foregroundStyle(palette.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(Reel.Space.s4)
         }
         .fileImporter(
             isPresented: $showImporter,
@@ -161,6 +164,18 @@ struct AddCaptionsSheet: View {
         }
     }
 
+    /// "1 cue appended" / "12 cues appended", through the keys the bundle
+    /// already carries — the `Form` version interpolated the count into an
+    /// unlocalizable literal.
+    private var importedCountText: String {
+        lastImportedCount == 1
+            ? NSLocalizedString("captions.imported.singular", comment: "One cue imported")
+            : String(
+                format: NSLocalizedString("captions.imported.plural", comment: "Many cues imported"),
+                lastImportedCount
+              )
+    }
+
     @MainActor
     private func loadCaptions(from url: URL) async {
         isLoading = true
@@ -178,13 +193,5 @@ struct AddCaptionsSheet: View {
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
-    }
-}
+// v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
+// sheet no longer wraps itself in; `ReelSheetHeader` draws the title.

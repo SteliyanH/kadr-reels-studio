@@ -7,12 +7,18 @@ import KadrUI
 /// (Position / Anchor / Opacity) + type-specific (Text + animation,
 /// Sticker rotation) controls. Mutations route through ``ProjectStore``'s
 /// overlay-mutation surface.
+///
+/// v0.8 Tier 5b — the band is the design's `surfaceRaised` block, matching
+/// ``InspectorArea``. `OverlayInspectorPanel`'s own rows are upstream
+/// literals and reported as gaps; the rows this repo draws
+/// (``TextEffectsSection``) take the design's slider treatment.
 struct OverlayInspectorArea: View {
 
     var store: ProjectStore
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Reel.Space.s2) {
             OverlayInspectorPanel(
                 store.video,
                 selectedOverlayID: Binding(
@@ -41,14 +47,15 @@ struct OverlayInspectorArea: View {
                     store.applyOverlayRotation(id: id, radians)
                 }
             )
-            .frame(maxHeight: 320)
+            .frame(maxHeight: Reel.inspectorMaxHeight)
             // v0.7 Tier 3 — stroke + shadow controls for `TextOverlay`. The
             // upstream `OverlayInspectorPanel` doesn't carry these yet
             // (would need a kadr-ui v0.10.3 patch), so we attach them
             // locally instead. Auto-hides for non-text overlays.
             TextEffectsSection(store: store)
         }
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        // v0.8 Tier 2 — flat raised surface; see `InspectorArea`.
+        .background(palette.surfaceRaised)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Overlay inspector")
     }

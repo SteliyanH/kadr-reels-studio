@@ -721,11 +721,200 @@ CHANGELOG, README, ROADMAP, develop → main, tag v0.7.0, GitHub release, back-m
 - **Tier 3 timing** — kadr v0.12 stroke/shadow surface is the deepest upstream dependency. Slipping it slides the whole reels-studio cycle.
 - **Tier 5 perf** — rendering a thumbnail for every project on first launch could spike CPU. Mitigation: render lazily on `.onAppear` of each `ProjectRow`, not eagerly at launch. Confirm with Instruments before merge.
 
+## Modernist design-system migration
+
+**Status:** ✓ Implemented (Tiers 1–5 + fixes landed on feature/modernist-design-system)
+
+### Motivation
+
+v0.7.1 completed the kadr-ecosystem iOS 17 migration, but the app's visual layer remained on a hardcoded baseline of values without a published design system. The Modernist system — a Swiss-precision grid with mono color + one red accent, built on Archivo (variable font, 400/600/800) — brings the editor's look and feel into a production-grade state and codifies the token layer as reusable Swift types for downstream apps.
+
+### Scope lock — Modernist migration
+
+In scope — visual design only; zero feature changes, zero state mutations:
+- **Token layer** (`ReelTheme.swift` + `ReelStyles.swift`) — two palettes (print + studio ground), accent ramp, spacing / type / rule constants, environment-keyed appearance modifiers.
+- **Call-site migration** — every hardcoded color / radius / material / font across ~25 view files moves onto the token layer; screens restructured to match the approved design.
+- **Archivo font** — bundled as static instances (400 / 600 / 800 weight) generated from Google Fonts variable, OFL.txt shipped, LICENSE attribution added.
+- **Constrained accent picker** — `setAccentColor(_:)` mutation unchanged; UI narrowed from free `ColorPicker` to `ReelSegmentedControl` over the three accent ramp steps + System option.
+
+Out of scope (carried forward from v0.7+ or deferred):
+- Dynamic Type audit (v1.0 prep).
+- Transport band (play/skip/loop/fullscreen), real eyedropper tool, editor rename affordance — all dropped by ruling per the handoff.
+- Snapshot test re-recording (none existed; skipped by standing ruling).
+
+### Five binding decisions (verbatim from handoff)
+
+1. **Two grounds, one system.** Modernist is a light print system; a video editor cannot grade footage against a light field. The theme ships two palettes of the same token system:
+   - `ReelPalette.print` — all app chrome (library, sheets, settings, export).
+   - `ReelPalette.studio` — dark grading surround (#0C0C0E / #151517 / #1D1D20) for the editor only (nav, stage, transport, timeline, inspector, toolbar).
+   Both use the same accent, same ramps, zero radius, 2px rules, flush-left labels and Archivo.
+
+2. **The accent is red, not blue.** Modernist is a mono scheme with one accent. Every blue in the previous design becomes `#EC3013` on print, `#FF563C` (Accent.a500) on studio, per the system's rule about using a lighter ramp step on dark grounds.
+
+3. **`Project.accentColor`'s free `ColorPicker` is constrained.** v0.5 shipped a per-project accent with an unconstrained picker, which breaks a mono scheme immediately. Replaced with a `ReelSegmentedControl` over the three accent ramp steps (`a500` / `a600` / `a700`) plus a System option that clears to `nil`. Persisted field, hex round-trip, and `ProjectDocument` schema v5 unchanged.
+
+4. **Semantic colors collapse into the mono scheme.** No success / warning / destructive roles. Delete uses `ReelSecondaryButtonStyle` (accent outline, not red fill — red is already the accent). Auto-save status uses neutral `n400`. Playhead is `text` white (2pt) — it sits over accent-tinted footage; white reads on any frame and stops competing with the accent. This is the one place the design deviates from "red = accent."
+
+5. **Footage is grayscale — except on the stage.** Apply `.reelGrayscale()` to project thumbnails, timeline filmstrips and layer thumbnails. **Do not** apply it to the preview stage — the user is grading color there.
+
+### Archivo provenance
+
+- **Source.** Google Fonts ships Archivo as a variable font only (wght 100–900).
+- **Static instances.** Generated at 400 / 600 / 800 weight using fontTools, with name tables rebuilt (ID 16 family grouping for SwiftUI weight resolution).
+- **Licensing.** OFL 1.1. The `OFL.txt` file ships in `Resources/Fonts/` alongside the `.ttf` instances; attribution recorded in the root `LICENSE` file.
+- **Proven.** SwiftUI weight resolution tested on-simulator — `family+trait` path resolves ExtraBold (800) and SemiBold (600) correctly; guarded by `ReelTypographyTests`.
+
+### ReelStyles.swift amendment
+
+One production fix applied during Tier 2: the nested view `Body` renamed to `StyleBody` to avoid a `ButtonStyle` associated-type witness collision in several contexts (compile blocker, zero visual change). The change is internal to `ReelStyles.swift` and surfaces nowhere in call sites.
+
+### kadr-ui 0.12.0 as upstream RFC — closed in 0.13.0
+
+The Modernist design exposed hard limits in kadr-ui's customization surface. kadr-ui ships with a zero-theming API by documented policy — the library is the reference implementation, not a theming substrate. Downstream apps are named the v1.0 reference consumer (this app).
+
+> **Resolved.** kadr-ui 0.13.0 shipped `KadrAppearance` (issue #101, PR #103), and `EditorView.studioAppearance(accent:)` now maps `ReelPalette.studio` onto it. The list below is kept as the record of what the ceiling was, not as an open gap. What remains upstream is the eyedropper's tap-to-sample (#102).
+
+**Was unreachable with kadr-ui 0.12.0:**
+- Red playhead (currently system accent, but playhead should be white per decision 4).
+- Clip-cell background colours, hues, and radius-4 corners.
+- Waveform colour on audio rows.
+- Keyframe diamond colour (accent-filled today).
+- Lane background colours and selection ring colour (white today).
+- Per-lane heights (single `laneHeight` — and it is ignored on the common single-non-audio-lane path).
+- Unhiddable 14pt scrub strip.
+- AVKit transport chrome on VideoPreview.
+- Time ruler (the app draws its own as a t=0 legend pending a scroll-offset API).
+- Filmstrips in clip cells.
+
+**One accidental match:** single-select ring is already white 2pt, aligning with Modernist by chance.
+
+**Proposed upstream shape:** An `EnvironmentValues`-based appearance modifier layered through the existing private helpers, allowing downstream consumers to set colour / radius / typography / layer height at the cost of a new protocol adoption. Carve out as a separate RFC if community demand surfaces.
+
+**Where dependency versions live.** `ReelsStudio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. This is an Xcode-project app with no `Package.swift`, so a root `Package.resolved` is never authoritative here — if one appears it is local residue from someone running `swift build` in the directory, it is gitignored, and it will drift (a stale one pinned kadr-ui 0.6.0 while the build used 0.13.0). Read the `.xcodeproj` one.
+
+### Dropped by ruling
+
+Three features that initially appeared in design drafts but were cut:
+- **Transport band** — play/skip/loop/fullscreen controls. Status: reopened and scoped for v0.9.0 (see § v0.9.0 — Transport band). A feature request deferred during the Modernist migration, now implemented.
+- **Real eyedropper tool** — "Pick from preview" for chroma key + colour overlays. Pre-existing `ColorPicker` stands in; a real eyedropper needs `VideoPreview` tap-coordinate exposure.
+- **Editor rename** — the navigation pencil glyph. Was decorative; a11y-hidden per v0.5; dropped as unnecessary affordance.
+
+### Known gaps closed by ruling
+
+- **Sheet backdrop.** Spec calls for an exact 55% black scrim. Implemented using system dimming (no custom presentation machinery). Perceptually equivalent, achieves the goal, avoids modal-presentation surgery.
+- **Tick row.** Designed as a zoom legend (showing "48 px/s" readout), not scroll-tracking. Implemented as specified.
+
+### The swipe-back regression — and the lesson
+
+Hiding the system navigation bar during the design migration killed the interactive pop gesture (swipe from left edge to go back). Restored via a `UIGestureRecognizerDelegate` shim in the nav stack.
+
+**The lesson:** When a test is retargeted because the chrome it targets moved, ask what the old target was *also proving*. An edge-swipe UI test now stands witness to the interactive-pop affordance.
+
+### Dynamic Type and snapshot baselines
+
+- **Dynamic Type.** Fixed Modernist scale makes a Dynamic Type audit *more* necessary, not less, for v1.0 prep. Deferred.
+- **Snapshot tests.** Re-recording was deferred by standing ruling until a pinned-Xcode re-record job landed — the job is now live. v0.10 lands the harness end-to-end: the determinism seam, seven snapshot test cases, the pinned `snapshot:` CI job, and the recording workflow (`.github/workflows/snapshot-record.yml`). **No baseline images are committed** — a fresh checkout has zero, and that is the intended state. Baselines are produced by dispatching that workflow after this lands, and arrive through a PR where a human reviews each PNG by eye. See v0.10 section below for the full determinism seam, why baselines are not committed, and why tests self-skip locally.
+
+### Compatibility
+
+- **No schema changes.** `ProjectDocument` v4 and `AppSettings` structures unchanged; `Project.accentColor` hex round-trip works identically.
+- **No `@Observable` or iOS 17 requirement bump.** Design layer works on iOS 16 runtime (v0.7.1 raised the floor; this migration is orthogonal).
+- **Archivo assets required.** Static font instances must be declared under `UIAppFonts` in `project.yml` (`Info.plist` is generated by XcodeGen) for the design to render correctly. Fallback to system face at the same size / weight ensures nothing breaks, but the intended look requires the font.
+
+---
+
+## v0.9.0 — Transport band
+
+**Status:** ✓ Implemented
+
+The editor shipped with a stage and timeline but no way to *run* a composition — the only playhead control was tapping the timeline. The transport band fills that gap: a horizontal strip below the stage with skip-back · play/pause · skip-forward buttons, a centered elapsed/total timecode readout, and loop / fullscreen toggles.
+
+### Scope lock — v0.9.0
+
+In scope:
+- **Transport band UI** — strip between stage and timeline.
+  - Leading group (3 cells): skip-back, play/pause (26pt glyph, accent fill), skip-forward.
+  - Center: "0:01 / 0:06" timecode in `Typography.numeric` (elapsed at full text colour, total at textMuted).
+  - Trailing group (2 cells): loop toggle, fullscreen button.
+- **Skip behaviour** — fixed 1.0-second intervals, clamped to [zero, duration]. Each button disabled at its bound. Frame-step rejected: `VideoPreview` ignores seeks under 0.05s, one frame at 30fps is 0.033s, button would silently fail.
+- **Loop implementation** — in the app, not `VideoPreview(loops:)`. kadr-ui captures that parameter at player construction and does not rebuild on `loops` change; the toggle would be inert. The app restarts playback when `isPlaying` falls and loop is on.
+- **Loop persistence** — session state on `ProjectStore`, no disk persistence. No schema change; `ProjectDocument` remains schema v5. Loop state does not enter undo timeline.
+- **Playhead flush gating** — scene-storage write does not fire on every playback tick (~10 times per second). Explicit flushes fire on playback stop and app background.
+- **Fullscreen mode** — collapses editor chrome in place (no new route). Transport band stays visible for its exit affordance.
+- **kadr-ui dependency** — requires 0.14.0 for `VideoPreview`'s `isPlaying` and `currentTime` two-way bindings. No upstream kadr changes needed.
+
+Out of scope:
+- **Frame-step controls** — rejected per the seek-floor reasoning above.
+- **Variable skip intervals** — always 1.0 second.
+- **Playback speed controls** — speed editing is v0.7's `SpeedCurveEditor`, separate from playback rate UI.
+- **Scrubbing on the transport band** — scrub affordance lives on the timeline.
+- **Playback loop on `VideoPreview`** — architectural decision tied to kadr-ui's construction-time parameter capture.
+
+### Compatibility
+
+- **kadr-ui ≥ 0.14.0** (no floor change; already required by chroma-key work). Requires `VideoPreview(isPlaying:currentTime:)` two-way bindings.
+- **No schema changes.** `ProjectDocument` v5 persists identically.
+- **No undo impact.** Loop and play state are transient; session-level state does not enter undo timeline.
+
+---
+
+## v0.10.0 — Snapshot testing harness
+
+**Status:** ✓ Implemented
+
+A thin slice of pixel-snapshot coverage over the editor view group (`EditorView`, `PreviewArea`, `TransportBand`, `EditorToolbar`). Proves layout, colour, and spacing invariants the unit/UI suite cannot reach — every other test is behavior (a binding wired, a computed string, a selection slot). First harness ship over one screen group; foundation for v1.0's pixel-perfect audit.
+
+### The determinism seam
+
+The live stage is an AVKit player built asynchronously inside `.task` on `VideoPreview` appear, racing a loading spinner against a failure glyph. A baseline captured during that race is unrepeatable. `StageRendering` is an `EnvironmentKey` with two cases: `.live` (default, never written in production) and `.placeholder` (test-only). Snapshot tests set it to `.placeholder`, swapping the player for the stage's own letterbox ground — no `AVPlayer`, no async load, no spinner-versus-glyph race. Every store is built from a fixed fixture (one `/dev/null` clip trimmed to 6 seconds) with `currentTime` and `isPlaying` pinned, so nothing in the tree is mid-animation or mid-load when the frame is captured. See `Sources/ReelsStudio/Editor/StageRendering.swift` for the seam; production is unaffected by its existence — the app never writes the key, and `Tests/ReelsStudioTests/StageRenderingTests.swift` asserts the default is `.live`, so a silent flip would fail a test.
+
+### Why baselines are not in the repo
+
+A fresh checkout has ZERO baseline images. That is the intended state, not a bug. Baselines live only in CI's pinned-runtime job and land via a PR where a human reviews each PNG as an image before merge. The `snapshot:` job is knowingly RED until that first record PR merges — a missing baseline is a failure, not a pass. This is honest: snapshot tests that never ran are not a feature; snapshot tests that always pass without anyone reviewing them are dangerous.
+
+### Two runtimes, on purpose
+
+The main `test:` job (ci.yml) keeps its documented highest-available-runtime float — unit assertions do not care which iOS point release renders them. The `snapshot:` job pins Xcode 26.3 + iOS 26.2 + iPhone 17 Pro and refuses to fall back. Pixel baselines drift across iOS point releases and device screen geometry. A fallback to a different runtime or device would be drift wearing green, silently unreviewed.
+
+### A documented trap
+
+`PreviewArea` and `EditorToolbar` declare `@Environment(ToastCenter.self)`. SwiftUI's Observation lookup TRAPS AT HOST TIME even when the value is never read — including in the `.placeholder` branch that never touches `toasts`. Standing up any SwiftUI host or snapshot test against these views crashes with "No Observable object of type ToastCenter found" unless the test injects `.environment(ToastCenter())`. **RULED: production will NOT be changed to tolerate its absence** — trapping is correct fail-fast, and making it optional would silently swallow the auto-save and preview-load error toasts users depend on. Tests inject a real `ToastCenter`. This is not a bug in the seam; it is intentional harness surface.
+
+### The harness's first catch
+
+The snapshot harness caught a real, user-visible defect in already-merged code on its first recording run (issue #75): `TransportBand` used SF Symbol names `gobackward.1` and `goforward.1`, which have never existed. The numbered "go" family runs `.5 / .10 / .15 / .30 / .45 / .60 / .75 / .90` — there is no `.1` member. Both skip buttons rendered a missing-symbol placeholder on device. It shipped in PR #84 and passed every existing gate: a11y tests assert spoken labels, ViewInspector asserts structure, the compiler only ever sees a `String`. Nothing looked at pixels. Fixed to `gobackward` / `goforward` with a regression test asserting `UIImage(systemName:)` resolves for both. The skip interval (1.0 second) did not change — it rested on kadr-ui's 0.05s seek floor, never on a glyph.
+
+### Scope lock — v0.10.0
+
+In scope:
+- **Snapshot test harness** — seven test cases (`SnapshotTests.swift`) covering the editor view group on CI's pinned runtime (Xcode 26.3 + iOS 26.2 + iPhone 17 Pro).
+  - `EditorView` in default session state.
+  - `PreviewArea` alone, placeholder-rendered, with and without overlay.
+  - `TransportBand` at composition start and mid-composition (both skip states).
+  - `EditorToolbar` in root mode and clip-selected mode.
+- **Determinism via `StageRendering` seam** — environment key with `.live` (default) and `.placeholder` (test-only) cases.
+- **Baseline recording** — manual workflow (`.github/workflows/snapshot-record.yml`) for human-reviewed baseline PRs. Pinned Xcode 26.3 / iOS 26.2 / iPhone 17 Pro, no auto-heal, no fallback.
+- **CI execution** — `snapshot:` job in ci.yml; knowingly red until first baselines land, then green on pixel match.
+- **Local skip guard** — every snapshot test calls `requireCIPinnedRuntime()` and self-skips unless `SNAPSHOT_RUNTIME_PINNED=1` is set in the booted simulator's launchd.
+
+Out of scope:
+- **Baselines on disk** — deferred to recorded PR; fresh checkout has none.
+- **Snapshot coverage outside editor group** — sliced to the one screen group the approved design cares about pixel-for-pixel. Other screens' behavior is proven by unit/UI.
+- **Portrait + landscape variants** — v0.10 captures one size (390×844 for full editor, 270×480 for preview). Additional device / orientation coverage deferred.
+
+### Compatibility
+
+- **No schema changes.** `ProjectDocument` v5 persists identically.
+- **No app changes outside tests.** `StageRendering` key added; production always uses `.live`, never written by app code.
+- **swift-snapshot-testing ≥ 1.19.4** — added to test target dependencies.
+
+---
+
 ## v0.8 — On-device AI *(planned, sketch)*
 
 Apple-platform-commodity AI features:
 
-1. **iOS 17 floor bump** + `@Observable` migration of `ProjectStore`, `ToastCenter`, `AppSettings`, `LibraryHost`, `ProjectLibrary`.
+1. ~~**iOS 17 floor bump** + `@Observable` migration~~ **Shipped in v0.7.1.** Remaining work:
 2. **Auto-captions** via kadr-captions v0.7's `AutoCaptionGenerator` (SpeechAnalyzer-backed). "Generate from audio" button in `AddCaptionsSheet`.
 3. **Person cutout** via Vision framework `PersonSegmentation`. New `Filter.mask(.person)` case (requires kadr engine update — track as kadr v0.13.x).
 4. Release prep + tag v0.8.0.

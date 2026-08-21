@@ -14,57 +14,57 @@ struct SpeedCurveSheet: View {
     var store: ProjectStore
     let clipID: ClipID
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.reelPalette) private var palette
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ReelSheetHeader("Speed Curve") {
+                Button("Done") { dismiss() }
+                    .buttonStyle(ReelGhostButtonStyle())
+            }
             content
-                .navigationTitle("Speed Curve")
-                .navigationBarTitleDisplayModeInline()
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { dismiss() }
-                    }
-                }
         }
+        // The design gives no fixed height for this one; the log-scaled
+        // multiplier axis needs every point it can get, so it takes the
+        // full-height stop.
+        .reelSheet(detents: [.large])
     }
 
     @ViewBuilder
     private var content: some View {
         if let clip = videoClip(matching: clipID) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Reel.Space.s3) {
                 Text(headerText(for: clip))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal)
+                    .font(Reel.Typography.body)
+                    .foregroundStyle(palette.textMuted)
                 SpeedCurveEditor(
                     clip: clip,
                     currentTime: Binding(
                         get: { store.currentTime },
                         set: { store.currentTime = $0 }
                     ),
-                    height: 240,
+                    height: Reel.speedCurveEditorHeight,
                     onUpdate: { newCurve in
                         store.applySpeedCurve(id: clipID, newCurve)
                     }
                 )
-                .padding(.horizontal)
                 Spacer()
             }
-            .padding(.top)
+            .padding(Reel.Space.s4)
         } else {
-            VStack(spacing: 12) {
+            VStack(spacing: Reel.Space.s3) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: Reel.Typography.Glyph.lg, weight: Reel.Typography.headingWeight))
+                    .foregroundStyle(palette.textMuted)
                 Text("Clip not available")
-                    .font(.headline)
+                    .font(Reel.Typography.h5)
                 Text("This clip is no longer in the project. Close this sheet and reselect.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                    .font(Reel.Typography.body)
+                    .foregroundStyle(palette.textMuted)
+                    .frame(maxWidth: Reel.emptyStateMeasure)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(Reel.Space.s4)
         }
     }
 
@@ -80,13 +80,5 @@ struct SpeedCurveSheet: View {
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func navigationBarTitleDisplayModeInline() -> some View {
-        #if os(iOS)
-        self.navigationBarTitleDisplayMode(.inline)
-        #else
-        self
-        #endif
-    }
-}
+// v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
+// sheet no longer wraps itself in; `ReelSheetHeader` draws the title.

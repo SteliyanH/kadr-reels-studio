@@ -188,3 +188,23 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+--------------------------------------------------------------------------
+
+THIRD-PARTY NOTICES
+
+This product bundles third-party material that is licensed separately from
+the Apache License above.
+
+Archivo
+   Copyright 2020 The Archivo Project Authors
+   (https://github.com/Omnibus-Type/Archivo)
+
+   Licensed under the SIL Open Font License, Version 1.1. The full license
+   text ships with the fonts at
+   Sources/ReelsStudio/Resources/Fonts/OFL.txt and is also available at
+   http://scripts.sil.org/OFL
+
+   Bundled as Archivo-Regular.ttf (400), Archivo-SemiBold.ttf (600) and
+   Archivo-ExtraBold.ttf (800): static instances derived from the upstream
+   variable font Archivo[wdth,wght].ttf at wght=400/600/800, wdth=100.

@@ -75,11 +75,82 @@ final class ProjectListViewTests: XCTestCase {
         XCTAssertEqual(library.documents.last?.id, first.id)
     }
 
+    // MARK: - Nav count line (v0.8 Tier 5a)
+
+    func testCountLineOmitsSkippedWhenThereAreNone() {
+        XCTAssertEqual(ProjectListView.countLine(projects: 3, skipped: 0), "3 projects")
+    }
+
+    func testCountLineSingularisesBothHalves() {
+        XCTAssertEqual(
+            ProjectListView.countLine(projects: 1, skipped: 1),
+            "1 project · 1 skipped file"
+        )
+    }
+
+    func testCountLineMatchesTheDesignsExample() {
+        XCTAssertEqual(
+            ProjectListView.countLine(projects: 3, skipped: 2),
+            "3 projects · 2 skipped files"
+        )
+    }
+
+    func testCountLineHandlesZeroProjectsWithSkippedFiles() {
+        // Reachable state: every document failed to load, so the empty state
+        // does *not* show and the header still has to say something true.
+        XCTAssertEqual(
+            ProjectListView.countLine(projects: 0, skipped: 2),
+            "0 projects · 2 skipped files"
+        )
+    }
+
+    // MARK: - Row preset tag
+
+    func testPresetLabelMapsPortraitPresetsToNineBySixteen() {
+        XCTAssertEqual(ProjectRow.presetLabel(for: .reelsAndShorts), "9:16")
+        XCTAssertEqual(ProjectRow.presetLabel(for: .tiktok), "9:16")
+    }
+
+    func testPresetLabelMapsSquareAndCinema() {
+        XCTAssertEqual(ProjectRow.presetLabel(for: .square), "1:1")
+        XCTAssertEqual(ProjectRow.presetLabel(for: .cinema), "16:9")
+    }
+
+    func testPresetLabelReducesACustomSize() {
+        XCTAssertEqual(
+            ProjectRow.presetLabel(
+                for: .custom(width: 1080, height: 1920, frameRate: 30, codecHEVC: true)
+            ),
+            "9:16"
+        )
+    }
+
+    func testRatioSurvivesADegenerateSize() {
+        XCTAssertEqual(ProjectRow.ratio(width: 0, height: 0), "0:0")
+    }
+
+    func testClipCountLabelSingularises() {
+        XCTAssertEqual(ProjectRow.clipCountLabel(1), "1 clip")
+        XCTAssertEqual(ProjectRow.clipCountLabel(3), "3 clips")
+    }
+
     // MARK: - Body smoke
 
     func testListViewBodyConstructs() {
         let view = ProjectListView(library: library)
         _ = view.body
+    }
+
+    func testListViewBodyConstructsWithProjects() throws {
+        _ = try library.newProject(name: "One")
+        _ = try library.newProject(name: "Two")
+        let view = ProjectListView(library: library)
+        _ = view.body
+    }
+
+    func testProjectRowBodyConstructs() throws {
+        let doc = try library.newProject(name: "Row")
+        _ = ProjectRow(document: doc).body
     }
 
     func testLibraryHostBuildsLibraryFromDefaultInit() {

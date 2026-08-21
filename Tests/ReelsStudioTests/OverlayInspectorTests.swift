@@ -208,6 +208,21 @@ final class OverlayInspectorTests: XCTestCase {
         XCTAssertEqual(title, "logo")
     }
 
+    /// Tier 6 — the row's composed VoiceOver label. Pins the shape
+    /// `ProjectRow.accessibilityDescription` established: title, then kind,
+    /// comma-joined. Selection is spoken through the `.isSelected` trait, not
+    /// echoed in the string, so this also guards against a future edit
+    /// re-introducing "selected" text that would double up with the trait.
+    func testLayersSheetAccessibilityDescriptionComposesTitleAndKind() {
+        let desc = LayersSheet.accessibilityDescription(title: "New text", kind: "Text")
+        XCTAssertEqual(desc, "New text, Text")
+    }
+
+    func testLayersSheetAccessibilityDescriptionOmitsSelectionState() {
+        let desc = LayersSheet.accessibilityDescription(title: "Sticker 1", kind: "Sticker")
+        XCTAssertFalse(desc.localizedCaseInsensitiveContains("selected"))
+    }
+
     // MARK: - Body smoke
 
     func testOverlayInspectorAreaConstructsForSelectedOverlay() {

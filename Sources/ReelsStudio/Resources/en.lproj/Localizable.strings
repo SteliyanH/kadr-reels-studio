@@ -27,9 +27,18 @@
 "Retry" = "Retry";
 "Not now" = "Not now";
 
+// MARK: - Library count (projected in nav header)
+
+"library.count.oneProject" = "1 project";
+"library.count.manyProjects" = "%lld projects";
+"library.count.oneSkipped" = "1 skipped file";
+"library.count.manySkipped" = "%lld skipped files";
+
 // MARK: - Project list
 
 "Projects" = "Projects";
+"New" = "New";
+"Open the bundled sample" = "Open the bundled sample";
 "New Project" = "New Project";
 "Sample" = "Sample";
 "Project not found" = "Project not found";
@@ -56,6 +65,13 @@
 "SFX" = "SFX";
 "Captions" = "Captions";
 "Selection" = "Selection";
+"Split" = "Split";
+"Copy" = "Copy";
+"Speed" = "Speed";
+"Back" = "Back";
+"Delete" = "Delete";
+"Forward" = "Forward";
+"Wrap" = "Wrap";
 "Splits the clip at the playhead" = "Splits the clip at the playhead";
 "Inserts a copy of this clip after itself" = "Inserts a copy of this clip after itself";
 "Opens the speed curve editor" = "Opens the speed curve editor";
@@ -74,6 +90,7 @@
 "Redo" = "Redo";
 "Redo last undone action" = "Redo last undone action";
 "Nothing to redo" = "Nothing to redo";
+"Auto-saved" = "Auto-saved";
 "Settings" = "Settings";
 "Open settings" = "Open settings";
 
@@ -98,11 +115,14 @@
 
 "Appearance" = "Appearance";
 "Accent" = "Accent";
+"Accent · This project" = "Accent · This project";
 "System" = "System";
 "Color" = "Color";
 "Playback" = "Playback";
 "Fixed-center playhead" = "Fixed-center playhead";
+"The timeline scrolls under a pinned playhead instead of letting it drift." = "The timeline scrolls under a pinned playhead instead of letting it drift.";
 "Haptics" = "Haptics";
+"Haptics · All projects" = "Haptics · All projects";
 "Strength" = "Strength";
 
 // MARK: - Add Music sheet
@@ -138,6 +158,12 @@
 "Preview" = "Preview";
 "New text" = "New text";
 "Add Text Overlay" = "Add Text Overlay";
+"Off-white" = "Off-white";
+"Mid gray" = "Mid gray";
+"Near black" = "Near black";
+"Accent, light" = "Accent, light";
+"Accent, dark" = "Accent, dark";
+"Ground text color" = "Ground text color";
 "Source" = "Source";
 "Pick image…" = "Pick image…";
 "Picked" = "Picked";
@@ -177,6 +203,7 @@
 
 "No overlays yet" = "No overlays yet";
 "Tap **+ Overlay** in the toolbar to add text or stickers." = "Tap **+ Overlay** in the toolbar to add text or stickers.";
+"Selects this layer for editing" = "Selects this layer for editing";
 
 // MARK: - Speed curve sheet
 
@@ -185,9 +212,23 @@
 "Drag points vertically to change the speed multiplier; horizontally to retime. Long-press to remove." = "Drag points vertically to change the speed multiplier; horizontally to retime. Long-press to remove.";
 "Tap inside the editor to add a keyframe at the playhead. Default speed is 1×." = "Tap inside the editor to add a keyframe at the playhead. Default speed is 1×.";
 
+// MARK: - Transition sheet
+
+"Transition" = "Transition";
+"Duration" = "Duration";
+
+// MARK: - Chroma Key sheet
+
+"Chroma Key" = "Chroma Key";
+"Key color" = "Key color";
+"Threshold" = "Threshold";
+
 // MARK: - Export sheet
 
 "Format" = "Format";
+"Preset" = "Preset";
+"Render" = "Render";
+"Rendering…" = "Rendering…";
 "Status" = "Status";
 "Share" = "Share";
 "Export" = "Export";
@@ -234,3 +275,26 @@
 "Couldn't read file" = "Couldn't read file";
 "skipped.reason.unsupportedSchema" = "Project uses a newer schema (v%lld)";
 "skipped.reason.unsupportedSchemaDetail" = "This project was saved by a newer build (schema v%lld). Update Reels Studio to open it.";
+
+/* v0.8.3 — chroma key: sample the key colour off the footage */
+"Sample from frame" = "Sample from frame";
+"Tap the picture to lift its colour. Taps outside the frame are ignored." = "Tap the picture to lift its colour. Taps outside the frame are ignored.";
+
+/* v0.9 — the transport band beneath the editor stage.
+ *
+ * Dotted keys, not literal-English ones: these are spoken labels resolved
+ * through `NSLocalizedString` at the call site (see `TransportBand`'s spoken-
+ * copy extension) rather than `Text("…")` literals SwiftUI looks up for us,
+ * and a key that differs from its value is what makes a missing entry visible
+ * instead of silent.
+ */
+"transport.play" = "Play";
+"transport.pause" = "Pause";
+"transport.skipBack" = "Skip back";
+"transport.skipForward" = "Skip forward";
+"transport.loop" = "Loop";
+"transport.loop.on" = "On";
+"transport.loop.off" = "Off";
+"transport.fullscreen.enter" = "Enter full screen";
+"transport.fullscreen.exit" = "Exit full screen";
+"transport.time.a11y" = "%1$@ of %2$@";

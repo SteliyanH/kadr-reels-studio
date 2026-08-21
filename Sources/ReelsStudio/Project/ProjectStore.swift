@@ -45,8 +45,37 @@ final class ProjectStore {
         }
     }
 
-    /// Composition-time playhead. Driven by `TimelineView`'s tap-to-scrub.
+    /// Composition-time playhead. Driven by `TimelineView`'s tap-to-scrub, and
+    /// from v0.9 by the transport band and by playback itself — kadr-ui's
+    /// periodic observer pushes the player's position back in here roughly ten
+    /// times a second while ``isPlaying``.
     var currentTime: CMTime = .zero
+
+    /// v0.9 — whether the stage is playing.
+    ///
+    /// Two-way with `VideoPreview(isPlaying:)`: writing it starts or stops the
+    /// player, and the player writes back — a non-looping composition running
+    /// out clears it, so the transport's play button can't sit stuck showing
+    /// "pause". Session UX state, the same kind as ``currentTime`` and the
+    /// selection slots above: not part of the document, not part of the undo
+    /// timeline, not persisted.
+    var isPlaying: Bool = false
+
+    /// v0.9 — whether playback restarts at zero when it reaches the end.
+    ///
+    /// **The app owns this, not `VideoPreview(loops:)`.** kadr-ui 0.14 reads
+    /// `loops` while it builds the player, inside `.task(id: identity)`, and
+    /// `identity` is a fingerprint over clip / overlay / audio counts and
+    /// duration — `loops` is not in it. The periodic observer's closure
+    /// captures the value from construction time, so toggling this flag would
+    /// have no effect until something else rebuilt the player: a loop button
+    /// that reads correctly and is inert on device. ``PreviewArea`` therefore
+    /// always passes `loops: false` and ``TransportBand`` performs the restart
+    /// itself.
+    ///
+    /// Resets per session — no `@SceneStorage`, no schema field. Loop is a
+    /// mode you switch on while working, not a property of the project.
+    var isLooping: Bool = false
 
     /// Multi-select mode flag — when `true`, taps on timeline clips toggle
     /// set membership (`selectedClipIDs`) instead of writing single-select
