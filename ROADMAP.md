@@ -107,7 +107,14 @@ Design-only cycle — zero features, zero state mutations. Visual overhaul of ev
 
 See `DESIGN.md` § Modernist design-system migration for the full RFC.
 
-## v0.8.0 — Platform polish + import/export *(planned)*
+## v0.8.0 — Platform polish + import/export *(deferred — not shipped)*
+
+> **This cycle was never released.** The work that actually shipped after v0.7.1
+> was the Modernist design migration, the transport band and the snapshot
+> harness, tagged together as **v0.10.0**. The scope below — iPad split-view,
+> `.kadr` import/export, PiP export preview, Sentry DSN — is still open and
+> moves to a later cycle. Recorded rather than renumbered so the version history
+> stays legible.
 
 Last cycle before v1.0 App Store submission. **iOS 17 floor and `@Observable` migration shipped in v0.7.1.** No new AI features — auto-captions, person cutout, and Vision-based smart crop all moved to kadr-pro per the [Kadr Pro scope](https://github.com/SteliyanH/kadr/blob/main/ROADMAP.md#kadr-pro). What's left to ship in the OSS app:
 
@@ -120,13 +127,13 @@ Last cycle before v1.0 App Store submission. **iOS 17 floor and `@Observable` mi
 
 Six tiers. Pairs with **kadr v0.13** (engine perf); v0.8 doesn't depend on kadr-ui v0.12 anymore (v0.7.1 already uses it).
 
-## v0.9.0 — Transport band
+## v0.9.0 — Transport band ✓ shipped in v0.10.0
 
 Playback controls missing since v0.1 — the editor had a stage and a timeline but no affordance between them to run a composition. A single-tier cycle scoped at the transport band (skip-back · play/pause · skip-forward · time readout · loop · fullscreen). Targets **kadr-ui 0.14.0** (VideoPreview bindings already ship); no upstream kadr changes needed (#73).
 
 1. **Transport band UI** — horizontal strip between stage and timeline. Leading group: skip-back / play/pause (26pt prominent accent fill) / skip-forward. Center: elapsed/total timecode readout ("0:01 / 0:06") in numeric type token (elapsed full text, total muted). Trailing: loop toggle and fullscreen button. Skip step is 1.0 second (fixed, not frame-step — VideoPreview ignores seeks under 0.05s and one frame at 30fps is 0.033s, so the button would silently do nothing; a second is clear of the floor and matches the timecode unit). Play on a finished composition restarts at zero. Loop is implemented in the app rather than `VideoPreview(loops:)` because kadr-ui captures that parameter at player construction and does not rebuild on change, which would make the toggle inert; the app restarts playback itself when `isPlaying` falls. Loop is session state on `ProjectStore` — no persistence, no schema change (ProjectDocument stays v5), no undo timeline. Scene-storage playhead write is gated so it does not fire on every playback tick; flushes fire when playback stops and when the app backgrounds. Fullscreen collapses editor chrome in place (no new route); the band stays visible so the exit control stays reachable.
 
-## v0.10.0 — Snapshot testing harness
+## v0.10.0 — Snapshot testing harness ✓ shipped
 
 A thin pixel-snapshot test harness over the editor view group — the one screen the approved design cares about pixel-for-pixel. Seven snapshot test cases (SnapshotTests.swift) prove layout, colour, and spacing invariants the unit/UI suite cannot reach. Baseline recording workflow (snapshot-record.yml) gates baselines to CI's pinned runtime (Xcode 26.3 + iOS 26.2 + iPhone 17 Pro); tests self-skip locally to avoid false positives on any contributor's renderer. The harness's first real run caught a user-visible defect in merged code: TransportBand used non-existent SF Symbol names `gobackward.1` and `goforward.1` (the numbered family runs .5 / .10 / .15 / .30 / .45 / .60 / .75 / .90), rendering missing-symbol placeholders on device while every other gate stayed green. Fixed to `gobackward` / `goforward` with a regression test. No new kadr dependencies; swift-snapshot-testing added to test target.
 
