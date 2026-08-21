@@ -4,7 +4,15 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — Modernist design-system migration
+## [0.10.0] - 2026-08-21
+
+Three cycles ship together: the Modernist design-system migration, the transport
+band (v0.9.0 below) and the snapshot harness. Nothing between v0.7.1 and this
+release was tagged, so the sections below describe the whole span.
+
+---
+
+### Modernist design-system migration
 
 Visual design system overhaul — zero feature changes, zero state mutations. Every hardcoded colour, radius, material and font across ~25 view files migrates onto a published token layer. The app now ships with two palettes of the same design system (print chrome + dark studio editor ground), Archivo variable font (400/600/800 weight), and a constrained accent picker.
 
@@ -114,7 +122,38 @@ New coverage: `ReelTokenTests` / `ReelTypographyTests` (radius 0, 2pt rules, bot
 
 ---
 
-## v0.10.0 — Snapshot testing harness
+### Adopted kadr-ui 0.15.0
+
+kadr-ui 0.15.0 closed the API gaps this app had been routing around, so three
+workarounds are gone.
+
+- **The hand-copied composition fingerprint.** `PreviewArea` carried its own
+  reconstruction of kadr-ui's rebuild identity so it could stop playback before
+  a rebuild orphaned a live time observer. It was a copy of a private upstream
+  definition — drift would have surfaced as playback quietly surviving a rebuild
+  it should not have. Now calls `VideoPreview.compositionIdentity(of:)`, and the
+  tests that pinned the copy pin the real thing.
+- **The AVKit chrome blocker.** A transparent tap-eater plus a blanket
+  `.accessibilityHidden(true)` over the whole preview subtree, because kadr-ui
+  exposed no way to decline AVKit's transport. `showsPlaybackControls: false`
+  does it upstream — and better: the app's version hid the entire subtree from
+  VoiceOver, taking kadr-ui's own loading and failure labels with it.
+- **Four mirrored layout constants.** `TimelineArea` copied the scrub-strip
+  height, lane height, chain audio-lane height and lane spacing out of kadr-ui.
+  They are `TimelineView.Metrics` now.
+
+Looping is deliberately unchanged: kadr-ui 0.15 made `loops` live, but the
+app-side restart is covered by unit tests and real playback cannot be exercised
+on a virtualised runner, so the swap waits for a device pass.
+
+### Dependency pins tightened
+
+Every kadr-family pin moved from `from:` to `minorVersion:`. SwiftPM's `from:`
+means `.upToNextMajor` and does not special-case `0.x`, so the previous ranges
+accepted every future 0.x of four dependencies — including breaking ones, which
+these minors are: kadr 0.15.0 raised the platform floor.
+
+### Snapshot testing harness
 
 Pixel-snapshot coverage over the editor view group — the one screen the approved design cares about pixel-for-pixel. Seven snapshot test cases prove layout, colour, and spacing invariants that unit/UI tests cannot reach. Baseline recording workflow (`snapshot-record.yml`) gates baselines to CI's pinned Xcode + runtime; tests self-skip locally to avoid false positives on contributor renderers.
 
@@ -148,7 +187,11 @@ Suite grows from 460 unit + 6 UI to 462 unit + 6 UI net coverage on development 
 
 ---
 
-## [0.9.0]
+## [0.9.0] — documented, folded into 0.10.0
+
+> Never tagged separately. Its work ships in v0.10.0; the section is kept as
+> written because it describes a distinct cycle.
+
 
 Transport band — playback controls for the editor. The editor shipped with stage and timeline but no affordance between them to *run* a composition — playback controls were missing. This release adds the transport band: a horizontal strip below the stage with skip-back · play/pause · skip-forward buttons, elapsed/total timecode readout ("0:01 / 0:06" in the numeric type token, with elapsed at full text colour and total at muted), and loop / fullscreen toggles.
 
