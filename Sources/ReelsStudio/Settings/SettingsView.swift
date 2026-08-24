@@ -77,10 +77,10 @@ struct SettingsView: View {
     /// stored colour survives untouched until the user actually taps.
     nonisolated static func choice(for color: Color?) -> AccentChoice {
         guard let color else { return .system }
-        let hex = ProjectDocument.hexString(from: PlatformColor(color))
+        let hex = ProjectDocument.hexString(from: PlatformColor.baked(color))
         for candidate in AccentChoice.allCases {
             guard let rampColor = candidate.color else { continue }
-            if ProjectDocument.hexString(from: PlatformColor(rampColor)) == hex {
+            if ProjectDocument.hexString(from: PlatformColor.baked(rampColor)) == hex {
                 return candidate
             }
         }
@@ -106,8 +106,8 @@ struct SettingsView: View {
         case (nil, nil):
             return false
         case let (target?, stored?):
-            guard let targetHex = ProjectDocument.hexString(from: PlatformColor(target)),
-                  let storedHex = ProjectDocument.hexString(from: PlatformColor(stored))
+            guard let targetHex = ProjectDocument.hexString(from: PlatformColor.baked(target)),
+                  let storedHex = ProjectDocument.hexString(from: PlatformColor.baked(stored))
             else {
                 // Can't prove they match — commit rather than assume, which
                 // is the same bias that produced this fix.

@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **Three guaranteed stack overflows in the colour pickers.**
+  `TextEffectsSection`, `AddOverlaySheet` and `ChromaKeySheet` each declared a
+  file-private `PlatformColor.init(_ color: Color)` whose body was
+  `self.init(color)`. SwiftUI already vends `UIColor(_ color: Color)`, and a
+  file-local declaration with that signature shadows it — so the body resolved
+  to itself and recursed until the stack overflowed. Picking a chroma key, an
+  overlay colour or a text-stroke colour ran into it.
+
+  The compiler had been warning on all three — *"function call causes an
+  infinite recursion"* — since the code was written. Nothing else caught it:
+  the tests rebuilt each `TextStyle` by hand rather than calling the private
+  view method that built the real one, and they live in the test target, which
+  has no shadow to fall into. `SettingsView` worked for the same accidental
+  reason.
+
+  All three are deleted in favour of one module-wide
+  `PlatformColor.baked(_:)`, and every call site — sources and tests alike —
+  now goes through it. An initialiser can be shadowed by a file-private
+  redeclaration; a named static cannot, and pointing the tests at it means
+  they exercise the app's path instead of a copy of it.
+
+  Each deleted shadow also carried an AppKit branch that had never been
+  compiled: this target builds for iOS only. `baked(_:)` has no `#if` at all.
+
+- **`recoverySuggestion` reaches the interface.** `localizedDescription`
+  returns `errorDescription` alone, so the recovery text the kadr family
+  writes was being discarded before it reached a toast — the actionable half
+  of the message. An export with no clips said *"There's nothing to export."*
+  and kept *"Add at least one clip before exporting."* to itself.
+
+  `AppError.readable(_:)` now returns both halves, sanitized. Without a
+  prefix the suggestion goes to the toast's `detail` line; with one, both
+  halves share `detail` rather than either being dropped. `ExportSheet` shows
+  them joined — it is the one surface where someone is stopped and waiting.
+  Errors that carry a suggestion in `userInfo` without conforming to
+  `LocalizedError` in Swift, which is most of Foundation, are read through
+  `NSError`.
+
 ### Changed
 
 - **The kadr family moves up a release: kadr `0.17.0`, kadr-ui `0.16.0`,

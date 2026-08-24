@@ -175,7 +175,7 @@ struct ChromaKeySheet: View {
     private func apply() {
         store.addChromaKey(
             id: clipID,
-            color: PlatformColor(keyColor),
+            color: PlatformColor.baked(keyColor),
             threshold: threshold
         )
     }
@@ -185,13 +185,3 @@ struct ChromaKeySheet: View {
 
 // v0.8 Tier 5a — the navigation-bar shim went with the `NavigationStack` this
 // sheet no longer wraps itself in; `ReelSheetHeader` draws the title.
-
-private extension PlatformColor {
-    convenience init(_ color: Color) {
-        #if canImport(UIKit)
-        self.init(color)
-        #else
-        self.init(cgColor: NSColor(color).cgColor) ?? .green
-        #endif
-    }
-}

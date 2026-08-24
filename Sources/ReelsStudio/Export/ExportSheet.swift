@@ -292,7 +292,10 @@ struct ExportSheet: View {
         } catch is CancellationError {
             stage = .idle
         } catch {
-            errorMessage = ErrorSanitizer.sanitize(error)
+            // `.joined` rather than the description alone: kadr writes a
+            // recovery suggestion for most of what can fail here, and this is
+            // the one surface where the person is stopped and waiting.
+            errorMessage = AppError.readable(error).joined
             stage = .failed
         }
     }

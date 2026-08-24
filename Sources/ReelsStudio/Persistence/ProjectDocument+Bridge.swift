@@ -347,7 +347,7 @@ extension Project {
             zoomPixelsPerSecond: zoom?.pixelsPerSecond,
             fixedCenterPlayhead: fixedCenterPlayhead,
             accentColorHex: accentColor.flatMap { color in
-                ProjectDocument.hexString(from: PlatformColor(color))
+                ProjectDocument.hexString(from: PlatformColor.baked(color))
             }
         )
     }
