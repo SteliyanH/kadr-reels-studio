@@ -78,7 +78,7 @@ final class AddOverlaySheetTests: XCTestCase {
     // allowed. These pin it so it can't drift back on the next sweep.
 
     private func hex(_ color: Color) -> String? {
-        ProjectDocument.hexString(from: PlatformColor(color))
+        ProjectDocument.hexString(from: PlatformColor.baked(color))
     }
 
     func testDefaultTextColorIsLiteralWhite() {

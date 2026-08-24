@@ -53,19 +53,63 @@ extension AppError {
     /// routes the detail through ``ErrorSanitizer`` so embedded file URLs /
     /// sandbox paths never reach the toast.
     static func transient(_ error: Error, prefix: String? = nil) -> AppError {
-        let detail = ErrorSanitizer.sanitize(error)
+        let text = readable(error)
         if let prefix {
-            return .transient(message: prefix, detail: detail)
+            return .transient(message: prefix, detail: text.joined)
         }
-        return .transient(message: detail)
+        return .transient(message: text.description, detail: text.recovery)
     }
 
     /// Build a catastrophic error for a thrown error.
     static func catastrophic(_ error: Error, prefix: String? = nil) -> AppError {
-        let detail = ErrorSanitizer.sanitize(error)
+        let text = readable(error)
         if let prefix {
-            return .catastrophic(message: prefix, detail: detail)
+            return .catastrophic(message: prefix, detail: text.joined)
         }
-        return .catastrophic(message: detail)
+        return .catastrophic(message: text.description, detail: text.recovery)
+    }
+
+    /// What an error has to say for itself, in the two parts a person needs:
+    /// what happened, and what to do about it.
+    struct Readable: Sendable {
+        /// Sanitized `localizedDescription` — always present.
+        let description: String
+        /// Sanitized `recoverySuggestion`, when the error offers one.
+        let recovery: String?
+
+        /// Both parts as one string, for the single-`Text` sites.
+        var joined: String {
+            guard let recovery else { return description }
+            return "\(description) \(recovery)"
+        }
+    }
+
+    /// Read an error's human-facing text.
+    ///
+    /// `localizedDescription` returns `errorDescription` **alone**, so the
+    /// `recoverySuggestion` a `LocalizedError` writes never reaches the UI
+    /// unless something asks for it. Across the kadr family that suggestion is
+    /// the actionable half — "Add at least one clip before exporting." against
+    /// "There's nothing to export." — and it was being dropped on the floor.
+    ///
+    /// Both parts go through ``ErrorSanitizer``. kadr deliberately writes its
+    /// strings without file paths, but Foundation and AVFoundation errors
+    /// still arrive with them embedded, and `KadrError.exportFailed`
+    /// interpolates one of those verbatim.
+    ///
+    /// The `NSError` fallback covers errors that carry a recovery suggestion
+    /// in `userInfo` without conforming to `LocalizedError` in Swift — most of
+    /// Foundation.
+    nonisolated static func readable(_ error: Error) -> Readable {
+        let suggestion = (error as? LocalizedError)?.recoverySuggestion
+            ?? (error as NSError).localizedRecoverySuggestion
+        var recovery: String?
+        if let suggestion, !suggestion.isEmpty {
+            recovery = ErrorSanitizer.sanitize(suggestion)
+        }
+        return Readable(
+            description: ErrorSanitizer.sanitize(error),
+            recovery: recovery
+        )
     }
 }

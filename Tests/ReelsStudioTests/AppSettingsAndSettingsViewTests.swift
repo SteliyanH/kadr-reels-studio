@@ -115,7 +115,7 @@ final class SettingsViewTests: XCTestCase {
     // and the off-ramp colour survived. The tap now commits.
 
     private func hex(_ color: Color?) -> String? {
-        color.flatMap { ProjectDocument.hexString(from: PlatformColor($0)) }
+        color.flatMap { ProjectDocument.hexString(from: PlatformColor.baked($0)) }
     }
 
     func testLegacyCustomAccentSeedsOntoTheRampBaseWithoutWriting() {

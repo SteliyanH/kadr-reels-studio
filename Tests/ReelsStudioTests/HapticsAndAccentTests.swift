@@ -73,8 +73,8 @@ final class AccentColorRoundTripTests: XCTestCase {
 
         XCTAssertNotNil(restored.accentColor)
         // Encode both runtime colors back to hex and compare.
-        let originalHex = ProjectDocument.hexString(from: PlatformColor(original.accentColor!))
-        let restoredHex = ProjectDocument.hexString(from: PlatformColor(restored.accentColor!))
+        let originalHex = ProjectDocument.hexString(from: PlatformColor.baked(original.accentColor!))
+        let restoredHex = ProjectDocument.hexString(from: PlatformColor.baked(restored.accentColor!))
         XCTAssertEqual(originalHex, restoredHex)
     }
 
@@ -150,8 +150,8 @@ final class AccentColorRoundTripTests: XCTestCase {
                 "\(name) did not survive the schema v5 round-trip"
             )
 
-            let originalHex = ProjectDocument.hexString(from: PlatformColor(accent))
-            let restoredHex = ProjectDocument.hexString(from: PlatformColor(restoredAccent))
+            let originalHex = ProjectDocument.hexString(from: PlatformColor.baked(accent))
+            let restoredHex = ProjectDocument.hexString(from: PlatformColor.baked(restoredAccent))
             XCTAssertEqual(originalHex, restoredHex, "\(name) hex drifted across the round-trip")
         }
     }
