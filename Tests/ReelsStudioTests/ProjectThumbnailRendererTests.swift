@@ -138,4 +138,7 @@ final class ProjectThumbnailRendererTests: XCTestCase {
     }
 }
 
-extension ProjectThumbnailTile: Inspectable {}
+// ViewInspector dropped the `Inspectable` requirement; conforming to it is
+// now deprecated, and declaring a conformance of an imported type to an
+// imported protocol is unsafe besides. The four extensions that used to sit
+// here did nothing.

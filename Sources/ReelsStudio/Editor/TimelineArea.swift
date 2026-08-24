@@ -216,7 +216,12 @@ extension TimelineArea {
 
     /// The density the zoom binding seeds on first pinch. Named once so the
     /// tick row's readout can't drift from what the timeline actually uses.
-    static let defaultPixelsPerSecond: Double = 50
+    ///
+    /// `nonisolated` because `TimelineArea` is a `View` and therefore
+    /// `@MainActor`, which isolated this constant along with everything else —
+    /// while the pure helper below that reads it is deliberately not. A `let`
+    /// of a `Sendable` type has nothing to protect.
+    nonisolated static let defaultPixelsPerSecond: Double = 50
 
     /// How many ticks the row emits. The viewport is at most ~1100pt wide on
     /// any supported device and ticks never sit closer than
