@@ -15,22 +15,27 @@ settings:
 packages:
   Kadr:
     url: https://github.com/SteliyanH/kadr.git
-    minorVersion: 0.15.0
+    minorVersion: 0.17.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
-    minorVersion: 0.15.0
+    minorVersion: 0.16.0
   KadrCaptions:
     url: https://github.com/SteliyanH/kadr-captions.git
-    minorVersion: 0.8.0
+    minorVersion: 0.10.0
   KadrPhotos:
     url: https://github.com/SteliyanH/kadr-photos.git
-    minorVersion: 0.7.0
+    minorVersion: 0.9.0
   Sentry:
     url: https://github.com/getsentry/sentry-cocoa.git
     from: 8.36.0
   ViewInspector:
     url: https://github.com/nalexn/ViewInspector.git
-    from: 0.9.11
+    # `from:` is .upToNextMajor and SwiftPM does not special-case 0.x, so the
+    # previous `from: 0.9.11` accepted every future 0.x release including
+    # breaking ones — and had already drifted to 0.10.3 on its own. The
+    # .xcodeproj is gitignored, so there is no lockfile to catch that: this
+    # pin is the only thing holding the version steady across machines and CI.
+    minorVersion: 0.10.3
   SnapshotTesting:
     url: https://github.com/pointfreeco/swift-snapshot-testing
     from: 1.19.4
