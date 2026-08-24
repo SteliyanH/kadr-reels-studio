@@ -4,6 +4,41 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **The kadr family moves up a release: kadr `0.17.0`, kadr-ui `0.16.0`,
+  kadr-captions `0.10.0`, kadr-photos `0.9.0`.** Every one of these is
+  additive upstream, so nothing here needed a source change — but the pins are
+  `.upToNextMinor`, which means a minor is picked up deliberately or not at
+  all. The app had gone a full release behind on all four.
+
+  What actually reaches a user: kadr, kadr-captions and kadr-photos now
+  conform their error types to `LocalizedError`, and this app already routes
+  every thrown error through `error.localizedDescription` (via
+  `AppError.transient(_:)` / `.catastrophic(_:)` and `ErrorSanitizer`). An
+  failure that reached `ExportSheet` as `The operation couldn't be completed.
+  (Kadr.KadrError error 6.)` now arrives as the sentence upstream wrote for
+  that case — with no call-site edits here.
+
+  Upstream deliberately writes those strings without file paths, so
+  `ErrorSanitizer` has less to redact than it used to. It stays regardless:
+  Foundation and AVFoundation errors still arrive with paths embedded, and
+  `KadrError.exportFailed` interpolates one of those verbatim.
+
+- **ViewInspector is pinned `.upToNextMinor` at `0.10.3`** (was
+  `from: 0.9.11`). `from:` is `.upToNextMajor` and SwiftPM does not
+  special-case `0.x`, so the old range accepted every future `0.x` release
+  including breaking ones — and it had already drifted a minor on its own, to
+  0.10.3, without anything recording that it moved.
+
+  This matters more here than in the packages: `.xcodeproj` is gitignored, so
+  there is no `Package.resolved` under version control to catch the drift.
+  `project.yml` is the only lockfile this repo has. Sentry and
+  swift-snapshot-testing keep `from:` — both are past 1.0, where it means what
+  it says.
+
 ## [0.10.0] - 2026-08-21
 
 Three cycles ship together: the Modernist design-system migration, the transport
