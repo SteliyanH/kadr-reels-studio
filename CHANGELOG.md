@@ -32,6 +32,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   Each deleted shadow also carried an AppKit branch that had never been
   compiled: this target builds for iOS only. `baked(_:)` has no `#if` at all.
 
+- **Warnings are errors, and the four classes of warning that were hiding
+  behind that are cleared.** `SWIFT_TREAT_WARNINGS_AS_ERRORS` was `NO`, which
+  is the whole reason three *"function call causes an infinite recursion"*
+  warnings could sit unread across three releases while the pickers they
+  described would have overflowed the stack on use.
+
+  Turning it on surfaced four further classes of warning, most of which the
+  app build had never shown because they live in test targets that only
+  compile under `test`:
+
+  - `TimelineArea.defaultPixelsPerSecond` is now `nonisolated`. `TimelineArea`
+    is a `View` and therefore `@MainActor`, which isolated this constant along
+    with everything else — while the pure helper that reads it is deliberately
+    not. A `let` of a `Sendable` type has nothing to protect.
+  - `AddOverlaySheet` dropped an `await` on `PhotoPickerResult.resolveAsset()`,
+    which is synchronous.
+  - `ReelsStudioUITests` is `@MainActor`, and its setup moved to the `async`
+    override — 67 diagnostics in that one file. Every XCUI type the suite
+    touches is main-actor isolated in the SDK, and an override inherits its
+    superclass's isolation, so `setUpWithError()` could not touch main-actor
+    state. The same migration fixed `ProjectLibraryTests` and
+    `ProjectListViewTests`.
+  - Four `Inspectable` conformances are deleted. ViewInspector dropped the
+    requirement, so they did nothing — and declaring a conformance of an
+    imported type to an imported protocol is unsafe besides. Leftovers from
+    the 0.9 → 0.10 drift the pin above now prevents.
+
+  The trade is real and deliberate: a future toolchain that introduces a new
+  warning will fail this build rather than mention it. That is the point.
+
 - **`recoverySuggestion` reaches the interface.** `localizedDescription`
   returns `errorDescription` alone, so the recovery text the kadr family
   writes was being discarded before it reached a toast — the actionable half

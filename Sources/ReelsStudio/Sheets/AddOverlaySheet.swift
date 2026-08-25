@@ -456,7 +456,7 @@ private struct PhotoOverlayTab: View {
         do {
             #if canImport(Photos)
             guard let result = items.first,
-                  let asset = await result.resolveAsset() else {
+                  let asset = result.resolveAsset() else {
                 toasts.show(.transient(message: "Couldn't resolve picked image"))
                 return
             }
