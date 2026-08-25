@@ -10,7 +10,7 @@ A real consumer codebase using every kadr + kadr-ui + kadr-captions + kadr-photo
 
 ## Status
 
-**v0.7.0 shipped — editor UX catch-up.** CapCut-baseline parity. Closes the creator-surface gaps the foundation cycles (v0.1–v0.6) left for later: audio rows had no trim handles, the transition data model shipped without a UI to add them, text overlays carried no stroke or shadow, `Filter.chromaKey` was unreachable from the picker, and the project list had no thumbnails. Bumps kadr ≥ 0.12.0 (`TextStyle.stroke` + `.shadow` with `NSAttributedString` / `CALayer` renderer wiring) and kadr-ui ≥ 0.10.2 (`AudioTrimEvent` + `onAudioTrim` modifier + audio-row trim handle render path). Adds `applyAudioTrim` + `insertTransition` + `setTextStroke` / `setTextShadow` + `addChromaKey` mutations, `TransitionsSheet` / `ChromaKeySheet` / `TextEffectsSection` views, schema v5 (additive text-effect fields), and `ProjectThumbnailRenderer` with cached JPEGs keyed by `<id>-<modifiedAt>.jpg`.
+**v0.11.0 shipped — correctness catch-up.** Runs on kadr 0.17.x + kadr-ui 0.16.x + kadr-captions 0.10.x + kadr-photos 0.9.x, current with the family after three cycles a release behind. No new features: three guaranteed stack overflows in the colour pickers are fixed, kadr's error text now reaches the interface with the recovery suggestion attached rather than the description alone, and the app reports its own version honestly for the first time since v0.1.0. `SWIFT_TREAT_WARNINGS_AS_ERRORS` is on — the recursions had been warned about for three releases and nothing had to act on it. Earlier cycles: v0.10.0 (transport band + snapshot harness + the Modernist design system), v0.7.0 (editor UX catch-up to CapCut-baseline parity).
 
 | Layer | What's wired |
 |---|---|
