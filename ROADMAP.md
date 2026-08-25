@@ -141,6 +141,45 @@ Scope: editor view group (EditorView, PreviewArea, TransportBand, EditorToolbar)
 
 Suite: 460 unit + 6 UI → 462 unit + 6 UI net (7 snapshot tests skip on development machines, execute on CI; 2 new always-run unit tests: glyph resolution regression + StageRendering default-value assertion).
 
+## v0.11.0 — Correctness catch-up ✓ shipped
+
+Unplanned cycle. Nothing here was on the roadmap: every item is a defect found
+while bringing the kadr family current, or a guard raised so the next one is
+found sooner.
+
+The kadr family moves up a release together — kadr 0.17.0, kadr-ui 0.16.0,
+kadr-captions 0.10.0, kadr-photos 0.9.0 — after three cycles a release behind.
+Nothing needed a source change: every upstream release in the range was
+additive, and the pins are `.upToNextMinor`, which is what let the app drift
+in the first place. What reaches a user is the family's `LocalizedError`
+conformance, arriving through paths the app already had.
+
+Three defects, all older than the bump and all invisible to the suite as it
+stood:
+
+1. **Three guaranteed stack overflows.** Three view files each declared a
+   file-private `PlatformColor.init(_ color: Color)` that shadowed SwiftUI's
+   and called itself. The compiler had warned on all three since they were
+   written. The tests could not see it: they rebuilt each `TextStyle` by hand
+   rather than calling the view method that built the real one, and they live
+   in a target with no shadow to fall into.
+2. **`recoverySuggestion` never reached the interface.** `localizedDescription`
+   returns `errorDescription` alone, so the actionable half of every kadr error
+   was discarded before a toast could show it.
+3. **The app reported its version as `0.1.0`** across ten releases, so every
+   Sentry event was tagged to a version that shipped in April.
+
+Guards raised: `SWIFT_TREAT_WARNINGS_AS_ERRORS` is `YES` — a warning nobody
+has to act on is a warning nobody acts on — and the four further classes it
+surfaced are cleared. Every `Color` → `PlatformColor` conversion goes through
+one named `PlatformColor.baked(_:)`, which an initialiser shadow cannot
+capture, and the tests call the same seam the app does. ViewInspector is
+pinned `.upToNextMinor` after drifting a minor unrecorded; `project.yml` is
+this repo's only lockfile, since the `.xcodeproj` is generated and gitignored.
+
+Suite: 469 unit + 6 UI → 480 unit + 6 UI (7 snapshot tests skip on development
+machines and execute on CI). Zero build warnings.
+
 ## v1.0.0 — App Store *(planned)*
 
 - Final name lock (revisit "Reels Studio" before submission — likely conflicts with Meta trademarks).
@@ -166,3 +205,11 @@ Suite: 460 unit + 6 UI → 462 unit + 6 UI net (7 snapshot tests skip on develop
 | 0.5.0 | ≥ 0.10.1 | ≥ 0.9.2 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.6.0 | ≥ 0.11.0 | ≥ 0.10.1 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.7.0 | ≥ 0.12.0 | ≥ 0.10.2 | ≥ 0.4.0 | ≥ 0.4.0 |
+| 0.7.1 | ≥ 0.15.0 | ≥ 0.12.0 | ≥ 0.8.0 | ≥ 0.7.0 |
+| 0.10.0 | 0.15.x | 0.15.x | 0.8.x | 0.7.x |
+| 0.11.0 | 0.17.x | 0.16.x | 0.10.x | 0.9.x |
+
+From 0.10.0 the pins are `.upToNextMinor`, not `.upToNextMajor`, so these are
+ranges rather than floors: `0.17.x` means `>=0.17.0, <0.18.0`. `from:` is
+`.upToNextMajor` and SwiftPM does not special-case `0.x`, so the earlier `≥`
+rows accepted every future 0.x release of a package whose minors do break.

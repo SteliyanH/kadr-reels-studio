@@ -66,8 +66,12 @@ targets:
           - UIInterfaceOrientationPortrait
         NSPhotoLibraryUsageDescription: "Reels Studio reads your photos and videos so you can import them as clips."
         CFBundleDisplayName: Reels Studio
-        CFBundleShortVersionString: "0.1.0"
-        CFBundleVersion: "1"
+        # Bump both on every release. These had read 0.1.0 / 1 since the
+        # XcodeGen switch, through ten releases, so `CrashReporter` tagged
+        # every Sentry event `reels-studio@0.1.0+1` and no crash could be
+        # attributed to the version it came from.
+        CFBundleShortVersionString: "0.11.0"
+        CFBundleVersion: "11"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.steliyanh.reels-studio

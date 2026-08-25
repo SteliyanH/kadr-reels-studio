@@ -4,9 +4,19 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.11.0] - 2026-08-25
+
+Readable errors, three crash fixes, and the kadr family brought current after
+three cycles adrift. No new features: everything here is either a defect that
+had shipped or a guard against the next one.
 
 ### Fixed
+
+- **The app had reported its version as `0.1.0` since the XcodeGen switch.**
+  `CFBundleShortVersionString` and `CFBundleVersion` were never bumped across
+  ten releases, so `CrashReporter` tagged every Sentry event
+  `reels-studio@0.1.0+1` and no crash report could be attributed to the
+  version that produced it. Both now move with the release.
 
 - **Three guaranteed stack overflows in the colour pickers.**
   `TextEffectsSection`, `AddOverlaySheet` and `ChromaKeySheet` each declared a
