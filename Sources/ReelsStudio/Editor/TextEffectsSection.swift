@@ -74,7 +74,7 @@ struct TextEffectsSection: View {
                             set: { newColor in
                                 store.setTextStroke(
                                     id: id,
-                                    TextStroke(width: stroke.width, color: PlatformColor(newColor))
+                                    TextStroke(width: stroke.width, color: PlatformColor.baked(newColor))
                                 )
                             }
                         ),
@@ -137,7 +137,7 @@ struct TextEffectsSection: View {
                                     TextShadow(
                                         offset: shadow.offset,
                                         blur: shadow.blur,
-                                        color: PlatformColor(newColor)
+                                        color: PlatformColor.baked(newColor)
                                     )
                                 )
                             }
@@ -202,17 +202,6 @@ private extension Color {
         self.init(uiColor: color)
         #else
         self.init(nsColor: color)
-        #endif
-    }
-}
-
-private extension PlatformColor {
-    convenience init(_ color: Color) {
-        #if canImport(UIKit)
-        self.init(color)
-        #else
-        // AppKit ColorPicker / SwiftUI bridge: round-trip through CGColor.
-        self.init(cgColor: NSColor(color).cgColor) ?? .black
         #endif
     }
 }

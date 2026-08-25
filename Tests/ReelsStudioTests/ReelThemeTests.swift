@@ -48,7 +48,7 @@ final class ReelTokenTests: XCTestCase {
     // across construction paths — the same helper the accent round-trip uses.
 
     private func hex(_ color: Color) throws -> String {
-        try XCTUnwrap(ProjectDocument.hexString(from: PlatformColor(color)))
+        try XCTUnwrap(ProjectDocument.hexString(from: PlatformColor.baked(color)))
     }
 
     /// The one accent on the light chrome ground.

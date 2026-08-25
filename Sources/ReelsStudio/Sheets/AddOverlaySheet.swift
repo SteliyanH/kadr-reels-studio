@@ -318,7 +318,7 @@ private struct TextOverlayTab: View {
     private func addTextOverlay() {
         let style = TextStyle(
             fontSize: fontSize,
-            color: PlatformColor(color),
+            color: PlatformColor.baked(color),
             alignment: .center,
             weight: weight.kadrWeight
         )
@@ -456,7 +456,7 @@ private struct PhotoOverlayTab: View {
         do {
             #if canImport(Photos)
             guard let result = items.first,
-                  let asset = await result.resolveAsset() else {
+                  let asset = result.resolveAsset() else {
                 toasts.show(.transient(message: "Couldn't resolve picked image"))
                 return
             }
@@ -504,22 +504,3 @@ private struct PhotoOverlayTab: View {
         dismiss()
     }
 }
-
-// MARK: - Color bridge (unchanged from v0.2)
-
-#if canImport(UIKit)
-import UIKit
-extension PlatformColor {
-    fileprivate convenience init(_ color: Color) {
-        self.init(color)
-    }
-}
-#elseif canImport(AppKit)
-import AppKit
-extension PlatformColor {
-    fileprivate convenience init(_ color: Color) {
-        let cg = color.resolve(in: .init()).cgColor
-        self.init(cgColor: cg) ?? .white
-    }
-}
-#endif

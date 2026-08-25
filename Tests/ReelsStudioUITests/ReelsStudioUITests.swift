@@ -12,11 +12,23 @@ import XCTest
 /// system picker isn't reliably automatable, and `PhotosAuthorizationGate`'s
 /// `.notDetermined` branch would hang the simulator the same way it hung
 /// CI in PR #48.
+/// `@MainActor` because every XCUI type this suite touches — `XCUIApplication`,
+/// `XCUIElement`, their subscripts — is main-actor isolated in the SDK, and
+/// XCTest already runs these methods on the main thread. Without the
+/// annotation the whole file compiled on 67 concurrency warnings, which is
+/// exactly the kind of noise that hid three real recursion warnings in #96.
+@MainActor
 final class ReelsStudioUITests: XCTestCase {
 
     private var app: XCUIApplication!
 
-    override func setUpWithError() throws {
+    // The `async` variant, because an override inherits its superclass's
+    // isolation and `setUpWithError()` is nonisolated — so it could not touch
+    // the main-actor `app` this class now holds. Swift allows an override of
+    // an `async` method to add isolation; the synchronous one gives no such
+    // opening.
+    @MainActor
+    override func setUp() async throws {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments = ["--ui-test-reset"]

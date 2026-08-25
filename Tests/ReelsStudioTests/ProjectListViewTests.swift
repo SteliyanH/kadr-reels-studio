@@ -11,13 +11,19 @@ final class ProjectListViewTests: XCTestCase {
     private var tempDirectory: URL!
     private var library: ProjectLibrary!
 
-    override func setUpWithError() throws {
+    // The `async` overrides: an override inherits its superclass's isolation,
+    // and `setUpWithError()` / `tearDownWithError()` are nonisolated — so
+    // neither could touch this class's main-actor state. Swift lets an
+    // override of an `async` method add isolation.
+    @MainActor
+    override func setUp() async throws {
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
         library = try ProjectLibrary(directoryURL: tempDirectory)
     }
 
-    override func tearDownWithError() throws {
+    @MainActor
+    override func tearDown() async throws {
         if FileManager.default.fileExists(atPath: tempDirectory.path) {
             try FileManager.default.removeItem(at: tempDirectory)
         }

@@ -10,27 +10,36 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+    # Was NO. Three "function call causes an infinite recursion" warnings sat
+    # unread across three releases while the pickers they described would have
+    # overflowed the stack on use (#96). A warning nobody has to act on is a
+    # warning nobody acts on.
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
 
 packages:
   Kadr:
     url: https://github.com/SteliyanH/kadr.git
-    minorVersion: 0.15.0
+    minorVersion: 0.17.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
-    minorVersion: 0.15.0
+    minorVersion: 0.16.0
   KadrCaptions:
     url: https://github.com/SteliyanH/kadr-captions.git
-    minorVersion: 0.8.0
+    minorVersion: 0.10.0
   KadrPhotos:
     url: https://github.com/SteliyanH/kadr-photos.git
-    minorVersion: 0.7.0
+    minorVersion: 0.9.0
   Sentry:
     url: https://github.com/getsentry/sentry-cocoa.git
     from: 8.36.0
   ViewInspector:
     url: https://github.com/nalexn/ViewInspector.git
-    from: 0.9.11
+    # `from:` is .upToNextMajor and SwiftPM does not special-case 0.x, so the
+    # previous `from: 0.9.11` accepted every future 0.x release including
+    # breaking ones — and had already drifted to 0.10.3 on its own. The
+    # .xcodeproj is gitignored, so there is no lockfile to catch that: this
+    # pin is the only thing holding the version steady across machines and CI.
+    minorVersion: 0.10.3
   SnapshotTesting:
     url: https://github.com/pointfreeco/swift-snapshot-testing
     from: 1.19.4
@@ -57,8 +66,12 @@ targets:
           - UIInterfaceOrientationPortrait
         NSPhotoLibraryUsageDescription: "Reels Studio reads your photos and videos so you can import them as clips."
         CFBundleDisplayName: Reels Studio
-        CFBundleShortVersionString: "0.1.0"
-        CFBundleVersion: "1"
+        # Bump both on every release. These had read 0.1.0 / 1 since the
+        # XcodeGen switch, through ten releases, so `CrashReporter` tagged
+        # every Sentry event `reels-studio@0.1.0+1` and no crash could be
+        # attributed to the version it came from.
+        CFBundleShortVersionString: "0.11.0"
+        CFBundleVersion: "11"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.steliyanh.reels-studio
