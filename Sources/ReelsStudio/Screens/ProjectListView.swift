@@ -1,4 +1,5 @@
 import SwiftUI
+import KadrPersistence
 
 /// Launch screen — lists every saved project in the ``ProjectLibrary`` and
 /// hands the user a way to start a new one. Tapping a row pushes the
@@ -214,7 +215,9 @@ struct ProjectListView: View {
             // user lands on a real on-disk project they can keep editing.
             let runtime = SampleProject.make()
             var doc = try library.newProject(name: "Sample")
-            doc = runtime.toDocument(inheriting: doc, name: "Sample")
+            // The sample is built from synthesised colour swatches — images with
+            // no file behind them — so their bytes travel in the document.
+            doc = try runtime.toDocument(inheriting: doc, name: "Sample", images: ProjectImageStore())
             try library.save(doc)
             path.append(doc.id)
         } catch {
@@ -418,11 +421,11 @@ struct ProjectRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 HStack(spacing: Reel.Space.s2) {
-                    ReelTag(text: ProjectRow.presetLabel(for: document.preset))
+                    ReelTag(text: ProjectRow.presetLabel(for: document.composition?.video.preset))
                     HStack(spacing: Reel.Space.s2) {
                         Text(document.modifiedAt, format: .relative(presentation: .named))
                         Text("·")
-                        Text(ProjectRow.clipCountLabel(document.clips.count))
+                        Text(ProjectRow.clipCountLabel(document.compositionClips.count))
                     }
                     .font(Reel.Typography.caption)
                     .foregroundStyle(palette.textMuted)
@@ -448,13 +451,20 @@ struct ProjectRow: View {
 
     /// The preset's aspect ratio, for the row's `ReelTag` ("9:16").
     /// Pure so it's testable.
-    nonisolated static func presetLabel(for preset: ProjectPreset) -> String {
-        switch preset {
-        case .auto:                       return "Auto"
-        case .reelsAndShorts, .tiktok:    return "9:16"
-        case .square:                     return "1:1"
-        case .cinema:                     return "16:9"
-        case .custom(let w, let h, _, _): return ProjectRow.ratio(width: w, height: h)
+    /// The aspect-ratio tag for a row, read straight off the persisted preset.
+    ///
+    /// `nil` only for a document with no composition, which the library's
+    /// migration makes unreachable — a row should still render rather than
+    /// crash if one ever appears.
+    nonisolated static func presetLabel(for preset: PresetData?) -> String {
+        guard let preset else { return "Auto" }
+        switch preset.kind {
+        case "reelsAndShorts", "tiktok": return "9:16"
+        case "square":                   return "1:1"
+        case "cinema":                   return "16:9"
+        case "custom":
+            return ProjectRow.ratio(width: preset.width ?? 0, height: preset.height ?? 0)
+        default:                         return "Auto"
         }
     }
 
@@ -485,7 +495,7 @@ struct ProjectRow: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
         let relative = formatter.localizedString(for: document.modifiedAt, relativeTo: Date())
-        let clipCount = document.clips.count
+        let clipCount = document.compositionClips.count
         let clipLabel = clipCount == 1 ? "1 clip" : "\(clipCount) clips"
         return "\(document.name), modified \(relative), \(clipLabel)"
     }

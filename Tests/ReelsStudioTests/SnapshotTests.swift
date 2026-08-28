@@ -3,6 +3,7 @@ import CoreMedia
 import SwiftUI
 import SnapshotTesting
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// Issue #75 — a thin slice of pixel-snapshot coverage over the editor view
@@ -137,7 +138,7 @@ final class SnapshotTests: XCTestCase {
             trimStartSeconds: 0,
             trimDurationSeconds: 6
         )
-        return ProjectDocument(name: "Snapshot Fixture", clips: [.video(clip)])
+        return ProjectDocument(name: "Snapshot Fixture", legacyClips: [.video(clip)])
     }
 
     // MARK: - EditorView

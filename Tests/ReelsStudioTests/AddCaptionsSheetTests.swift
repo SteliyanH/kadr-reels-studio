@@ -1,6 +1,7 @@
 import XCTest
 import CoreMedia
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 @MainActor
@@ -62,13 +63,14 @@ final class AddCaptionsSheetTests: XCTestCase {
 
     // MARK: - Persistence round-trip
 
-    func testCaptionListSurvivesDocumentBridge() {
+    func testCaptionListSurvivesDocumentBridge() throws {
         let store = makeStore()
         let cues = [cue(0.5, 1.5, "Hello"), cue(2.5, 4.0, "World")]
         store.setCaptions(cues)
 
-        let document = store.project.toDocument(name: "Captions")
-        let restored = document.toRuntimeProject()
+        // Through the session's own image store, which is how the editor saves.
+        let document = try store.project.toDocument(name: "Captions", images: store.images)
+        let restored = try document.toRuntimeProject(images: store.images)
         XCTAssertEqual(restored.captions.count, 2)
         XCTAssertEqual(restored.captions[0].text, "Hello")
         XCTAssertEqual(restored.captions[1].text, "World")

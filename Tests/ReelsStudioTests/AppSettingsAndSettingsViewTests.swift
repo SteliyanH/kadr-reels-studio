@@ -1,6 +1,7 @@
 import XCTest
 import SwiftUI
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 @MainActor

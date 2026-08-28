@@ -1,6 +1,7 @@
 import XCTest
 import CoreMedia
 import Kadr
+import KadrPersistence
 import KadrUI
 @testable import ReelsStudio
 
@@ -31,19 +32,20 @@ final class TimelineZoomAndTracksTests: XCTestCase {
         XCTAssertNil(store.project.zoom)
     }
 
-    func testZoomSurvivesDocumentRoundTrip() {
+    func testZoomSurvivesDocumentRoundTrip() throws {
+        let store = ProjectImageStore()
         let project = Project(zoom: TimelineZoom(pixelsPerSecond: 75))
-        let document = project.toDocument(name: "Zoomed")
+        let document = try project.toDocument(name: "Zoomed", images: store)
         XCTAssertEqual(document.zoomPixelsPerSecond, 75)
-        let restored = document.toRuntimeProject()
+        let restored = try document.toRuntimeProject(images: store)
         XCTAssertEqual(restored.zoom?.pixelsPerSecond, 75)
     }
 
-    func testNilZoomRoundTripsAsAbsentField() {
-        let project = Project()
-        let document = project.toDocument(name: "NoZoom")
+    func testNilZoomRoundTripsAsAbsentField() throws {
+        let store = ProjectImageStore()
+        let document = try Project().toDocument(name: "NoZoom", images: store)
         XCTAssertNil(document.zoomPixelsPerSecond)
-        XCTAssertNil(document.toRuntimeProject().zoom)
+        XCTAssertNil(try document.toRuntimeProject(images: store).zoom)
     }
 
     // MARK: - Track trim — pure helper (applyingTrim)

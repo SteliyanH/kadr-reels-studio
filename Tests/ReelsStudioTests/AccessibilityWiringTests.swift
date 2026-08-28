@@ -2,6 +2,7 @@ import XCTest
 import SwiftUI
 import ViewInspector
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 #if canImport(UIKit)
 import UIKit
@@ -35,15 +36,20 @@ final class ProjectRowAccessibilityTests: XCTestCase {
         ))
     }
 
-    func testSingularClipLabel() {
-        let doc = ProjectDocument(name: "x", clips: [makeImageClip()])
+    func testSingularClipLabel() throws {
+        let doc = try Project(clips: [TitleSequence("a", duration: 1.0)])
+            .toDocument(name: "x", images: ProjectImageStore())
         let desc = ProjectRow.accessibilityDescription(for: doc)
         XCTAssertTrue(desc.contains("1 clip,") || desc.hasSuffix("1 clip"))
         XCTAssertFalse(desc.contains("1 clips"))
     }
 
-    func testPluralClipLabel() {
-        let doc = ProjectDocument(name: "x", clips: [makeImageClip(), makeImageClip(), makeImageClip()])
+    func testPluralClipLabel() throws {
+        let doc = try Project(clips: [
+            TitleSequence("a", duration: 1.0),
+            TitleSequence("b", duration: 1.0),
+            TitleSequence("c", duration: 1.0),
+        ]).toDocument(name: "x", images: ProjectImageStore())
         let desc = ProjectRow.accessibilityDescription(for: doc)
         XCTAssertTrue(desc.contains("3 clips"))
     }

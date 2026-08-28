@@ -1,4 +1,5 @@
 import Foundation
+import KadrPersistence
 import AVFoundation
 import CoreGraphics
 import ImageIO
@@ -108,12 +109,12 @@ enum ProjectThumbnailRenderer {
     /// Walk `clips` and produce a `CGImage` of the first renderable frame.
     /// Returns nil when no clip yields one.
     private static func renderImage(for document: ProjectDocument) async -> CGImage? {
-        for clip in document.clips {
+        for clip in document.compositionClips {
             switch clip {
             case .video(let data):
                 if let image = await renderVideoFrame(from: data) { return image }
             case .image(let data):
-                if let image = renderImageClip(from: data) { return image }
+                if let image = renderImageClip(from: data, in: document) { return image }
             case .title, .transition, .track:
                 continue
             }
@@ -121,12 +122,13 @@ enum ProjectThumbnailRenderer {
         return nil
     }
 
-    private static func renderVideoFrame(from data: VideoClipData) async -> CGImage? {
-        let asset = AVURLAsset(url: data.url)
+    private static func renderVideoFrame(from data: KadrPersistence.VideoClipData) async -> CGImage? {
+        guard let url = URL(string: data.url) else { return nil }
+        let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: pixelSize, height: pixelSize)
-        let time = CMTime(seconds: data.trimStartSeconds ?? 0, preferredTimescale: 600)
+        let time = data.trimRange?.start.time ?? .zero
         return await withCheckedContinuation { continuation in
             generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: time)]) { _, image, _, _, _ in
                 continuation.resume(returning: image)
@@ -134,13 +136,24 @@ enum ProjectThumbnailRenderer {
         }
     }
 
-    private static func renderImageClip(from data: ImageClipData) -> CGImage? {
-        switch data.storage {
-        case .url(let url):
+    /// Resolve an image clip's token without building a whole composition.
+    ///
+    /// A list row must not construct a `Video` or decode a project just to draw
+    /// a thumbnail, so this reads the token directly: `file:` opens the URL,
+    /// `png:` reads the blob the document carries. Same two cases the old
+    /// `ImageStorage` enum had, now expressed as tokens.
+    private static func renderImageClip(
+        from data: KadrPersistence.ImageClipData,
+        in document: ProjectDocument
+    ) -> CGImage? {
+        let token = data.imageToken
+        if token.hasPrefix("file:"), let url = URL(string: String(token.dropFirst("file:".count))) {
             return cgImage(at: url)
-        case .embeddedPNG(let png):
+        }
+        if let png = document.imageBlobs?[token] {
             return cgImage(from: png)
         }
+        return nil
     }
 
     private static func cgImage(at url: URL) -> CGImage? {

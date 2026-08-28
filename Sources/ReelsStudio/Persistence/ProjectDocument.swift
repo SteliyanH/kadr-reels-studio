@@ -2,68 +2,102 @@ import Foundation
 import CoreMedia
 import CoreGraphics
 import Kadr
+import KadrPersistence
 
 // MARK: - Persistable project shape
 
-/// On-disk JSON shape for a saved project. Decoupled from the in-memory
-/// ``Project`` so the persistence schema can evolve without breaking the
-/// editor's runtime types — and vice versa.
+/// On-disk JSON shape for a saved project.
 ///
-/// **Schema versioning.** ``schemaVersion`` is bumped whenever the on-disk
-/// shape changes incompatibly. v0.2 ships at version `1`. The library
-/// rejects unknown versions with ``ProjectLibraryError/unsupportedSchema(_:)``
-/// rather than silently misinterpreting fields.
+/// **v6 hands the composition to `KadrPersistence`.** Versions 1–5 carried a
+/// hand-written mirror of kadr's DSL — `VideoClipData`, `TextOverlayData`, and
+/// the rest, all still below because old documents must still be readable. That
+/// mirror had the failure mode every hand-written mirror has: kadr gains a field,
+/// nobody updates the mirror, and *nothing fails*. A field missing from both
+/// sides of a round-trip comparison compares equal. It cost this app three
+/// fields before anyone noticed, and it was still silently dropping `crop` and
+/// `quality` when v6 was written.
+///
+/// So the composition half of this document is now a ``KadrDocument``, and the
+/// package's own completeness guard — a reflective test over kadr's types —
+/// fails when kadr grows a field. What stays here is what is genuinely this
+/// app's: identity, naming, timestamps, and editor preferences. That split is
+/// deliberate; a document format that accretes app-specific fields stops being
+/// a document format.
+///
+/// **Schema versioning.** ``schemaVersion`` is bumped for incompatible shapes.
+/// Load-side migration to v6 lives in ``ProjectLibrary``; v1–v5 documents are
+/// read through the legacy types below, converted once, and rewritten as v6 on
+/// the next save.
 struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
 
-    /// Current persistence schema version. Increment for incompatible changes;
-    /// load-side migrations live in ``ProjectLibrary``.
+    /// Current persistence schema version.
     ///
-    /// **v5 (this release)** adds text-effect fields on `TextOverlayData`
-    /// and `TitleSequenceData` — `strokeWidth` + `strokeColorHex` for outline,
-    /// `shadowOffsetX/Y` + `shadowBlur` + `shadowColorHex` for drop shadow.
-    /// Mirrors kadr v0.12's `TextStyle.stroke` + `.shadow`. All additive
-    /// and optional; v1-v4 docs decode with nil and the runtime renders
-    /// without effects (matching their old behavior).
+    /// **v6 (this release)** replaces the hand-written composition mirror with
+    /// `KadrPersistence.KadrDocument`, stored under `composition`, plus
+    /// `imageBlobs` for images with no file behind them. The v1–v5 fields are
+    /// retained as decode-only legacy and are never written.
     ///
-    /// **v4** added `filterIDs: [String]?` on `VideoClipData` — a parallel-
-    /// array mirror of kadr v0.11's `VideoClip.filterIDs`. Lets future tooling
-    /// round-trip stable per-filter identities across saves.
+    /// **v5** added text-effect fields on `TextOverlayData` and
+    /// `TitleSequenceData` — stroke and drop shadow, mirroring kadr v0.12.
     ///
-    /// **v3** added `fixedCenterPlayhead: Bool?` — per-project opt-in for
-    /// kadr-ui v0.9's `TimelineView.fixedCenterPlayhead(_:)`.
+    /// **v4** added `filterIDs` on `VideoClipData`.
     ///
-    /// **v2** added `transformAnimation` / `opacityAnimation` /
-    /// `filterAnimations` on clips, `speedCurve` on `VideoClipData`,
-    /// `transformAnimation` / `opacityAnimation` on overlays, and
-    /// `ProjectClip.track` for `Kadr.Track {}` blocks.
-    public static let currentSchemaVersion: Int = 5
+    /// **v3** added `fixedCenterPlayhead`.
+    ///
+    /// **v2** added keyframe animations, `speedCurve`, and `ProjectClip.track`.
+    public static let currentSchemaVersion: Int = 6
 
     public let id: UUID
     public var name: String
     public var createdAt: Date
     public var modifiedAt: Date
     public var schemaVersion: Int
-    public var clips: [ProjectClip]
-    public var overlays: [ProjectOverlay]
-    public var audioTracks: [ProjectAudioTrack]
-    public var captions: [ProjectCaption]
-    public var preset: ProjectPreset
-    /// Timeline pinch-zoom state, persisted per project. `nil` = use
-    /// auto fit-to-width on load. v0.3 Tier 5.
+
+    // MARK: The composition (v6+)
+
+    /// The composition, in `KadrPersistence`'s format. `nil` only on a v1–v5
+    /// document that has been decoded but not yet migrated.
+    public var composition: KadrDocument?
+
+    /// PNG payloads for `png:` image tokens — images with no file behind them,
+    /// such as synthesised swatches. Images that live on disk are referenced by
+    /// `file:` token and carry no bytes here. See ``ProjectImageStore``.
+    public var imageBlobs: [String: Data]?
+
+    // MARK: Editor preferences (all versions)
+
+    /// Timeline pinch-zoom state, persisted per project. `nil` = auto fit-to-width.
     public var zoomPixelsPerSecond: Double?
 
-    /// Per-project opt-in for kadr-ui v0.9's
-    /// `TimelineView.fixedCenterPlayhead(_:)`. `nil` on v1 / v2 documents (no
-    /// migration); the runtime falls back to the v0.4 default (`true`) when
-    /// loading. v0.4 Tier 2.
+    /// Per-project opt-in for kadr-ui's `TimelineView.fixedCenterPlayhead(_:)`.
+    /// `nil` on older documents; the runtime falls back to `true`.
     public var fixedCenterPlayhead: Bool?
 
-    /// Per-project accent color, encoded as `#RRGGBB(AA)` hex. `nil` =
-    /// follow the system tint. Additive on schema v3 (no version bump
-    /// needed — fold into the current schema like `zoomPixelsPerSecond`
-    /// did under v2); v1 / v2 / v3-without-the-field documents decode nil
-    /// and the runtime renders with the system accent. v0.4 Tier 3.
+    /// Per-project accent color as `#RRGGBB(AA)` hex. `nil` = system tint.
     public var accentColorHex: String?
+
+    // MARK: Legacy composition (v1–v5, decode-only)
+
+    /// The v1–v5 hand-written mirror. Read when migrating an old document and
+    /// never written: ``toDocument(inheriting:name:)`` always emits v6.
+    public var legacyClips: [ProjectClip]?
+    public var legacyOverlays: [ProjectOverlay]?
+    public var legacyAudioTracks: [ProjectAudioTrack]?
+    public var legacyCaptions: [ProjectCaption]?
+    public var legacyPreset: ProjectPreset?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, createdAt, modifiedAt, schemaVersion
+        case composition, imageBlobs
+        case zoomPixelsPerSecond, fixedCenterPlayhead, accentColorHex
+        // The legacy payload keeps its original key names, because that is what
+        // is on disk in every document written before v6.
+        case legacyClips = "clips"
+        case legacyOverlays = "overlays"
+        case legacyAudioTracks = "audioTracks"
+        case legacyCaptions = "captions"
+        case legacyPreset = "preset"
+    }
 
     public init(
         id: UUID = UUID(),
@@ -71,28 +105,45 @@ struct ProjectDocument: Codable, Identifiable, Sendable, Equatable {
         createdAt: Date = Date(),
         modifiedAt: Date = Date(),
         schemaVersion: Int = ProjectDocument.currentSchemaVersion,
-        clips: [ProjectClip] = [],
-        overlays: [ProjectOverlay] = [],
-        audioTracks: [ProjectAudioTrack] = [],
-        captions: [ProjectCaption] = [],
-        preset: ProjectPreset = .reelsAndShorts,
+        composition: KadrDocument? = nil,
+        imageBlobs: [String: Data]? = nil,
         zoomPixelsPerSecond: Double? = nil,
         fixedCenterPlayhead: Bool? = nil,
-        accentColorHex: String? = nil
+        accentColorHex: String? = nil,
+        legacyClips: [ProjectClip]? = nil,
+        legacyOverlays: [ProjectOverlay]? = nil,
+        legacyAudioTracks: [ProjectAudioTrack]? = nil,
+        legacyCaptions: [ProjectCaption]? = nil,
+        legacyPreset: ProjectPreset? = nil
     ) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
         self.schemaVersion = schemaVersion
-        self.clips = clips
-        self.overlays = overlays
-        self.audioTracks = audioTracks
-        self.captions = captions
-        self.preset = preset
+        self.composition = composition
+        self.imageBlobs = imageBlobs
         self.zoomPixelsPerSecond = zoomPixelsPerSecond
         self.fixedCenterPlayhead = fixedCenterPlayhead
         self.accentColorHex = accentColorHex
+        self.legacyClips = legacyClips
+        self.legacyOverlays = legacyOverlays
+        self.legacyAudioTracks = legacyAudioTracks
+        self.legacyCaptions = legacyCaptions
+        self.legacyPreset = legacyPreset
+    }
+
+    // MARK: Convenience
+
+    /// The composition's clips, or an empty array. For list rows and thumbnails,
+    /// which read the persisted shape without building a `Video`.
+    public var compositionClips: [KadrPersistence.ClipData] {
+        composition?.video.clips ?? []
+    }
+
+    /// Whether this document still needs migrating to v6.
+    public var needsMigration: Bool {
+        composition == nil && schemaVersion < 6
     }
 }
 

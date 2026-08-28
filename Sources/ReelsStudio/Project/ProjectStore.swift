@@ -1,4 +1,5 @@
 import Foundation
+import KadrPersistence
 import CoreMedia
 import SwiftUI
 import Kadr
@@ -106,8 +107,19 @@ final class ProjectStore {
     /// SwiftUI-observable mirror of ``undoManager.canRedo``.
     private(set) var canRedo = false
 
-    init(project: Project) {
+    /// How this session names its images.
+    ///
+    /// Session-scoped on purpose. An `ImageClip` holds decoded pixels with no
+    /// record of where they came from, so the mapping from image to origin is
+    /// the app's to keep — and it has to survive from the moment a photo is
+    /// imported until the moment the project is saved. A store created fresh at
+    /// save time would have forgotten every URL and re-embedded whole photos as
+    /// bytes.
+    let images: ProjectImageStore
+
+    init(project: Project, images: ProjectImageStore = ProjectImageStore()) {
         self.project = project
+        self.images = images
         // Disable auto-grouping so each mutation becomes its own undo step.
         // Without this, every mutation in the same runloop tick coalesces
         // into one big undo (e.g. three sequential `append(clip:)` calls

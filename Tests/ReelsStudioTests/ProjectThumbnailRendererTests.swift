@@ -1,5 +1,8 @@
 import XCTest
 import SwiftUI
+import CoreMedia
+import Kadr
+import KadrPersistence
 import ViewInspector
 @testable import ReelsStudio
 
@@ -76,7 +79,7 @@ final class ProjectThumbnailRendererTests: XCTestCase {
     /// dashed `divider` frame on `surface`, with no glyph and no chip.
     func testTileBodyConstructsForEmptyProject() throws {
         let doc = ProjectDocument(name: "Empty")
-        XCTAssertTrue(doc.clips.isEmpty)
+        XCTAssertTrue((doc.legacyClips ?? []).isEmpty)
         let tile = ProjectThumbnailTile(document: doc)
         XCTAssertNoThrow(try tile.inspect())
     }
@@ -84,7 +87,7 @@ final class ProjectThumbnailRendererTests: XCTestCase {
     func testTileBodyConstructsForProjectWithClips() throws {
         let doc = ProjectDocument(
             name: "Has clips",
-            clips: [.title(TitleSequenceData(text: "Hi", durationSeconds: 2))]
+            legacyClips: [.title(TitleSequenceData(text: "Hi", durationSeconds: 2))]
         )
         let tile = ProjectThumbnailTile(document: doc)
         XCTAssertNoThrow(try tile.inspect())
@@ -97,32 +100,38 @@ final class ProjectThumbnailRendererTests: XCTestCase {
         XCTAssertNil(ProjectThumbnailTile.durationLabel(for: doc))
     }
 
-    func testDurationLabelFormatsMinutesAndSeconds() {
-        let doc = ProjectDocument(
-            name: "Six seconds",
-            clips: [
-                .title(TitleSequenceData(text: "a", durationSeconds: 2)),
-                .title(TitleSequenceData(text: "b", durationSeconds: 4)),
-            ]
-        )
+    func testDurationLabelFormatsMinutesAndSeconds() throws {
+        // A real v6 document: the label reads the composition, so a fixture
+        // built from the legacy payload would measure nothing.
+        let doc = try Project(clips: [
+            TitleSequence("a", duration: 2.0),
+            TitleSequence("b", duration: 4.0),
+        ]).toDocument(name: "Six seconds", images: ProjectImageStore())
         XCTAssertEqual(ProjectThumbnailTile.durationLabel(for: doc), "0:06")
     }
 
-    func testDurationLabelPadsSecondsPastAMinute() {
-        let doc = ProjectDocument(
-            name: "Long",
-            clips: [.title(TitleSequenceData(text: "a", durationSeconds: 65))]
-        )
+    func testDurationLabelPadsSecondsPastAMinute() throws {
+        let doc = try Project(clips: [TitleSequence("a", duration: 65.0)])
+            .toDocument(name: "Long", images: ProjectImageStore())
         XCTAssertEqual(ProjectThumbnailTile.durationLabel(for: doc), "1:05")
     }
 
     func testDurationSkipsTransitionsAndDescendsIntoTracks() {
         // Transitions overlap their neighbours in kadr, so counting them
         // would over-report; a `Track {}` block's children do count.
-        let clips: [ProjectClip] = [
-            .transition(TransitionData(kind: .fade, durationSeconds: 5)),
-            .track(TrackData(clips: [
-                .title(TitleSequenceData(text: "nested", durationSeconds: 3)),
+        let clips: [KadrPersistence.ClipData] = [
+            .transition(TransitionData(kind: "fade", duration: TimeData(CMTime(seconds: 5, preferredTimescale: 600)), direction: nil)),
+            .track(TrackData(name: nil, startTime: nil, opacityFactor: 1.0, clips: [
+                .title(TitleSequenceData(
+                    text: "nested",
+                    style: TextStyleData(fontName: nil, fontSize: 24,
+                                         color: ColorData(red: 1, green: 1, blue: 1, alpha: 1),
+                                         alignment: "center", weight: "regular",
+                                         stroke: nil, shadow: nil),
+                    backgroundColor: ColorData(red: 0, green: 0, blue: 0, alpha: 1),
+                    duration: TimeData(CMTime(seconds: 3, preferredTimescale: 600)), clipID: nil, startTime: nil, transform: nil,
+                    transformAnimation: nil, opacity: nil, opacityAnimation: nil
+                )),
             ])),
         ]
         XCTAssertEqual(ProjectThumbnailTile.durationSeconds(of: clips), 3, accuracy: 0.0001)
@@ -131,8 +140,13 @@ final class ProjectThumbnailRendererTests: XCTestCase {
     func testUntrimmedVideoClipContributesNoDuration() {
         // A video clip's length lives in the asset until it has been
         // trimmed; a list row must not open an asset to find out.
-        let clips: [ProjectClip] = [
-            .video(VideoClipData(url: URL(fileURLWithPath: "/tmp/x.mov"))),
+        let clips: [KadrPersistence.ClipData] = [
+            .video(VideoClipData(
+                url: "file:///tmp/x.mov", trimRange: nil, isReversed: false, isMuted: false,
+                volumeLevel: 1.0, replacementAudioURL: nil, speedRate: 1.0, speedCurve: nil,
+                filters: [], filterIDs: [], filterAnimations: [], clipID: nil, startTime: nil,
+                transform: nil, transformAnimation: nil, opacity: nil, opacityAnimation: nil
+            )),
         ]
         XCTAssertEqual(ProjectThumbnailTile.durationSeconds(of: clips), 0, accuracy: 0.0001)
     }

@@ -1,5 +1,6 @@
 import XCTest
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 @MainActor

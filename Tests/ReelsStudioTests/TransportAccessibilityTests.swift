@@ -3,6 +3,7 @@ import CoreMedia
 import SwiftUI
 import ViewInspector
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// Issue #73 — accessibility contract for the v0.9 transport band.

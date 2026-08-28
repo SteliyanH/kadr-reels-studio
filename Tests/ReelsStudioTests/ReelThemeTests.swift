@@ -2,6 +2,7 @@ import XCTest
 import SwiftUI
 import CoreText
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// Tier 1 guards for the Modernist theme layer.
