@@ -18,7 +18,10 @@ public enum CrashReporter {
     /// Sentry guards re-entry internally. Returns whether reporting is
     /// actually live, which the caller can log without leaking the DSN.
     @discardableResult
-    public static func startIfConfigured() -> Bool {
+    public static func startIfConfigured(enabled: Bool = true) -> Bool {
+        // The user's choice comes first: without this guard the DSN alone
+        // decided, and the Settings toggle would have been decorative.
+        guard enabled else { return false }
         guard let dsn = resolveDSN(), !dsn.isEmpty else { return false }
         SentrySDK.start { options in
             options.dsn = dsn
