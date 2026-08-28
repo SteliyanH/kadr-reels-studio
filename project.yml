@@ -19,16 +19,19 @@ settings:
 packages:
   Kadr:
     url: https://github.com/SteliyanH/kadr.git
-    minorVersion: 0.17.0
+    minorVersion: 0.20.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
-    minorVersion: 0.16.0
+    minorVersion: 0.18.0
   KadrCaptions:
     url: https://github.com/SteliyanH/kadr-captions.git
-    minorVersion: 0.10.0
+    minorVersion: 0.11.0
   KadrPhotos:
     url: https://github.com/SteliyanH/kadr-photos.git
-    minorVersion: 0.9.0
+    minorVersion: 0.10.0
+  KadrAudio:
+    url: https://github.com/SteliyanH/kadr-audio.git
+    minorVersion: 0.6.1
   Sentry:
     url: https://github.com/getsentry/sentry-cocoa.git
     from: 8.36.0
@@ -88,6 +91,7 @@ targets:
       - package: KadrUI
       - package: KadrCaptions
       - package: KadrPhotos
+      - package: KadrAudio
       - package: Sentry
         product: Sentry
 
