@@ -1,6 +1,7 @@
 import XCTest
 import CoreMedia
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 @MainActor
@@ -83,13 +84,13 @@ final class SpeedCurveSheetTests: XCTestCase {
 
     // MARK: - Persistence round-trip
 
-    func testSpeedCurveSurvivesRuntimeBridge() {
+    func testSpeedCurveSurvivesRuntimeBridge() throws {
         let (store, id) = makeStoreWithVideoClip()
         store.applySpeedCurve(id: id, makeCurve())
 
         // Round-trip the runtime project through the document bridge.
-        let document = store.project.toDocument(name: "Sheet")
-        let restored = document.toRuntimeProject()
+        let document = try store.project.toDocument(name: "Sheet", images: ProjectImageStore())
+        let restored = try document.toRuntimeProject(images: ProjectImageStore())
         guard let restoredVideo = restored.clips.first as? VideoClip else {
             return XCTFail("Expected VideoClip after round-trip")
         }

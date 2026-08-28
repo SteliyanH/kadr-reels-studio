@@ -1,6 +1,7 @@
 import XCTest
 import CoreMedia
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// v0.7 Tier 2 — tests for `insertTransition` / `removeTransition` mutations

@@ -141,6 +141,7 @@ struct SettingsView: View {
                     accentSection
                     playbackSection
                     hapticsSection
+                    privacySection
                 }
                 .padding(Reel.Space.s4)
             }
@@ -201,6 +202,26 @@ struct SettingsView: View {
             }
             // Decision 4 — the scheme has no success role, so the switch's
             // "on" fill is the accent, never the system green.
+            .tint(palette.accent)
+            .reelCard()
+        }
+    }
+
+    // MARK: - Privacy
+
+    private var privacySection: some View {
+        @Bindable var settings = settings
+        return VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Privacy · All Projects").reelLabel()
+            Toggle(isOn: $settings.crashReportingEnabled) {
+                VStack(alignment: .leading, spacing: Reel.Space.s1) {
+                    Text("Send crash reports")
+                        .font(Reel.Typography.bodyEmphasis)
+                    Text("A crash report carries the stack, the app version and the device model — never your media or your projects. Takes effect next launch.")
+                        .font(Reel.Typography.caption)
+                        .foregroundStyle(palette.textMuted)
+                }
+            }
             .tint(palette.accent)
             .reelCard()
         }

@@ -1,4 +1,5 @@
 import SwiftUI
+import KadrPersistence
 import CoreMedia
 import Kadr
 import KadrUI
@@ -80,9 +81,12 @@ struct EditorView: View {
     init(document: ProjectDocument, library: ProjectLibrary) {
         self._document = State(initialValue: document)
         self.library = library
-        self._store = State(
-            initialValue: ProjectStore(project: document.toRuntimeProject())
-        )
+        // One store for the whole editing session, seeded with whatever the
+        // document already carries so re-saving an unchanged project produces
+        // identical bytes rather than re-minting every image token.
+        let images = ProjectImageStore(blobs: document.imageBlobs ?? [:])
+        let project = (try? document.toRuntimeProject(images: images)) ?? Project()
+        self._store = State(initialValue: ProjectStore(project: project, images: images))
     }
 
     var body: some View {
@@ -400,8 +404,8 @@ struct EditorView: View {
     /// toast; the in-memory edit is *not* rolled back — the next debounced
     /// cycle retries automatically.
     private func autoSave() {
-        let updated = store.project.toDocument(inheriting: document)
         do {
+            let updated = try store.project.toDocument(inheriting: document, images: store.images)
             try library.save(updated)
             document = updated
         } catch {

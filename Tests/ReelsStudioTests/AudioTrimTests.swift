@@ -1,6 +1,7 @@
 import XCTest
 import CoreMedia
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// v0.7 Tier 1 — tests for `ProjectStore.applyAudioTrim` and its pure helper.

@@ -1,4 +1,5 @@
 import SwiftUI
+import KadrAudio
 
 @main
 struct ReelsStudioApp: App {
@@ -7,7 +8,22 @@ struct ReelsStudioApp: App {
     /// launch crashes are captured. No-op when no DSN is configured.
     /// `_` so the compiler doesn't strip the side effect.
     private static let _crashReportingBoot: Bool = {
-        Task { @MainActor in CrashReporter.startIfConfigured() }
+        Task { @MainActor in CrashReporter.startIfConfigured(enabled: AppSettings.shared.crashReportingEnabled) }
+        return true
+    }()
+
+    /// v0.12 — configure the audio session before anything can play.
+    ///
+    /// Without this the app runs under `.soloAmbient`, iOS's default, which obeys
+    /// the ring/silent switch: **a muted phone made the editor preview silent**,
+    /// with nothing on screen saying why. Every video app ignores that switch,
+    /// which is why nobody expects a preview to obey it.
+    ///
+    /// Configured at launch and activated per preview, not here: activating takes
+    /// audio focus, and doing that at launch would stop the user's music for as
+    /// long as the app is open.
+    private static let _audioSessionBoot: Bool = {
+        try? AudioSession.configure(.preview)
         return true
     }()
 

@@ -1,6 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import Kadr
+import KadrAudio
 
 /// Sheet for adding a background music track. User picks an audio file via
 /// `.fileImporter`, sets volume + ducking, taps **Add** → appends an `AudioTrack`
@@ -13,6 +14,7 @@ struct AddMusicSheet: View {
     var store: ProjectStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.reelPalette) private var palette
+    @Environment(ToastCenter.self) private var toasts
 
     @State private var pickedURL: URL?
     @State private var showImporter = false
@@ -88,6 +90,26 @@ struct AddMusicSheet: View {
 
     private func addTrack() {
         guard let url = pickedURL else { return }
+        Task { await addTrack(from: url) }
+    }
+
+    /// v0.12 — validate before the file reaches a composition.
+    ///
+    /// The `.fileImporter` content-type list above is a guess: `.audio` admits
+    /// files with no decodable audio track, and a user can rename anything. Before
+    /// this check a video file picked here produced a project that saved fine and
+    /// exported without the music, with nothing said at any point.
+    ///
+    /// `AudioFile` costs one asset load and turns that into a sentence naming the
+    /// file.
+    @MainActor
+    private func addTrack(from url: URL) async {
+        do {
+            _ = try await AudioFile.inspect(url)
+        } catch {
+            toasts.show(.transient(error, prefix: "Couldn't add music"))
+            return
+        }
         var track = AudioTrack(url: url)
             .volume(volume)
             .fadeIn(0.5)

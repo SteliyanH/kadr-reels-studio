@@ -1,5 +1,6 @@
 import XCTest
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// Tests for v0.2 Tier 2 — pure helpers + smoke for `ProjectListView`. Body
@@ -35,7 +36,7 @@ final class ProjectListViewTests: XCTestCase {
         // Create a project, mutate the runtime project, save back through
         // the library, re-init a fresh library — the mutation should survive.
         var doc = try library.newProject(name: "AutoSave")
-        var project = doc.toRuntimeProject()
+        var project = try doc.toRuntimeProject(images: ProjectImageStore())
         XCTAssertEqual(project.clips.count, 0)
 
         // Add a title clip.
@@ -47,7 +48,7 @@ final class ProjectListViewTests: XCTestCase {
         project.clips.append(title)
 
         // Persist.
-        let updated = project.toDocument(inheriting: doc, name: doc.name)
+        let updated = try project.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
         try library.save(updated)
         doc = updated
 
@@ -55,8 +56,8 @@ final class ProjectListViewTests: XCTestCase {
         let library2 = try ProjectLibrary(directoryURL: tempDirectory)
         let reloaded = library2.documents.first { $0.id == doc.id }
         XCTAssertNotNil(reloaded)
-        XCTAssertEqual(reloaded?.clips.count, 1)
-        if case .title(let t) = reloaded?.clips.first {
+        XCTAssertEqual(reloaded?.compositionClips.count, 1)
+        if case .title(let t) = reloaded?.compositionClips.first {
             XCTAssertEqual(t.text, "Hi")
         } else {
             XCTFail("Expected title clip after reload")
@@ -112,21 +113,31 @@ final class ProjectListViewTests: XCTestCase {
 
     // MARK: - Row preset tag
 
+    /// A `PresetData` as the persisted document carries it.
+    private func fixture(_ kind: String, width: Int? = nil, height: Int? = nil) -> KadrPersistence.PresetData {
+        KadrPersistence.PresetData(kind: kind, width: width, height: height, frameRate: nil, codec: nil)
+    }
+
     func testPresetLabelMapsPortraitPresetsToNineBySixteen() {
-        XCTAssertEqual(ProjectRow.presetLabel(for: .reelsAndShorts), "9:16")
-        XCTAssertEqual(ProjectRow.presetLabel(for: .tiktok), "9:16")
+        XCTAssertEqual(ProjectRow.presetLabel(for: fixture("reelsAndShorts")), "9:16")
+        XCTAssertEqual(ProjectRow.presetLabel(for: fixture("tiktok")), "9:16")
     }
 
     func testPresetLabelMapsSquareAndCinema() {
-        XCTAssertEqual(ProjectRow.presetLabel(for: .square), "1:1")
-        XCTAssertEqual(ProjectRow.presetLabel(for: .cinema), "16:9")
+        XCTAssertEqual(ProjectRow.presetLabel(for: fixture("square")), "1:1")
+        XCTAssertEqual(ProjectRow.presetLabel(for: fixture("cinema")), "16:9")
+    }
+
+    func testPresetLabelFallsBackForAMissingComposition() {
+        // A row must still render rather than crash if a document without a
+        // composition ever reaches it.
+        XCTAssertEqual(ProjectRow.presetLabel(for: nil), "Auto")
+        XCTAssertEqual(ProjectRow.presetLabel(for: fixture("somethingNewer")), "Auto")
     }
 
     func testPresetLabelReducesACustomSize() {
         XCTAssertEqual(
-            ProjectRow.presetLabel(
-                for: .custom(width: 1080, height: 1920, frameRate: 30, codecHEVC: true)
-            ),
+            ProjectRow.presetLabel(for: fixture("custom", width: 1080, height: 1920)),
             "9:16"
         )
     }

@@ -1,6 +1,7 @@
 import XCTest
 import SwiftUI
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// `AppError.readable(_:)` and the colour bridge.
@@ -66,7 +67,7 @@ final class ErrorTextTests: XCTestCase {
 
     // MARK: - The suggestion is sanitized too
 
-    func testSuggestionIsSanitizedNotJustTheDescription() {
+    func testSuggestionIsSanitizedNotJustTheDescription() throws {
         let error = NSError(
             domain: "test",
             code: 1,

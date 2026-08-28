@@ -1,4 +1,5 @@
 import Foundation
+import KadrPersistence
 
 /// Disk-backed library of saved projects. JSON-per-project under
 /// `~/Library/Application Support/ReelsStudio/Projects/<uuid>.json`.
@@ -94,17 +95,21 @@ final class ProjectLibrary {
     @discardableResult
     public func duplicate(id sourceID: UUID) throws -> ProjectDocument {
         let original = try load(id: sourceID)
+        // `load` has already migrated an old document, so `original` is
+        // always v6 here — the copy carries the composition wholesale rather
+        // than rebuilding it, which means duplication cannot lose anything the
+        // format holds.
         let copy = ProjectDocument(
             id: UUID(),
             name: "\(original.name) Copy",
             createdAt: Date(),
             modifiedAt: Date(),
-            schemaVersion: original.schemaVersion,
-            clips: original.clips,
-            overlays: original.overlays,
-            audioTracks: original.audioTracks,
-            captions: original.captions,
-            preset: original.preset
+            schemaVersion: ProjectDocument.currentSchemaVersion,
+            composition: original.composition,
+            imageBlobs: original.imageBlobs,
+            zoomPixelsPerSecond: original.zoomPixelsPerSecond,
+            fixedCenterPlayhead: original.fixedCenterPlayhead,
+            accentColorHex: original.accentColorHex
         )
         try save(copy)
         return copy
@@ -247,7 +252,51 @@ final class ProjectLibrary {
         if doc.schemaVersion > ProjectDocument.currentSchemaVersion {
             throw ProjectLibraryError.unsupportedSchema(doc.schemaVersion)
         }
-        return doc
+        return doc.needsMigration ? try migrateToV6(doc) : doc
+    }
+
+    /// Convert a v1–v5 document to v6, in memory.
+    ///
+    /// Reading an old project runs its legacy payload through the old bridge
+    /// once, then re-encodes the resulting composition with `KadrPersistence`.
+    /// The file on disk is untouched until the user saves — an app that
+    /// rewrites every project the first time it opens them turns a routine
+    /// launch into a bulk migration nobody asked for, and one that cannot be
+    /// undone by quitting.
+    ///
+    /// Images keep their provenance: ``ProjectDocument/seedLegacyImages(into:)``
+    /// registers every `ImageStorage.url` with the store first, so a
+    /// photo-library import stays a `file:` reference instead of being
+    /// re-embedded as bytes.
+    nonisolated internal static func migrateToV6(_ document: ProjectDocument) throws -> ProjectDocument {
+        let store = ProjectImageStore()
+        document.seedLegacyImages(into: store)
+        let project = document.legacyRuntimeProject()
+        do {
+            // `allowingLoss` is true here and only here. An old document may
+            // hold something the new format reports as lossy, and refusing to
+            // open a project the user already had is a worse outcome than
+            // opening it and saying so. Everything the app can author survives;
+            // `ProjectMigrationTests` pins that.
+            let composition = try KadrCoding.encode(project.makeVideo(), allowingLoss: true, images: store)
+            let tokens = ProjectDocument.imageTokens(in: composition)
+            return ProjectDocument(
+                id: document.id,
+                name: document.name,
+                createdAt: document.createdAt,
+                modifiedAt: document.modifiedAt,
+                schemaVersion: ProjectDocument.currentSchemaVersion,
+                composition: composition,
+                imageBlobs: store.blobs(reachableFrom: tokens),
+                zoomPixelsPerSecond: document.zoomPixelsPerSecond,
+                fixedCenterPlayhead: document.fixedCenterPlayhead,
+                accentColorHex: document.accentColorHex
+            )
+        } catch {
+            throw ProjectLibraryError.decode(
+                "This project was saved by an older version and could not be upgraded. \(error.localizedDescription)"
+            )
+        }
     }
 
     nonisolated internal static func write(

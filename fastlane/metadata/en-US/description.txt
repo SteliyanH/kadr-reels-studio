@@ -1,0 +1,28 @@
+Reels Studio is a vertical video editor for short-form video — trim, layer, and export in the shape your footage is actually going to be watched in.
+
+EDITING
+• Trim, split, reorder and reverse clips on a pinch-zoomable timeline
+• Layer multiple tracks, with per-clip opacity and transforms
+• Fade, dissolve and slide transitions between clips
+• Keyframe animation for position, scale, rotation and opacity
+
+LOOK
+• Thirteen colour filters, stackable per clip, with adjustable intensity
+• Chroma key with a colour you can sample straight off the frame
+• Colour LUTs
+• Text overlays with your choice of typeface, weight, outline and drop shadow
+• Image and sticker overlays, with a visibility window
+
+SOUND
+• Import music from your library, or record a voiceover in the app
+• Per-clip and per-track volume, fades, crossfades and ducking
+• Waveform display, so you can cut to the beat
+
+EXPORT
+• Presets for the common vertical formats, plus a custom size
+• Target a bitrate or a file size — useful when an upload has a limit
+• H.264 or HEVC
+
+Projects save automatically as you work, and reopen exactly as you left them.
+
+Reels Studio is built on kadr, an open-source Swift video framework. No account. No subscription. Nothing leaves your device unless you export it.

@@ -1,6 +1,7 @@
 import XCTest
 import CoreMedia
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 #if canImport(UIKit)
 import UIKit
@@ -66,7 +67,7 @@ final class SchemaV2Tests: XCTestCase {
         let v1Doc = ProjectDocument(
             name: "Legacy",
             schemaVersion: 1,
-            clips: [
+            legacyClips: [
                 .video(VideoClipData(
                     url: URL(fileURLWithPath: "/tmp/x.mp4"),
                     speedRate: 1.0
@@ -81,8 +82,8 @@ final class SchemaV2Tests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         let restored = try decoder.decode(ProjectDocument.self, from: data)
         XCTAssertEqual(restored.schemaVersion, 1)
-        XCTAssertEqual(restored.clips.count, 1)
-        guard case .video(let v) = restored.clips.first else {
+        XCTAssertEqual((restored.legacyClips ?? []).count, 1)
+        guard case .video(let v) = (restored.legacyClips ?? []).first else {
             return XCTFail("Expected .video")
         }
         XCTAssertNil(v.transformAnimation)
@@ -107,9 +108,9 @@ final class SchemaV2Tests: XCTestCase {
             opacity: 1.0,
             opacityAnimation: animation
         )
-        let doc = ProjectDocument(name: "Animated", clips: [.video(clip)])
+        let doc = ProjectDocument(name: "Animated", legacyClips: [.video(clip)])
         let restored = try roundTrip(doc)
-        guard case .video(let v) = restored.clips.first else {
+        guard case .video(let v) = (restored.legacyClips ?? []).first else {
             return XCTFail("Expected .video")
         }
         XCTAssertEqual(v.opacityAnimation?.keyframes.count, 3)
@@ -127,9 +128,9 @@ final class SchemaV2Tests: XCTestCase {
             opacity: 1.0,
             opacityAnimation: animation
         )
-        let doc = ProjectDocument(name: "Bezier", clips: [.video(clip)])
+        let doc = ProjectDocument(name: "Bezier", legacyClips: [.video(clip)])
         let restored = try roundTrip(doc)
-        guard case .video(let v) = restored.clips.first,
+        guard case .video(let v) = (restored.legacyClips ?? []).first,
               case .cubicBezier(let p1x, let p1y, let p2x, let p2y) = v.opacityAnimation?.timing else {
             return XCTFail("Expected cubicBezier timing")
         }
@@ -152,9 +153,9 @@ final class SchemaV2Tests: XCTestCase {
             opacityFactor: 0.7,
             clips: [.image(inner)]
         )
-        let doc = ProjectDocument(name: "Track", clips: [.track(track)])
+        let doc = ProjectDocument(name: "Track", legacyClips: [.track(track)])
         let restored = try roundTrip(doc)
-        guard case .track(let t) = restored.clips.first else {
+        guard case .track(let t) = (restored.legacyClips ?? []).first else {
             return XCTFail("Expected .track")
         }
         XCTAssertEqual(t.startTimeSeconds, 2.0)
@@ -165,7 +166,7 @@ final class SchemaV2Tests: XCTestCase {
 
     // MARK: - Speed curve survives bridge
 
-    func testSpeedCurveRoundTripsThroughBridge() {
+    func testSpeedCurveRoundTripsThroughBridge() throws {
         let curveData = ProjectAnimation<Double>(
             keyframes: [
                 ProjectKeyframe(timeSeconds: 0, value: 1.0),
@@ -180,22 +181,22 @@ final class SchemaV2Tests: XCTestCase {
             trimDurationSeconds: 2.0,
             speedCurve: curveData
         )
-        let doc = ProjectDocument(name: "SpeedCurve", clips: [.video(clipData)])
+        let doc = ProjectDocument(name: "SpeedCurve", legacyClips: [.video(clipData)])
         // Document → runtime → document, verifying the curve survives both
         // legs of the bridge.
-        let runtime = doc.toRuntimeProject()
-        let rebuilt = runtime.toDocument(inheriting: doc, name: doc.name)
-        guard case .video(let v) = rebuilt.clips.first else {
+        let runtime = doc.legacyRuntimeProject()
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        guard case .video(let v) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .video")
         }
         XCTAssertEqual(v.speedCurve?.keyframes.count, 3)
-        XCTAssertEqual(v.speedCurve?.keyframes[1].timeSeconds ?? 0, 1.0, accuracy: 0.0001)
+        XCTAssertEqual(v.speedCurve?.keyframes[1].time.time.seconds ?? 0, 1.0, accuracy: 0.0001)
         XCTAssertEqual(v.speedCurve?.keyframes[1].value ?? 0, 0.5, accuracy: 0.0001)
     }
 
     // MARK: - Track round-trip through bridge
 
-    func testTrackBridgeRoundTrips() {
+    func testTrackBridgeRoundTrips() throws {
         let inner = ImageClipData(
             storage: .embeddedPNG(tinyPNG()),
             durationSeconds: 1.0
@@ -206,12 +207,12 @@ final class SchemaV2Tests: XCTestCase {
             opacityFactor: 0.5,
             clips: [.image(inner)]
         )
-        let doc = ProjectDocument(name: "T", clips: [.track(track)])
-        let runtime = doc.toRuntimeProject()
+        let doc = ProjectDocument(name: "T", legacyClips: [.track(track)])
+        let runtime = doc.legacyRuntimeProject()
         XCTAssertEqual(runtime.clips.count, 1)
         XCTAssertNotNil(runtime.clips.first as? Track)
-        let rebuilt = runtime.toDocument(inheriting: doc, name: doc.name)
-        guard case .track(let t) = rebuilt.clips.first else {
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        guard case .track(let t) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .track")
         }
         XCTAssertEqual(t.name, "Cutaway")
@@ -220,7 +221,7 @@ final class SchemaV2Tests: XCTestCase {
 
     // MARK: - Animations survive runtime bridge
 
-    func testTransformAnimationSurvivesRuntimeBridge() {
+    func testTransformAnimationSurvivesRuntimeBridge() throws {
         let curveData = ProjectAnimation<ProjectTransform>(
             keyframes: [
                 ProjectKeyframe(
@@ -240,10 +241,10 @@ final class SchemaV2Tests: XCTestCase {
             transform: ProjectTransform(),
             transformAnimation: curveData
         )
-        let doc = ProjectDocument(name: "Anim", clips: [.image(clipData)])
-        let runtime = doc.toRuntimeProject()
-        let rebuilt = runtime.toDocument(inheriting: doc, name: doc.name)
-        guard case .image(let i) = rebuilt.clips.first else {
+        let doc = ProjectDocument(name: "Anim", legacyClips: [.image(clipData)])
+        let runtime = doc.legacyRuntimeProject()
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        guard case .image(let i) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .image")
         }
         XCTAssertEqual(i.transformAnimation?.keyframes.count, 2)
