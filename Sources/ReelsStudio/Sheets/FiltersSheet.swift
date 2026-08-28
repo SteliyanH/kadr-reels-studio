@@ -104,20 +104,21 @@ struct FiltersSheet: View {
     @ViewBuilder
     private var addMenu: some View {
         Menu {
-            Button("Brightness") { store.addFilter(id: clipID, .brightness(0)) }
-            Button("Contrast")   { store.addFilter(id: clipID, .contrast(1)) }
-            Button("Saturation") { store.addFilter(id: clipID, .saturation(1)) }
-            Button("Exposure")   { store.addFilter(id: clipID, .exposure(0)) }
-            Button("Sepia")      { store.addFilter(id: clipID, .sepia(intensity: 1)) }
-            Button("Mono")       { store.addFilter(id: clipID, .mono) }
-            Button("Gaussian Blur") { store.addFilter(id: clipID, .gaussianBlur(radius: 10)) }
-            Button("Vignette")   { store.addFilter(id: clipID, .vignette(intensity: 1)) }
-            Button("Sharpen")    { store.addFilter(id: clipID, .sharpen(amount: 0.4)) }
-            Button("Zoom Blur")  { store.addFilter(id: clipID, .zoomBlur(amount: 20)) }
-            Button("Glow")       { store.addFilter(id: clipID, .glow(intensity: 1)) }
-            // v0.7 Tier 4 — chroma key needs a color picker + threshold,
-            // so route through a dedicated sub-sheet instead of inserting
-            // straight from the menu.
+            // Driven by kadr's `FilterKind` rather than a hand-written list.
+            // This menu named eleven filters by hand until kadr 1.0 shipped the
+            // catalogue, which meant a filter added to the engine simply never
+            // appeared here — silently, because nothing failed. `.lut` and
+            // `.chromaKey` are excluded by `insertable`: both need a payload a
+            // menu can't supply.
+            ForEach(FilterKind.insertable, id: \.self) { kind in
+                Button(kind.displayName) {
+                    if let filter = kind.defaultFilter {
+                        store.addFilter(id: clipID, filter)
+                    }
+                }
+            }
+            // Chroma key needs a colour and a threshold, so it routes through a
+            // dedicated sub-sheet instead of inserting straight from the menu.
             Button("Chroma Key…") { showChromaKey = true }
         } label: {
             Image(systemName: "plus")
