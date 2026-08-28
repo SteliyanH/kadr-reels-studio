@@ -4,6 +4,42 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Preview audio was silenced by the ring/silent switch.** The app ran under
+  `.soloAmbient`, iOS's default for an app that never configures a session — so a
+  muted phone made the editor preview silent, with nothing on screen saying why.
+  Every video app ignores that switch, which is why nobody expects a preview to
+  obey it.
+
+  The session is now configured at launch via kadr-audio's
+  `AudioSession.configure(.preview)`. Configured at launch, activated per
+  preview: activating takes audio focus, and doing that at launch would stop the
+  user's music for as long as the app is open.
+
+- **A video file picked as music failed silently.** `AddMusicSheet`'s
+  `.fileImporter` content-type list is a guess — `.audio` admits files with no
+  decodable audio track, and a user can rename anything. Picking one produced a
+  project that saved fine and exported without the music, with nothing said at any
+  point.
+
+  `AudioFile.inspect(_:)` now runs before the track reaches the composition, and
+  the failure names the file: *"“holiday.mov” doesn't contain any audio. Pick a
+  music or voice file — a video file won't work here."*
+
+### Changed
+
+- **kadr family moved to the 0.20 line**, and **kadr-audio added**: kadr 0.20.x,
+  kadr-ui 0.18.x, kadr-captions 0.11.x, kadr-photos 0.10.x, kadr-audio 0.6.x.
+
+  Adopting kadr-audio required all four adapters to accept the same kadr minor
+  first. They had drifted onto three different ones under `.upToNextMinor` pins,
+  so **no single kadr version satisfied them all** and this app had no resolvable
+  dependency graph at all. Nothing reported that until something tried to depend
+  on two of them at once.
+
 ## [0.11.0] - 2026-08-25
 
 Readable errors, three crash fixes, and the kadr family brought current after
