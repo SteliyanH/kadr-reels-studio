@@ -23,6 +23,22 @@ final class AppSettings {
         didSet { defaults.set(hapticIntensity.rawValue, forKey: Keys.hapticIntensity) }
     }
 
+    /// Whether to send a diagnostic report when the app crashes.
+    ///
+    /// Defaults to on. Crash reports carry the stack, the app version, the OS
+    /// version and the device model — no media, no project contents, no file
+    /// names, and nothing that identifies a person. That is a defensible
+    /// default, but "defensible" is not the same as "not asked", and a privacy
+    /// policy that says reporting can be turned off has to be true.
+    ///
+    /// Read at launch by ``CrashReporter/startIfConfigured()``. Turning it off
+    /// takes effect on the next launch, because Sentry cannot be unstarted
+    /// within a process — the toggle's caption says so rather than implying an
+    /// immediacy it does not have.
+    var crashReportingEnabled: Bool {
+        didSet { defaults.set(crashReportingEnabled, forKey: Keys.crashReportingEnabled) }
+    }
+
     private let defaults: UserDefaults
 
     /// - Parameter defaults: Injectable for tests (pass a sandboxed
@@ -38,10 +54,15 @@ final class AppSettings {
             // anyone's feel without explicit consent.
             self.hapticIntensity = .light
         }
+        // `object(forKey:)` rather than `bool(forKey:)`: the latter returns
+        // false for an absent key, which would silently opt every existing
+        // user out on upgrade rather than leaving the default in place.
+        self.crashReportingEnabled = defaults.object(forKey: Keys.crashReportingEnabled) as? Bool ?? true
     }
 
     private enum Keys {
         static let hapticIntensity = "reels-studio.hapticIntensity"
+        static let crashReportingEnabled = "reels-studio.crashReportingEnabled"
     }
 }
 

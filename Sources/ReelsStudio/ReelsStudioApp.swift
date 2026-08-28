@@ -8,7 +8,7 @@ struct ReelsStudioApp: App {
     /// launch crashes are captured. No-op when no DSN is configured.
     /// `_` so the compiler doesn't strip the side effect.
     private static let _crashReportingBoot: Bool = {
-        Task { @MainActor in CrashReporter.startIfConfigured() }
+        Task { @MainActor in CrashReporter.startIfConfigured(enabled: AppSettings.shared.crashReportingEnabled) }
         return true
     }()
 
