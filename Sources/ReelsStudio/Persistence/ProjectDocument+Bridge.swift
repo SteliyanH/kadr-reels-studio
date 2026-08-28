@@ -3,6 +3,7 @@ import CoreMedia
 import CoreGraphics
 import SwiftUI
 import Kadr
+import KadrPersistence
 import KadrUI
 #if canImport(UIKit)
 import UIKit
@@ -20,21 +21,80 @@ extension ProjectDocument {
     /// swallowed at the clip / overlay level so a single corrupt entry
     /// doesn't take the whole project down. The runtime project's `clips`
     /// / `overlays` arrays will be shorter than the document's in that case.
-    func toRuntimeProject() -> Project {
-        Project(
-            clips: clips.compactMap(ProjectDocument.runtimeClip(from:)),
-            overlays: overlays.compactMap(ProjectDocument.runtimeOverlay(from:)),
-            audioTracks: audioTracks.map(ProjectDocument.runtimeAudioTrack(from:)),
-            captions: captions.map(ProjectDocument.runtimeCaption(from:)),
-            preset: ProjectDocument.runtimePreset(from: preset),
+    /// Build the in-memory editor ``Project`` from a v6 document.
+    ///
+    /// - Throws: when the composition cannot be decoded — a token whose image
+    ///   has gone missing, or a schema this build does not read. Deliberately
+    ///   throwing rather than returning a partial project: silently opening a
+    ///   composition with clips missing is how a user loses work by saving over
+    ///   it.
+    func toRuntimeProject(images: ProjectImageStore) throws -> Project {
+        guard let composition else {
+            // A v1–v5 document that was never migrated. ProjectLibrary migrates
+            // on read, so reaching here means a caller built one by hand.
+            return legacyRuntimeProject()
+        }
+        let video = try KadrCoding.decode(composition, images: images)
+        return Project(
+            clips: video.clips,
+            overlays: video.overlays,
+            audioTracks: video.audioTracks,
+            captions: video.captions,
+            preset: video.preset,
             zoom: zoomPixelsPerSecond.map { TimelineZoom(pixelsPerSecond: $0) },
-            // v1 / v2 documents have no field on disk; the runtime default
-            // (true) is the v0.4 behavior every existing project should
-            // adopt unchanged. v3 documents round-trip the explicit value.
             fixedCenterPlayhead: fixedCenterPlayhead ?? true,
             accentColor: ProjectDocument.platformColor(forHex: accentColorHex)
                 .map(ProjectDocument.color(from:))
         )
+    }
+
+    /// The v1–v5 path, used once per old document at migration time.
+    ///
+    /// Failures are swallowed per clip and per overlay, matching the behaviour
+    /// these documents were written under: a single unreadable entry should not
+    /// cost the user the rest of the project when the alternative is refusing to
+    /// open it at all.
+    func legacyRuntimeProject() -> Project {
+        Project(
+            clips: (legacyClips ?? []).compactMap(ProjectDocument.runtimeClip(from:)),
+            overlays: (legacyOverlays ?? []).compactMap(ProjectDocument.runtimeOverlay(from:)),
+            audioTracks: (legacyAudioTracks ?? []).map(ProjectDocument.runtimeAudioTrack(from:)),
+            captions: (legacyCaptions ?? []).map(ProjectDocument.runtimeCaption(from:)),
+            preset: ProjectDocument.runtimePreset(from: legacyPreset ?? .reelsAndShorts),
+            zoom: zoomPixelsPerSecond.map { TimelineZoom(pixelsPerSecond: $0) },
+            fixedCenterPlayhead: fixedCenterPlayhead ?? true,
+            accentColor: ProjectDocument.platformColor(forHex: accentColorHex)
+                .map(ProjectDocument.color(from:))
+        )
+    }
+
+    /// Register every legacy image with `store` so migration keeps each image's
+    /// provenance: a photo-library import stays a `file:` reference rather than
+    /// being re-embedded as bytes.
+    func seedLegacyImages(into store: ProjectImageStore) {
+        for clip in legacyClips ?? [] {
+            ProjectDocument.seedLegacyImages(in: clip, into: store)
+        }
+        for overlay in legacyOverlays ?? [] {
+            switch overlay {
+            case .image(let data): ProjectDocument.seed(data.storage, into: store)
+            case .sticker(let data): ProjectDocument.seed(data.storage, into: store)
+            case .text: break
+            }
+        }
+    }
+
+    nonisolated static func seedLegacyImages(in clip: ProjectClip, into store: ProjectImageStore) {
+        switch clip {
+        case .image(let data): seed(data.storage, into: store)
+        case .track(let data): for inner in data.clips { seedLegacyImages(in: inner, into: store) }
+        case .video, .title, .transition: break
+        }
+    }
+
+    nonisolated static func seed(_ storage: ImageStorage, into store: ProjectImageStore) {
+        guard case let .url(url) = storage, let image = platformImage(from: storage) else { return }
+        store.register(image, from: url)
     }
 
     // MARK: Clip dispatch
@@ -329,21 +389,33 @@ extension Project {
     /// Encode the runtime project into a persistable document. Existing
     /// document identity (`id` / `createdAt` / `name`) is preserved by
     /// passing `inheriting:`; pass `nil` for a fresh document.
+    /// Encode the runtime project into a v6 document.
+    ///
+    /// Encoding is **strict**: `allowingLoss` stays false, so a composition
+    /// holding something a file cannot represent fails the save loudly instead
+    /// of writing a project that reopens wrong. This editor cannot currently
+    /// author any of the five lossy things — there is no compositor UI, no
+    /// custom-easing UI, and every image goes through `store` — so a throw here
+    /// means a genuine regression, which is exactly when you want to hear about
+    /// it.
     func toDocument(
         inheriting existing: ProjectDocument? = nil,
-        name: String = "Untitled"
-    ) -> ProjectDocument {
-        ProjectDocument(
+        name: String = "Untitled",
+        images store: ProjectImageStore
+    ) throws -> ProjectDocument {
+        let composition = try KadrCoding.encode(makeVideo(), images: store)
+        let tokens = ProjectDocument.imageTokens(in: composition)
+        return ProjectDocument(
             id: existing?.id ?? UUID(),
             name: existing?.name ?? name,
             createdAt: existing?.createdAt ?? Date(),
             modifiedAt: Date(),
             schemaVersion: ProjectDocument.currentSchemaVersion,
-            clips: clips.compactMap(ProjectDocument.documentClip(from:)),
-            overlays: overlays.compactMap(ProjectDocument.documentOverlay(from:)),
-            audioTracks: audioTracks.map(ProjectDocument.documentAudioTrack(from:)),
-            captions: captions.map(ProjectDocument.documentCaption(from:)),
-            preset: ProjectDocument.documentPreset(from: preset),
+            composition: composition,
+            // Only the blobs this composition still references. Without the
+            // filter a project file grows by the bytes of every image ever
+            // deleted from it.
+            imageBlobs: store.blobs(reachableFrom: tokens),
             zoomPixelsPerSecond: zoom?.pixelsPerSecond,
             fixedCenterPlayhead: fixedCenterPlayhead,
             accentColorHex: accentColor.flatMap { color in
@@ -354,6 +426,40 @@ extension Project {
 }
 
 extension ProjectDocument {
+
+    /// Every image token the composition refers to, including inside tracks.
+    nonisolated static func imageTokens(in document: KadrDocument) -> Set<String> {
+        var tokens: Set<String> = []
+        func walk(_ clips: [KadrPersistence.ClipData]) {
+            for clip in clips {
+                switch clip {
+                case .image(let data): tokens.insert(data.imageToken)
+                case .track(let data): walk(data.clips)
+                case .video, .title, .transition: break
+                }
+            }
+        }
+        walk(document.video.clips)
+        for overlay in document.video.overlays {
+            switch overlay {
+            case .image(let data):   tokens.insert(data.imageToken)
+            case .sticker(let data): tokens.insert(data.imageToken)
+            case .text: break
+            }
+        }
+        return tokens
+    }
+}
+
+extension ProjectDocument {
+
+    // MARK: - Legacy encode (v1–v5)
+    //
+    // v6 never writes this shape — `toDocument(inheriting:name:images:)` emits a
+    // `KadrDocument`. These are retained because migration tests need to build
+    // documents in the *old* shape to prove they still open, and because the
+    // decode side below reads what they produce. Nothing in the running app
+    // calls them.
 
     nonisolated static func documentClip(from clip: any Clip) -> ProjectClip? {
         if let video = clip as? VideoClip {

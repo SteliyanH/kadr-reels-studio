@@ -1,6 +1,7 @@
 import XCTest
 import CoreGraphics
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// v0.7 Tier 3 — tests for schema v5's additive text-effect fields on
@@ -9,8 +10,8 @@ import Kadr
 @MainActor
 final class SchemaV5Tests: XCTestCase {
 
-    func testCurrentSchemaVersionIsFive() {
-        XCTAssertEqual(ProjectDocument.currentSchemaVersion, 5)
+    func testCurrentSchemaVersionIsSix() {
+        XCTAssertEqual(ProjectDocument.currentSchemaVersion, 6)
     }
 
     // MARK: - Stroke + shadow round-trip on TextOverlayData
@@ -18,7 +19,7 @@ final class SchemaV5Tests: XCTestCase {
     func testTextOverlayStrokeAndShadowRoundTripThroughCodable() throws {
         let original = ProjectDocument(
             name: "Effects",
-            overlays: [.text(TextOverlayData(
+            legacyOverlays: [.text(TextOverlayData(
                 text: "HI",
                 strokeWidth: 3,
                 strokeColorHex: "#FF0000",
@@ -32,7 +33,7 @@ final class SchemaV5Tests: XCTestCase {
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(ProjectDocument.self, from: data)
 
-        guard case .text(let text) = decoded.overlays.first else {
+        guard case .text(let text) = (decoded.legacyOverlays ?? []).first else {
             return XCTFail("Expected a text overlay")
         }
         XCTAssertEqual(text.strokeWidth, 3)
@@ -82,7 +83,7 @@ final class SchemaV5Tests: XCTestCase {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let doc = try decoder.decode(ProjectDocument.self, from: Data(v4JSON.utf8))
-        guard case .text(let text) = doc.overlays.first else {
+        guard case .text(let text) = (doc.legacyOverlays ?? []).first else {
             return XCTFail("Expected a text overlay")
         }
         XCTAssertNil(text.strokeWidth)
@@ -132,16 +133,19 @@ final class SchemaV5Tests: XCTestCase {
         // so the JSON still mirrors the pre-v0.7 shape semantically.
         let original = ProjectDocument(
             name: "Legacy v4",
-            overlays: [.text(TextOverlayData(text: "HELLO"))]
+            legacyOverlays: [.text(TextOverlayData(text: "HELLO"))]
         )
-        let runtime = original.toRuntimeProject()
-        let promoted = runtime.toDocument(inheriting: original)
-        XCTAssertEqual(promoted.schemaVersion, 5)
-        guard case .text(let text) = promoted.overlays.first else {
+        let runtime = original.legacyRuntimeProject()
+        let promoted = try runtime.toDocument(inheriting: original, images: ProjectImageStore())
+        XCTAssertEqual(promoted.schemaVersion, ProjectDocument.currentSchemaVersion)
+        // v6 carries text effects inside the style rather than as flattened
+        // sibling fields. Absent stays absent: an overlay saved without a
+        // stroke or shadow must not acquire a zero-width one.
+        guard case .text(let text) = promoted.composition?.video.overlays.first else {
             return XCTFail("Expected text overlay")
         }
-        XCTAssertNil(text.strokeWidth)
-        XCTAssertNil(text.shadowOffsetX)
+        XCTAssertNil(text.style.stroke)
+        XCTAssertNil(text.style.shadow)
     }
 
     /// A text overlay built with stroke + shadow at the runtime layer

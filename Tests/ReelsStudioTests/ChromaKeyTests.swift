@@ -2,6 +2,7 @@ import XCTest
 import CoreMedia
 import ViewInspector
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// v0.7 Tier 4 — tests for `ProjectStore.addChromaKey`. The sheet itself is

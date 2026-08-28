@@ -1,6 +1,7 @@
 import XCTest
 import CoreMedia
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// Tests for v0.6 Tier 3 — scene-storage cold-launch restore. We can't run

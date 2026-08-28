@@ -1,6 +1,7 @@
 import XCTest
 import CoreMedia
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// Tests for v0.2 Tier 1 — Codable round-trip + bridge between
@@ -32,8 +33,8 @@ final class ProjectDocumentTests: XCTestCase {
         XCTAssertEqual(restored.id, original.id)
         XCTAssertEqual(restored.name, "Empty")
         XCTAssertEqual(restored.schemaVersion, ProjectDocument.currentSchemaVersion)
-        XCTAssertTrue(restored.clips.isEmpty)
-        XCTAssertTrue(restored.overlays.isEmpty)
+        XCTAssertTrue((restored.legacyClips ?? []).isEmpty)
+        XCTAssertTrue((restored.legacyOverlays ?? []).isEmpty)
     }
 
     // MARK: - Clip round-trip
@@ -50,9 +51,9 @@ final class ProjectDocumentTests: XCTestCase {
             speedRate: 0.5,
             opacity: 0.75
         )
-        let doc = ProjectDocument(name: "VideoOnly", clips: [.video(clip)])
+        let doc = ProjectDocument(name: "VideoOnly", legacyClips: [.video(clip)])
         let restored = try roundTrip(doc)
-        guard case .video(let v) = restored.clips.first else {
+        guard case .video(let v) = (restored.legacyClips ?? []).first else {
             return XCTFail("Expected .video")
         }
         XCTAssertEqual(v.clipID, "clip-1")
@@ -73,9 +74,9 @@ final class ProjectDocumentTests: XCTestCase {
             durationSeconds: 2.0,
             opacity: 0.9
         )
-        let doc = ProjectDocument(name: "ImageOnly", clips: [.image(clip)])
+        let doc = ProjectDocument(name: "ImageOnly", legacyClips: [.image(clip)])
         let restored = try roundTrip(doc)
-        guard case .image(let i) = restored.clips.first else {
+        guard case .image(let i) = (restored.legacyClips ?? []).first else {
             return XCTFail("Expected .image")
         }
         if case .embeddedPNG(let restoredData) = i.storage {
@@ -95,9 +96,9 @@ final class ProjectDocumentTests: XCTestCase {
             alignment: .center,
             durationSeconds: 1.5
         )
-        let doc = ProjectDocument(name: "Titled", clips: [.title(title)])
+        let doc = ProjectDocument(name: "Titled", legacyClips: [.title(title)])
         let restored = try roundTrip(doc)
-        guard case .title(let t) = restored.clips.first else {
+        guard case .title(let t) = (restored.legacyClips ?? []).first else {
             return XCTFail("Expected .title")
         }
         XCTAssertEqual(t.text, "Hello")
@@ -110,9 +111,9 @@ final class ProjectDocumentTests: XCTestCase {
 
     func testTransitionRoundTrips() throws {
         let transition = TransitionData(kind: .dissolve, durationSeconds: 0.75)
-        let doc = ProjectDocument(name: "Transition", clips: [.transition(transition)])
+        let doc = ProjectDocument(name: "Transition", legacyClips: [.transition(transition)])
         let restored = try roundTrip(doc)
-        guard case .transition(let t) = restored.clips.first else {
+        guard case .transition(let t) = (restored.legacyClips ?? []).first else {
             return XCTFail("Expected .transition")
         }
         XCTAssertEqual(t.kind, .dissolve)
@@ -134,9 +135,9 @@ final class ProjectDocumentTests: XCTestCase {
             anchor: .top,
             opacity: 0.95
         )
-        let doc = ProjectDocument(name: "Overlay", overlays: [.text(overlay)])
+        let doc = ProjectDocument(name: "Overlay", legacyOverlays: [.text(overlay)])
         let restored = try roundTrip(doc)
-        guard case .text(let t) = restored.overlays.first else {
+        guard case .text(let t) = (restored.legacyOverlays ?? []).first else {
             return XCTFail("Expected .text")
         }
         XCTAssertEqual(t.layerID, "title")
@@ -157,9 +158,9 @@ final class ProjectDocumentTests: XCTestCase {
             opacity: 1.0,
             rotationRadians: .pi / 4
         )
-        let doc = ProjectDocument(name: "Sticker", overlays: [.sticker(sticker)])
+        let doc = ProjectDocument(name: "Sticker", legacyOverlays: [.sticker(sticker)])
         let restored = try roundTrip(doc)
-        guard case .sticker(let s) = restored.overlays.first else {
+        guard case .sticker(let s) = (restored.legacyOverlays ?? []).first else {
             return XCTFail("Expected .sticker")
         }
         XCTAssertEqual(s.rotationRadians, .pi / 4, accuracy: 0.0001)
@@ -178,9 +179,9 @@ final class ProjectDocumentTests: XCTestCase {
             duckingTargetVolume: 0.3,
             crossfadeDurationSeconds: nil
         )
-        let doc = ProjectDocument(name: "Audio", audioTracks: [track])
+        let doc = ProjectDocument(name: "Audio", legacyAudioTracks: [track])
         let restored = try roundTrip(doc)
-        let restoredTrack = restored.audioTracks.first
+        let restoredTrack = (restored.legacyAudioTracks ?? []).first
         XCTAssertEqual(restoredTrack?.volume, 0.8)
         XCTAssertEqual(restoredTrack?.fadeInSeconds, 0.5)
         XCTAssertEqual(restoredTrack?.duckingTargetVolume, 0.3)
@@ -192,11 +193,11 @@ final class ProjectDocumentTests: XCTestCase {
             ProjectCaption(text: "Hello", startSeconds: 0.5, durationSeconds: 1.5),
             ProjectCaption(text: "World", startSeconds: 2.5, durationSeconds: 1.0),
         ]
-        let doc = ProjectDocument(name: "Captioned", captions: cues)
+        let doc = ProjectDocument(name: "Captioned", legacyCaptions: cues)
         let restored = try roundTrip(doc)
-        XCTAssertEqual(restored.captions.count, 2)
-        XCTAssertEqual(restored.captions[0].text, "Hello")
-        XCTAssertEqual(restored.captions[1].startSeconds, 2.5)
+        XCTAssertEqual((restored.legacyCaptions ?? []).count, 2)
+        XCTAssertEqual((restored.legacyCaptions ?? [])[0].text, "Hello")
+        XCTAssertEqual((restored.legacyCaptions ?? [])[1].startSeconds, 2.5)
     }
 
     func testPresetVariantsRoundTrip() throws {
@@ -208,18 +209,18 @@ final class ProjectDocumentTests: XCTestCase {
             ProjectPreset.cinema,
             ProjectPreset.custom(width: 1280, height: 720, frameRate: 60, codecHEVC: true),
         ] {
-            let doc = ProjectDocument(name: "Preset", preset: preset)
+            let doc = ProjectDocument(name: "Preset", legacyPreset: preset)
             let restored = try roundTrip(doc)
-            XCTAssertEqual(restored.preset, preset)
+            XCTAssertEqual((restored.legacyPreset ?? .reelsAndShorts), preset)
         }
     }
 
     // MARK: - Bridge — runtime ↔ document round-trip
 
-    func testRuntimeProjectRoundTripsThroughDocument() {
+    func testRuntimeProjectRoundTripsThroughDocument() throws {
         let original = ProjectDocument(
             name: "Demo",
-            clips: [
+            legacyClips: [
                 .title(TitleSequenceData(
                     clipID: "intro",
                     text: "Intro",
@@ -228,7 +229,7 @@ final class ProjectDocumentTests: XCTestCase {
                     durationSeconds: 1.0
                 ))
             ],
-            overlays: [
+            legacyOverlays: [
                 .text(TextOverlayData(
                     layerID: "watermark",
                     text: "Reels",
@@ -242,14 +243,14 @@ final class ProjectDocumentTests: XCTestCase {
                 ))
             ]
         )
-        let runtime = original.toRuntimeProject()
+        let runtime = try original.toRuntimeProject(images: ProjectImageStore())
         XCTAssertEqual(runtime.clips.count, 1)
         XCTAssertEqual(runtime.overlays.count, 1)
-        let rebuilt = runtime.toDocument(inheriting: original)
+        let rebuilt = try runtime.toDocument(inheriting: original, images: ProjectImageStore())
         XCTAssertEqual(rebuilt.id, original.id)
-        XCTAssertEqual(rebuilt.clips.count, 1)
-        XCTAssertEqual(rebuilt.overlays.count, 1)
-        if case .title(let t) = rebuilt.clips.first {
+        XCTAssertEqual(rebuilt.compositionClips.count, 1)
+        XCTAssertEqual(rebuilt.composition?.video.overlays.count, 1)
+        if case .title(let t) = rebuilt.compositionClips.first {
             XCTAssertEqual(t.text, "Intro")
         } else {
             XCTFail("Expected title clip in rebuilt document")
@@ -268,9 +269,9 @@ final class ProjectDocumentTests: XCTestCase {
                 .gaussianBlur(8.0),
             ]
         )
-        let doc = ProjectDocument(name: "Filtered", clips: [.video(clip)])
+        let doc = ProjectDocument(name: "Filtered", legacyClips: [.video(clip)])
         let restored = try roundTrip(doc)
-        guard case .video(let v) = restored.clips.first else {
+        guard case .video(let v) = (restored.legacyClips ?? []).first else {
             return XCTFail("Expected .video")
         }
         XCTAssertEqual(v.filters.count, 4)
@@ -292,9 +293,9 @@ final class ProjectDocumentTests: XCTestCase {
             url: URL(fileURLWithPath: "/tmp/x.mp4"),
             transform: transform
         )
-        let doc = ProjectDocument(name: "Transformed", clips: [.video(clip)])
+        let doc = ProjectDocument(name: "Transformed", legacyClips: [.video(clip)])
         let restored = try roundTrip(doc)
-        guard case .video(let v) = restored.clips.first,
+        guard case .video(let v) = (restored.legacyClips ?? []).first,
               let t = v.transform else {
             return XCTFail("Expected .video with transform")
         }
@@ -305,7 +306,7 @@ final class ProjectDocumentTests: XCTestCase {
         XCTAssertEqual(t.anchor, .topLeft)
     }
 
-    func testTextOverlayColorSurvivesBridgeRoundTrip() {
+    func testTextOverlayColorSurvivesBridgeRoundTrip() throws {
         // Build an overlay with a custom color, run it through the runtime
         // bridge (which includes the PlatformColor extraction path), then
         // back into a document. Verify the hex matches.
@@ -314,71 +315,84 @@ final class ProjectDocumentTests: XCTestCase {
             colorHex: "#FF8800",
             opacity: 1.0
         )
-        let doc = ProjectDocument(name: "Color", overlays: [.text(original)])
-        let runtime = doc.toRuntimeProject()
-        let rebuilt = runtime.toDocument(inheriting: doc, name: doc.name)
-        guard case .text(let restored) = rebuilt.overlays.first else {
+        let doc = ProjectDocument(name: "Color", legacyOverlays: [.text(original)])
+        let runtime = try doc.toRuntimeProject(images: ProjectImageStore())
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        // v6 stores colour as components rather than hex. #FF8800 is
+        // (1.0, 0.533, 0.0) — the assertion this test has always been about is
+        // that the colour arrives at all, which is the bug that lost
+        // TextStyle.color twice before.
+        guard case .text(let restored) = rebuilt.composition?.video.overlays.first else {
             return XCTFail("Expected .text")
         }
-        XCTAssertEqual(restored.colorHex, "#FF8800")
+        XCTAssertEqual(restored.style.color.red, 1.0, accuracy: 0.01)
+        XCTAssertEqual(restored.style.color.green, 0.533, accuracy: 0.01)
+        XCTAssertEqual(restored.style.color.blue, 0.0, accuracy: 0.01)
+        XCTAssertEqual(restored.style.color.alpha, 1.0, accuracy: 0.01)
     }
 
-    func testTitleSequenceTransformAndColorSurviveBridge() {
+    func testTitleSequenceTransformAndColorSurviveBridge() throws {
         let title = TitleSequenceData(
             text: "Title",
             colorHex: "#00FF00",
             durationSeconds: 1.0,
             transform: ProjectTransform(centerX: 0.25, centerY: 0.75, rotation: 0, scale: 1.0, anchor: .center)
         )
-        let doc = ProjectDocument(name: "Title", clips: [.title(title)])
-        let runtime = doc.toRuntimeProject()
-        let rebuilt = runtime.toDocument(inheriting: doc, name: doc.name)
-        guard case .title(let restored) = rebuilt.clips.first else {
+        let doc = ProjectDocument(name: "Title", legacyClips: [.title(title)])
+        let runtime = try doc.toRuntimeProject(images: ProjectImageStore())
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        guard case .title(let restored) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .title")
         }
-        XCTAssertEqual(restored.colorHex, "#00FF00")
-        XCTAssertEqual(restored.transform?.centerX ?? 0, 0.25, accuracy: 0.0001)
-        XCTAssertEqual(restored.transform?.centerY ?? 0, 0.75, accuracy: 0.0001)
+        XCTAssertEqual(restored.style.color.red, 0.0, accuracy: 0.01)
+        XCTAssertEqual(restored.style.color.green, 1.0, accuracy: 0.01)
+        XCTAssertEqual(restored.style.color.blue, 0.0, accuracy: 0.01)
+        XCTAssertEqual(restored.transform?.center.x ?? 0, 0.25, accuracy: 0.0001)
+        XCTAssertEqual(restored.transform?.center.y ?? 0, 0.75, accuracy: 0.0001)
     }
 
-    func testVideoFiltersSurviveBridge() {
+    func testVideoFiltersSurviveBridge() throws {
         // End-to-end through runtime bridge — verifies kadr Filter cases
         // round-trip through `runtimeFilter` / `documentFilter`.
         let clipData = VideoClipData(
             url: URL(fileURLWithPath: "/tmp/x.mp4"),
             filters: [.exposure(0.5), .vignette(0.7)]
         )
-        let doc = ProjectDocument(name: "F", clips: [.video(clipData)])
-        let runtime = doc.toRuntimeProject()
-        let rebuilt = runtime.toDocument(inheriting: doc, name: doc.name)
-        guard case .video(let v) = rebuilt.clips.first else {
+        let doc = ProjectDocument(name: "F", legacyClips: [.video(clipData)])
+        let runtime = try doc.toRuntimeProject(images: ProjectImageStore())
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        guard case .video(let v) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .video")
         }
         XCTAssertEqual(v.filters.count, 2)
-        if case .exposure(let val) = v.filters[0] {
+        // v6 tags a filter by kind with its scalar alongside, rather than as a
+        // Swift enum with a payload.
+        XCTAssertEqual(v.filters[0].kind, "exposure")
+        if let val = v.filters[0].scalar {
             XCTAssertEqual(val, 0.5, accuracy: 0.0001)
         } else {
             XCTFail("Expected .exposure")
         }
     }
 
-    func testMonoFilterRoundTrips() {
+    func testMonoFilterRoundTrips() throws {
         let clip = VideoClip(url: URL(fileURLWithPath: "/tmp/x.mp4"))
             .filter(.mono)
             .filter(.brightness(0.5))
         let project = Project(clips: [clip])
-        let doc = project.toDocument(name: "Mixed")
-        guard case .video(let v) = doc.clips.first else {
+        let doc = try project.toDocument(name: "Mixed", images: ProjectImageStore())
+        guard case .video(let v) = doc.compositionClips.first else {
             return XCTFail("Expected .video")
         }
         XCTAssertEqual(v.filters.count, 2)
-        if case .mono = v.filters[0] { } else { XCTFail("Expected .mono first") }
-        if case .brightness(let val) = v.filters[1] {
-            XCTAssertEqual(val, 0.5, accuracy: 0.0001)
-        }
+        // Order is render order, and a filter with no scalar must still occupy
+        // its slot — .mono carries no intensity but is not skippable.
+        XCTAssertEqual(v.filters[0].kind, "mono")
+        XCTAssertEqual(v.filters[1].kind, "brightness")
+        XCTAssertEqual(v.filters[1].scalar ?? 0, 0.5, accuracy: 0.0001)
     }
 
-    func testChromaKeyRoundTripsRGBAndThreshold() {
+    func testChromaKeyRoundTripsRGBAndThreshold() throws {
         // Build a runtime ChromaKey filter, run through document, restore.
         // Verify the (r, g, b, threshold) survive — the GPU cube is rebuilt
         // from those parameters by `ChromaKey.init(color:threshold:)`.
@@ -391,18 +405,18 @@ final class ProjectDocumentTests: XCTestCase {
         let clip = VideoClip(url: URL(fileURLWithPath: "/tmp/x.mp4"))
             .filter(.chromaKey(key))
         let project = Project(clips: [clip])
-        let doc = project.toDocument(name: "ChromaKey")
-        guard case .video(let v) = doc.clips.first,
-              case .chromaKey(let r, let g, let b, let threshold) = v.filters.first else {
+        let doc = try project.toDocument(name: "ChromaKey", images: ProjectImageStore())
+        guard case .video(let v) = doc.compositionClips.first,
+              let filter = v.filters.first, filter.kind == "chromaKey" else {
             return XCTFail("Expected .chromaKey filter")
         }
-        XCTAssertEqual(r, 0.0, accuracy: 0.001)
-        XCTAssertEqual(g, 1.0, accuracy: 0.001)
-        XCTAssertEqual(b, 0.0, accuracy: 0.001)
-        XCTAssertEqual(threshold, 0.4, accuracy: 0.0001)
+        XCTAssertEqual(filter.red ?? -1, 0.0, accuracy: 0.001)
+        XCTAssertEqual(filter.green ?? -1, 1.0, accuracy: 0.001)
+        XCTAssertEqual(filter.blue ?? -1, 0.0, accuracy: 0.001)
+        XCTAssertEqual(filter.threshold ?? -1, 0.4, accuracy: 0.0001)
     }
 
-    func testLUTRoundTripsURL() {
+    func testLUTRoundTripsURL() throws {
         // Persist a LUT filter — we don't load a real .cube file in tests
         // (the runtime side handles missing files gracefully). We only
         // verify the URL survives the document round-trip.
@@ -432,17 +446,17 @@ final class ProjectDocumentTests: XCTestCase {
         XCTAssertNil(result)
     }
 
-    func testRuntimeBridgeDropsCorruptImageClipSilently() {
+    func testRuntimeBridgeDropsCorruptImageClipSilently() throws {
         // Empty PNG data → platformImage returns nil → runtime drops the clip
         // entirely. The rest of the project stays intact.
         let doc = ProjectDocument(
             name: "Mixed",
-            clips: [
+            legacyClips: [
                 .image(ImageClipData(storage: .embeddedPNG(Data()), durationSeconds: 1.0)),
                 .title(TitleSequenceData(text: "Hi", durationSeconds: 0.5)),
             ]
         )
-        let runtime = doc.toRuntimeProject()
+        let runtime = try doc.toRuntimeProject(images: ProjectImageStore())
         XCTAssertEqual(runtime.clips.count, 1) // image dropped, title kept
     }
 }

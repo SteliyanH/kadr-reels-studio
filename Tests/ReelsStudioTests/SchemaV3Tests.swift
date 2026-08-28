@@ -10,23 +10,23 @@ final class SchemaV3Tests: XCTestCase {
     /// loads with that exact value — no default coercion.
     func testFixedCenterPlayheadFalseRoundTrips() throws {
         let project = Project(fixedCenterPlayhead: false)
-        let doc = project.toDocument()
+        let doc = try project.toDocument(images: ProjectImageStore())
         XCTAssertEqual(doc.fixedCenterPlayhead, false)
 
         let encoded = try JSONEncoder().encode(doc)
         let decoded = try JSONDecoder().decode(ProjectDocument.self, from: encoded)
         XCTAssertEqual(decoded.fixedCenterPlayhead, false)
 
-        let runtime = decoded.toRuntimeProject()
+        let runtime = decoded.legacyRuntimeProject()
         XCTAssertFalse(runtime.fixedCenterPlayhead)
     }
 
     func testFixedCenterPlayheadTrueRoundTrips() throws {
         let project = Project(fixedCenterPlayhead: true)
-        let doc = project.toDocument()
+        let doc = try project.toDocument(images: ProjectImageStore())
         let encoded = try JSONEncoder().encode(doc)
         let decoded = try JSONDecoder().decode(ProjectDocument.self, from: encoded)
-        XCTAssertTrue(decoded.toRuntimeProject().fixedCenterPlayhead)
+        XCTAssertTrue(decoded.legacyRuntimeProject().fixedCenterPlayhead)
     }
 
     // MARK: - v1 / v2 forward compat
@@ -66,7 +66,7 @@ final class SchemaV3Tests: XCTestCase {
         let doc = try decodeDocument(v2Data)
         XCTAssertNil(doc.fixedCenterPlayhead)
         XCTAssertEqual(doc.schemaVersion, 2)
-        XCTAssertTrue(doc.toRuntimeProject().fixedCenterPlayhead)
+        XCTAssertTrue(doc.legacyRuntimeProject().fixedCenterPlayhead)
     }
 
     func testV1DocumentDecodesWithoutFixedCenterPlayheadField() throws {
@@ -75,7 +75,7 @@ final class SchemaV3Tests: XCTestCase {
 
         let doc = try decodeDocument(v1Data)
         XCTAssertNil(doc.fixedCenterPlayhead)
-        XCTAssertTrue(doc.toRuntimeProject().fixedCenterPlayhead)
+        XCTAssertTrue(doc.legacyRuntimeProject().fixedCenterPlayhead)
     }
 
     // MARK: - Re-saving an old document upgrades it
@@ -89,8 +89,8 @@ final class SchemaV3Tests: XCTestCase {
         let v2Data = try oldVersionJSON(from: original, targetVersion: 2)
         let loaded = try decodeDocument(v2Data)
 
-        let runtime = loaded.toRuntimeProject()
-        let promoted = runtime.toDocument(inheriting: loaded)
+        let runtime = loaded.legacyRuntimeProject()
+        let promoted = try runtime.toDocument(inheriting: loaded, images: ProjectImageStore())
 
         XCTAssertEqual(promoted.schemaVersion, ProjectDocument.currentSchemaVersion)
         XCTAssertEqual(promoted.fixedCenterPlayhead, true)

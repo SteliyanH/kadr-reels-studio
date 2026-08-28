@@ -1,6 +1,7 @@
 import XCTest
 import SwiftUI
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 @MainActor
@@ -42,13 +43,13 @@ final class HapticEngineTests: XCTestCase {
 final class AccentColorRoundTripTests: XCTestCase {
 
     private func roundTrip(_ project: Project) throws -> Project {
-        let doc = project.toDocument()
+        let doc = try project.toDocument(images: ProjectImageStore())
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(doc)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(ProjectDocument.self, from: data).toRuntimeProject()
+        return try decoder.decode(ProjectDocument.self, from: data).toRuntimeProject(images: ProjectImageStore())
     }
 
     // MARK: - Defaults
@@ -103,16 +104,16 @@ final class AccentColorRoundTripTests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         let doc = try decoder.decode(ProjectDocument.self, from: stripped)
         XCTAssertNil(doc.accentColorHex)
-        XCTAssertNil(doc.toRuntimeProject().accentColor)
+        XCTAssertNil(try doc.toRuntimeProject(images: ProjectImageStore()).accentColor)
     }
 
     // MARK: - Hex shape
 
     /// Hex round-trips through the existing `hexString(from:)` helper —
     /// regression-guards the additive use of the v0.2 PlatformColor helper.
-    func testAccentHexHasExpectedShape() {
+    func testAccentHexHasExpectedShape() throws {
         let project = Project(accentColor: Color(red: 1, green: 0, blue: 0))
-        let doc = project.toDocument()
+        let doc = try project.toDocument(images: ProjectImageStore())
         let hex = try? XCTUnwrap(doc.accentColorHex)
         // Either #RRGGBB (6 chars after #) or #RRGGBBAA (8 chars after #).
         XCTAssertTrue(hex?.hasPrefix("#") ?? false)
@@ -126,10 +127,10 @@ final class AccentColorRoundTripTests: XCTestCase {
     /// control still writes through `store.setAccentColor(_:)` — the
     /// mutation, the persisted field, and its hex round-trip are unchanged.
     /// Prove every ramp step the narrowed picker can select survives
-    /// `ProjectDocument` encode/decode at schema v5 exactly, driven through
+    /// `ProjectDocument` encode/decode at the current schema, driven through
     /// the store rather than constructing `Project` directly.
-    func testReelRampAccentsRoundTripThroughSetAccentColorAtSchemaV5() throws {
-        XCTAssertEqual(ProjectDocument.currentSchemaVersion, 5)
+    func testReelRampAccentsRoundTripThroughSetAccentColorAtCurrentSchema() throws {
+        XCTAssertEqual(ProjectDocument.currentSchemaVersion, 6)
 
         let rampAccents: [(name: String, color: Color)] = [
             ("a500", Reel.Accent.a500),
@@ -141,8 +142,8 @@ final class AccentColorRoundTripTests: XCTestCase {
             let store = ProjectStore(project: Project())
             store.setAccentColor(accent)
 
-            let doc = store.project.toDocument()
-            XCTAssertEqual(doc.schemaVersion, 5, "\(name) did not encode at schema v5")
+            let doc = try store.project.toDocument(images: ProjectImageStore())
+            XCTAssertEqual(doc.schemaVersion, ProjectDocument.currentSchemaVersion, "\(name) did not encode at the current schema")
 
             let restored = try roundTrip(store.project)
             let restoredAccent = try XCTUnwrap(
@@ -165,8 +166,8 @@ final class AccentColorRoundTripTests: XCTestCase {
         store.setAccentColor(nil)
         XCTAssertNil(store.project.accentColor)
 
-        let doc = store.project.toDocument()
-        XCTAssertEqual(doc.schemaVersion, 5)
+        let doc = try store.project.toDocument(images: ProjectImageStore())
+        XCTAssertEqual(doc.schemaVersion, ProjectDocument.currentSchemaVersion)
         XCTAssertNil(doc.accentColorHex)
 
         let restored = try roundTrip(store.project)

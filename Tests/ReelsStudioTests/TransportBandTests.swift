@@ -4,6 +4,7 @@ import SwiftUI
 import UIKit
 import ViewInspector
 import Kadr
+import KadrPersistence
 import KadrUI
 @testable import ReelsStudio
 
@@ -333,7 +334,7 @@ final class TransportBandTests: XCTestCase {
         _ = band.body
     }
 
-    func testBandBuildsOnAnEmptyProject() {
+    func testBandBuildsOnAnEmptyProject() throws {
         let band = TransportBand(store: ProjectStore(project: Project()))
         XCTAssertNoThrow(try band.inspect())
     }

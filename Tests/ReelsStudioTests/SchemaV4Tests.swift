@@ -1,5 +1,6 @@
 import XCTest
 import Kadr
+import KadrPersistence
 @testable import ReelsStudio
 
 /// Tests for schema v4 — additive `filterIDs: [String]?` on `VideoClipData`,
@@ -64,7 +65,7 @@ final class SchemaV4Tests: XCTestCase {
         let clip = VideoClip(url: URL(fileURLWithPath: "/dev/null"))
             .filter(.brightness(0.2))
         let videoData = ProjectDocument.documentVideoClip(from: clip)
-        return ProjectDocument(name: "WithFilter", clips: [.video(videoData)])
+        return ProjectDocument(name: "WithFilter", legacyClips: [.video(videoData)])
     }
 
     /// v3 JSON (missing `filterIDs`) decodes cleanly into the v4 shape with
@@ -77,12 +78,12 @@ final class SchemaV4Tests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         let decoded = try decoder.decode(ProjectDocument.self, from: v3Data)
         XCTAssertEqual(decoded.schemaVersion, 3)
-        guard case .video(let videoData) = decoded.clips.first else {
+        guard case .video(let videoData) = (decoded.legacyClips ?? []).first else {
             return XCTFail("Expected a video clip")
         }
         XCTAssertNil(videoData.filterIDs)
         // Bridge falls back to kadr-generated ids — clip rebuilds cleanly.
-        let runtime = decoded.toRuntimeProject()
+        let runtime = decoded.legacyRuntimeProject()
         XCTAssertEqual(runtime.clips.count, 1)
     }
 
@@ -98,16 +99,21 @@ final class SchemaV4Tests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         let loaded = try decoder.decode(ProjectDocument.self, from: v3Data)
 
-        let runtime = loaded.toRuntimeProject()
-        let promoted = runtime.toDocument(inheriting: loaded)
+        let runtime = loaded.legacyRuntimeProject()
+        let promoted = try runtime.toDocument(inheriting: loaded, images: ProjectImageStore())
 
         // Promotion target tracks `currentSchemaVersion` rather than pinning
         // to a specific number — when v5+ landed this test would otherwise
         // need updating per cycle. Same pattern as `SchemaV3Tests` uses.
         XCTAssertEqual(promoted.schemaVersion, ProjectDocument.currentSchemaVersion)
-        guard case .video(let videoData) = promoted.clips.first else {
+        // Re-saving now emits v6, so the promoted clip is KadrPersistence's
+        // VideoClipData — where filterIDs is non-optional and always parallel
+        // to filters. The guarantee under test is the same one v4 introduced:
+        // a filter's identity survives a save.
+        guard case .video(let videoData) = promoted.compositionClips.first else {
             return XCTFail("Expected video clip after re-save")
         }
-        XCTAssertEqual(videoData.filterIDs?.count, 1)
+        XCTAssertEqual(videoData.filterIDs.count, 1)
+        XCTAssertEqual(videoData.filterIDs.count, videoData.filters.count)
     }
 }
