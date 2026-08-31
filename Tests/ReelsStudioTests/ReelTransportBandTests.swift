@@ -12,7 +12,7 @@ import KadrUI
 ///
 /// The view is deliberately thin: every decision it makes (what the readout
 /// says, where a skip lands, whether a bound button is live, whether an
-/// `isPlaying` fall means "loop") is a pure static on ``TransportBand``, so it
+/// `isPlaying` fall means "loop") is a pure static on ``ReelTransportBand``, so it
 /// can be pinned here without driving SwiftUI's gesture surface. What's left
 /// for ViewInspector is a body smoke and the strings actually on screen.
 @MainActor
@@ -38,44 +38,44 @@ final class TransportBandTests: XCTestCase {
     /// The spec's own example: a one-second playhead in a six-second
     /// composition reads "0:01 / 0:06".
     func testTimecodeRendersTheSpecExample() {
-        XCTAssertEqual(TransportBand.timecode(seconds(1)), "0:01")
-        XCTAssertEqual(TransportBand.timecode(seconds(6)), "0:06")
+        XCTAssertEqual(ReelTransportBand.timecode(seconds(1)), "0:01")
+        XCTAssertEqual(ReelTransportBand.timecode(seconds(6)), "0:06")
     }
 
     func testTimecodeRollsOverPastAMinute() {
-        XCTAssertEqual(TransportBand.timecode(seconds(65)), "1:05")
-        XCTAssertEqual(TransportBand.timecode(seconds(60)), "1:00")
-        XCTAssertEqual(TransportBand.timecode(seconds(600)), "10:00")
+        XCTAssertEqual(ReelTransportBand.timecode(seconds(65)), "1:05")
+        XCTAssertEqual(ReelTransportBand.timecode(seconds(60)), "1:00")
+        XCTAssertEqual(ReelTransportBand.timecode(seconds(600)), "10:00")
     }
 
     /// Truncates rather than rounds — a playhead 900ms in has not reached the
     /// first second, and a readout that says otherwise reads as a bug.
     func testTimecodeTruncatesWithinTheSecond() {
-        XCTAssertEqual(TransportBand.timecode(seconds(0.9)), "0:00")
-        XCTAssertEqual(TransportBand.timecode(seconds(1.99)), "0:01")
+        XCTAssertEqual(ReelTransportBand.timecode(seconds(0.9)), "0:00")
+        XCTAssertEqual(ReelTransportBand.timecode(seconds(1.99)), "0:01")
     }
 
     func testTimecodeClampsNonNumericAndNegativeTimes() {
-        XCTAssertEqual(TransportBand.timecode(.zero), "0:00")
-        XCTAssertEqual(TransportBand.timecode(seconds(-3)), "0:00")
-        XCTAssertEqual(TransportBand.timecode(.invalid), "0:00")
-        XCTAssertEqual(TransportBand.timecode(.indefinite), "0:00")
-        XCTAssertEqual(TransportBand.timecode(.positiveInfinity), "0:00")
+        XCTAssertEqual(ReelTransportBand.timecode(.zero), "0:00")
+        XCTAssertEqual(ReelTransportBand.timecode(seconds(-3)), "0:00")
+        XCTAssertEqual(ReelTransportBand.timecode(.invalid), "0:00")
+        XCTAssertEqual(ReelTransportBand.timecode(.indefinite), "0:00")
+        XCTAssertEqual(ReelTransportBand.timecode(.positiveInfinity), "0:00")
     }
 
     /// The total rounds where the elapsed truncates, so the band's total and
     /// the nav bar's `statusMetrics` — on screen at the same time, for the
     /// same composition — never disagree.
     func testDurationTimecodeRoundsAndAgreesWithTheNavBar() {
-        XCTAssertEqual(TransportBand.durationTimecode(seconds(6)), "0:06")
-        XCTAssertEqual(TransportBand.durationTimecode(seconds(5.97)), "0:06")
-        XCTAssertEqual(TransportBand.durationTimecode(seconds(65)), "1:05")
-        XCTAssertEqual(TransportBand.durationTimecode(.zero), "0:00")
-        XCTAssertEqual(TransportBand.durationTimecode(.invalid), "0:00")
+        XCTAssertEqual(ReelTransportBand.durationTimecode(seconds(6)), "0:06")
+        XCTAssertEqual(ReelTransportBand.durationTimecode(seconds(5.97)), "0:06")
+        XCTAssertEqual(ReelTransportBand.durationTimecode(seconds(65)), "1:05")
+        XCTAssertEqual(ReelTransportBand.durationTimecode(.zero), "0:00")
+        XCTAssertEqual(ReelTransportBand.durationTimecode(.invalid), "0:00")
 
         for length in [6.0, 5.97, 65.0, 0.0] {
             XCTAssertEqual(
-                TransportBand.durationTimecode(seconds(length)),
+                ReelTransportBand.durationTimecode(seconds(length)),
                 EditorView.timecode(seconds(length)),
                 "band total and nav bar disagree at \(length)s"
             )
@@ -89,8 +89,8 @@ final class TransportBandTests: XCTestCase {
     /// would be silently swallowed on every press. Pinned so the ruling can't
     /// be quietly reversed.
     func testSkipIntervalIsOneSecondAndClearsThePreviewSeekFloor() {
-        XCTAssertEqual(TransportBand.skipInterval, 1.0)
-        XCTAssertGreaterThan(TransportBand.skipInterval, 0.05)
+        XCTAssertEqual(ReelTransportBand.skipInterval, 1.0)
+        XCTAssertGreaterThan(ReelTransportBand.skipInterval, 0.05)
     }
 
     // MARK: - Glyphs
@@ -113,57 +113,57 @@ final class TransportBandTests: XCTestCase {
     /// only assertion in the suite about which glyphs the band carries.
     func testSkipGlyphsExistInTheSystemSymbolSet() {
         XCTAssertNotNil(
-            UIImage(systemName: TransportBand.skipBackSymbol),
-            "No system symbol named '\(TransportBand.skipBackSymbol)'"
+            UIImage(systemName: ReelTransportBand.skipBackSymbol),
+            "No system symbol named '\(ReelTransportBand.skipBackSymbol)'"
         )
         XCTAssertNotNil(
-            UIImage(systemName: TransportBand.skipForwardSymbol),
-            "No system symbol named '\(TransportBand.skipForwardSymbol)'"
+            UIImage(systemName: ReelTransportBand.skipForwardSymbol),
+            "No system symbol named '\(ReelTransportBand.skipForwardSymbol)'"
         )
     }
 
     // MARK: - Skip targets
 
     func testSkipForwardMovesByTheInterval() {
-        let target = TransportBand.skipTarget(
+        let target = ReelTransportBand.skipTarget(
             from: seconds(2),
-            by: TransportBand.skipInterval,
+            by: ReelTransportBand.skipInterval,
             duration: seconds(6)
         )
         XCTAssertEqual(CMTimeGetSeconds(target), 3, accuracy: 0.001)
     }
 
     func testSkipBackMovesByTheInterval() {
-        let target = TransportBand.skipTarget(
+        let target = ReelTransportBand.skipTarget(
             from: seconds(2),
-            by: -TransportBand.skipInterval,
+            by: -ReelTransportBand.skipInterval,
             duration: seconds(6)
         )
         XCTAssertEqual(CMTimeGetSeconds(target), 1, accuracy: 0.001)
     }
 
     func testSkipBackClampsAtZeroRatherThanWrapping() {
-        let target = TransportBand.skipTarget(
+        let target = ReelTransportBand.skipTarget(
             from: seconds(0.4),
-            by: -TransportBand.skipInterval,
+            by: -ReelTransportBand.skipInterval,
             duration: seconds(6)
         )
         XCTAssertEqual(CMTimeGetSeconds(target), 0, accuracy: 0.001)
     }
 
     func testSkipForwardClampsAtDurationRatherThanWrapping() {
-        let target = TransportBand.skipTarget(
+        let target = ReelTransportBand.skipTarget(
             from: seconds(5.7),
-            by: TransportBand.skipInterval,
+            by: ReelTransportBand.skipInterval,
             duration: seconds(6)
         )
         XCTAssertEqual(CMTimeGetSeconds(target), 6, accuracy: 0.001)
     }
 
     func testSkipTargetIsSafeOnAnEmptyComposition() {
-        let target = TransportBand.skipTarget(
+        let target = ReelTransportBand.skipTarget(
             from: .zero,
-            by: TransportBand.skipInterval,
+            by: ReelTransportBand.skipInterval,
             duration: .zero
         )
         XCTAssertEqual(CMTimeGetSeconds(target), 0, accuracy: 0.001)
@@ -172,23 +172,23 @@ final class TransportBandTests: XCTestCase {
     // MARK: - Bounds (what the buttons disable on)
 
     func testSkipBackIsBoundedOnlyAtZero() {
-        XCTAssertTrue(TransportBand.isAtStart(.zero))
+        XCTAssertTrue(ReelTransportBand.isAtStart(.zero))
         // A scrub to 20ms still leaves skip-back real work to do.
-        XCTAssertFalse(TransportBand.isAtStart(seconds(0.02)))
+        XCTAssertFalse(ReelTransportBand.isAtStart(seconds(0.02)))
     }
 
     func testSkipForwardIsBoundedOnlyAtTheEnd() {
-        XCTAssertTrue(TransportBand.isAtEnd(seconds(6), duration: seconds(6)))
-        XCTAssertFalse(TransportBand.isAtEnd(seconds(5.5), duration: seconds(6)))
+        XCTAssertTrue(ReelTransportBand.isAtEnd(seconds(6), duration: seconds(6)))
+        XCTAssertFalse(ReelTransportBand.isAtEnd(seconds(5.5), duration: seconds(6)))
     }
 
     /// A composition with nothing in it is both bounds at once, and play is
     /// dead — no control in the band claims to be able to do anything.
     func testEmptyCompositionDisablesEveryTransportControl() {
-        XCTAssertTrue(TransportBand.isAtStart(.zero))
-        XCTAssertTrue(TransportBand.isAtEnd(.zero, duration: .zero))
-        XCTAssertFalse(TransportBand.canPlay(duration: .zero))
-        XCTAssertTrue(TransportBand.canPlay(duration: seconds(6)))
+        XCTAssertTrue(ReelTransportBand.isAtStart(.zero))
+        XCTAssertTrue(ReelTransportBand.isAtEnd(.zero, duration: .zero))
+        XCTAssertFalse(ReelTransportBand.canPlay(duration: .zero))
+        XCTAssertTrue(ReelTransportBand.canPlay(duration: seconds(6)))
     }
 
     // MARK: - App-side loop
@@ -197,7 +197,7 @@ final class TransportBandTests: XCTestCase {
     /// freezes that flag into the player at construction time. The signal the
     /// app watches for is `isPlaying` falling with the playhead at the end.
     func testLoopRestartsWhenPlaybackRunsOutWithLoopOn() {
-        XCTAssertTrue(TransportBand.shouldRestartForLoop(
+        XCTAssertTrue(ReelTransportBand.shouldRestartForLoop(
             wasPlaying: true,
             isPlaying: false,
             isLooping: true,
@@ -210,7 +210,7 @@ final class TransportBandTests: XCTestCase {
     /// duration, so the last published position can land just short of the
     /// composition's. The tolerance has to cover that.
     func testLoopRestartsFromJustShortOfTheEnd() {
-        XCTAssertTrue(TransportBand.shouldRestartForLoop(
+        XCTAssertTrue(ReelTransportBand.shouldRestartForLoop(
             wasPlaying: true,
             isPlaying: false,
             isLooping: true,
@@ -220,7 +220,7 @@ final class TransportBandTests: XCTestCase {
     }
 
     func testLoopDoesNotRestartWhenLoopIsOff() {
-        XCTAssertFalse(TransportBand.shouldRestartForLoop(
+        XCTAssertFalse(ReelTransportBand.shouldRestartForLoop(
             wasPlaying: true,
             isPlaying: false,
             isLooping: false,
@@ -231,7 +231,7 @@ final class TransportBandTests: XCTestCase {
 
     /// A pause in the middle is a pause, not an ending.
     func testLoopDoesNotRestartOnAMidCompositionPause() {
-        XCTAssertFalse(TransportBand.shouldRestartForLoop(
+        XCTAssertFalse(ReelTransportBand.shouldRestartForLoop(
             wasPlaying: true,
             isPlaying: false,
             isLooping: true,
@@ -243,7 +243,7 @@ final class TransportBandTests: XCTestCase {
     /// The restart writes `isPlaying = true`, which re-enters the same
     /// observer. A rise must never be treated as an ending or the band spins.
     func testLoopDoesNotRestartOnItsOwnEcho() {
-        XCTAssertFalse(TransportBand.shouldRestartForLoop(
+        XCTAssertFalse(ReelTransportBand.shouldRestartForLoop(
             wasPlaying: false,
             isPlaying: true,
             isLooping: true,
@@ -299,22 +299,22 @@ final class TransportBandTests: XCTestCase {
     /// The spoken copy the controls actually carry, resolved the same way the
     /// call sites resolve it.
     func testSpokenLabelsSwitchWithState() {
-        XCTAssertEqual(TransportBand.playPauseLabel(isPlaying: false), "Play")
-        XCTAssertEqual(TransportBand.playPauseLabel(isPlaying: true), "Pause")
-        XCTAssertEqual(TransportBand.loopValueLabel(isLooping: true), "On")
-        XCTAssertEqual(TransportBand.loopValueLabel(isLooping: false), "Off")
-        XCTAssertEqual(TransportBand.fullscreenLabel(isFullscreen: false), "Enter full screen")
-        XCTAssertEqual(TransportBand.fullscreenLabel(isFullscreen: true), "Exit full screen")
-        XCTAssertEqual(TransportBand.skipBackLabel, "Skip back")
-        XCTAssertEqual(TransportBand.skipForwardLabel, "Skip forward")
-        XCTAssertEqual(TransportBand.loopLabel, "Loop")
+        XCTAssertEqual(ReelTransportBand.playPauseLabel(isPlaying: false), "Play")
+        XCTAssertEqual(ReelTransportBand.playPauseLabel(isPlaying: true), "Pause")
+        XCTAssertEqual(ReelTransportBand.loopValueLabel(isLooping: true), "On")
+        XCTAssertEqual(ReelTransportBand.loopValueLabel(isLooping: false), "Off")
+        XCTAssertEqual(ReelTransportBand.fullscreenLabel(isFullscreen: false), "Enter full screen")
+        XCTAssertEqual(ReelTransportBand.fullscreenLabel(isFullscreen: true), "Exit full screen")
+        XCTAssertEqual(ReelTransportBand.skipBackLabel, "Skip back")
+        XCTAssertEqual(ReelTransportBand.skipForwardLabel, "Skip forward")
+        XCTAssertEqual(ReelTransportBand.loopLabel, "Loop")
     }
 
     /// The readout is one element, and it speaks a sentence — not "0:01",
     /// which on its own tells a reader nothing.
     func testTimeReadoutSpeaksBothHalves() {
         XCTAssertEqual(
-            TransportBand.timeReadoutLabel(elapsed: "0:01", total: "0:06"),
+            ReelTransportBand.timeReadoutLabel(elapsed: "0:01", total: "0:06"),
             "0:01 of 0:06"
         )
     }
@@ -323,7 +323,7 @@ final class TransportBandTests: XCTestCase {
 
     func testBandBuildsAcrossEveryTransportState() {
         let store = makeStore()
-        let band = TransportBand(store: store)
+        let band = ReelTransportBand(store: store)
         _ = band.body
 
         store.isPlaying = true
@@ -335,14 +335,14 @@ final class TransportBandTests: XCTestCase {
     }
 
     func testBandBuildsOnAnEmptyProject() throws {
-        let band = TransportBand(store: ProjectStore(project: Project()))
+        let band = ReelTransportBand(store: ProjectStore(project: Project()))
         XCTAssertNoThrow(try band.inspect())
     }
 
     func testBandRendersTheElapsedAndTotalReadout() throws {
         let store = makeStore()
         store.currentTime = CMTime(seconds: 1, preferredTimescale: 600)
-        let band = TransportBand(store: store)
+        let band = ReelTransportBand(store: store)
 
         XCTAssertEqual(CMTimeGetSeconds(store.video.duration), 6, accuracy: 0.001)
         XCTAssertNoThrow(try band.inspect().find(text: "0:01"))
@@ -354,10 +354,10 @@ final class TransportBandTests: XCTestCase {
     func testFullscreenBindingIsTwoWay() throws {
         var isFullscreen = true
         let binding = Binding(get: { isFullscreen }, set: { isFullscreen = $0 })
-        let band = TransportBand(store: makeStore(), isFullscreen: binding)
+        let band = ReelTransportBand(store: makeStore(), isFullscreen: binding)
 
         XCTAssertNoThrow(try band.inspect())
-        XCTAssertEqual(TransportBand.fullscreenLabel(isFullscreen: isFullscreen), "Exit full screen")
+        XCTAssertEqual(ReelTransportBand.fullscreenLabel(isFullscreen: isFullscreen), "Exit full screen")
 
         binding.wrappedValue.toggle()
         XCTAssertFalse(isFullscreen)

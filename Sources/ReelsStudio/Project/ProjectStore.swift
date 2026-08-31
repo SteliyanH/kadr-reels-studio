@@ -71,7 +71,7 @@ final class ProjectStore {
     /// captures the value from construction time, so toggling this flag would
     /// have no effect until something else rebuilt the player: a loop button
     /// that reads correctly and is inert on device. ``PreviewArea`` therefore
-    /// always passes `loops: false` and ``TransportBand`` performs the restart
+    /// always passes `loops: false` and ``ReelTransportBand`` performs the restart
     /// itself.
     ///
     /// Resets per session — no `@SceneStorage`, no schema field. Loop is a

@@ -4,6 +4,28 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.15.0] - 2026-08-31
+
+### Changed
+
+- **The transport band's arithmetic moved upstream.** `TransportBand` is now
+  `ReelTransportBand`, and every decision it used to make itself — timecode
+  formatting, skip targets, bound checks, the two playback tolerances, the
+  loop-restart rule — forwards to `KadrUI.TransportControls` (kadr-ui 0.21).
+
+  What stays here is the chrome: Reel spacing, Reel typography, and the
+  localised copy. That split is deliberate and the same one made for
+  `FiltersSheet` — this app exists to demonstrate a design system, so its
+  transport band should look like the design rather than like KadrUI's
+  defaults. The arithmetic was never app-specific and should not have been here.
+
+  The rename is what makes the delegation possible: `KadrUI` is both a module
+  and an `enum`, so `KadrUI.TransportBand` resolves to the enum and fails. With
+  the app's type prefixed — matching `ReelCard`, `ReelTag` and the rest —
+  `TransportBand` unambiguously means KadrUI's.
+
+  All 506 tests pass unchanged, snapshots included.
+
 ## [0.14.0] - 2026-08-31
 
 ### Changed

@@ -40,7 +40,7 @@ final class TransportAccessibilityTests: XCTestCase {
     }
 
     private func button(
-        _ band: TransportBand,
+        _ band: ReelTransportBand,
         labelled label: String
     ) throws -> InspectableView<ViewType.Button> {
         try band.inspect().find(ViewType.Button.self, where: {
@@ -59,7 +59,7 @@ final class TransportAccessibilityTests: XCTestCase {
     func testPlayPauseIsOneButtonThatSwapsItsLabelRatherThanTwoButtons() throws {
         let store = makeStore()
         XCTAssertFalse(store.isPlaying)
-        let band = TransportBand(store: store)
+        let band = ReelTransportBand(store: store)
 
         let totalBefore = try band.inspect().findAll(ViewType.Button.self).count
         XCTAssertNoThrow(try button(band, labelled: "Play"))
@@ -77,8 +77,8 @@ final class TransportAccessibilityTests: XCTestCase {
     /// function of `isPlaying` — pinned directly so a regression there is
     /// caught even in a context where the view tree is awkward to traverse.
     func testPlayPauseLabelIsAPureFunctionOfIsPlaying() {
-        XCTAssertEqual(TransportBand.playPauseLabel(isPlaying: false), "Play")
-        XCTAssertEqual(TransportBand.playPauseLabel(isPlaying: true), "Pause")
+        XCTAssertEqual(ReelTransportBand.playPauseLabel(isPlaying: false), "Play")
+        XCTAssertEqual(ReelTransportBand.playPauseLabel(isPlaying: true), "Pause")
     }
 
     // MARK: - 2. Skip back disables at the zero bound
@@ -90,7 +90,7 @@ final class TransportAccessibilityTests: XCTestCase {
     /// wired to the button and not just sitting unused nearby.
     func testSkipBackIsDisabledOnlyWhenThePlayheadIsAtZero() throws {
         let store = makeStore(length: 6)
-        let band = TransportBand(store: store)
+        let band = ReelTransportBand(store: store)
 
         XCTAssertTrue(store.currentTime == .zero)
         XCTAssertTrue(try button(band, labelled: "Skip back").isDisabled())
@@ -107,7 +107,7 @@ final class TransportAccessibilityTests: XCTestCase {
     /// View-tree-backed, mirroring the skip-back case at the opposite bound.
     func testSkipForwardIsDisabledOnlyAtTheCompositionDuration() throws {
         let store = makeStore(length: 6)
-        let band = TransportBand(store: store)
+        let band = ReelTransportBand(store: store)
 
         store.currentTime = seconds(3)
         XCTAssertFalse(try button(band, labelled: "Skip forward").isDisabled())
@@ -124,7 +124,7 @@ final class TransportAccessibilityTests: XCTestCase {
     /// and reads the value back off the live button each time.
     func testLoopLabelStaysConstantWhileValueCarriesTheToggleState() throws {
         let store = makeStore()
-        let band = TransportBand(store: store)
+        let band = ReelTransportBand(store: store)
 
         XCTAssertFalse(store.isLooping)
         XCTAssertEqual(try button(band, labelled: "Loop").accessibilityLabel().string(), "Loop")
@@ -147,8 +147,8 @@ final class TransportAccessibilityTests: XCTestCase {
     /// reinforce; the trait itself needs a human with VoiceOver or the
     /// Accessibility Inspector's audit.
     func testLoopValueLabelIsAPureFunctionOfIsLooping() {
-        XCTAssertEqual(TransportBand.loopValueLabel(isLooping: false), "Off")
-        XCTAssertEqual(TransportBand.loopValueLabel(isLooping: true), "On")
+        XCTAssertEqual(ReelTransportBand.loopValueLabel(isLooping: false), "Off")
+        XCTAssertEqual(ReelTransportBand.loopValueLabel(isLooping: true), "On")
     }
 
     // MARK: - 5. Fullscreen: only exit affordance, present and labelled
@@ -159,14 +159,14 @@ final class TransportAccessibilityTests: XCTestCase {
     /// the exit button resolves by its expected label specifically in that
     /// state, not merely that *some* fullscreen button exists.
     func testFullscreenExitControlIsPresentAndLabelledWhenActive() throws {
-        let band = TransportBand(store: makeStore(), isFullscreen: .constant(true))
+        let band = ReelTransportBand(store: makeStore(), isFullscreen: .constant(true))
         XCTAssertNoThrow(try button(band, labelled: "Exit full screen"))
         XCTAssertThrowsError(try button(band, labelled: "Enter full screen"))
     }
 
     /// View-tree-backed. The other half of the same switch, inactive state.
     func testFullscreenEnterControlIsPresentAndLabelledWhenInactive() throws {
-        let band = TransportBand(store: makeStore(), isFullscreen: .constant(false))
+        let band = ReelTransportBand(store: makeStore(), isFullscreen: .constant(false))
         XCTAssertNoThrow(try button(band, labelled: "Enter full screen"))
         XCTAssertThrowsError(try button(band, labelled: "Exit full screen"))
     }
@@ -175,8 +175,8 @@ final class TransportAccessibilityTests: XCTestCase {
     /// button when active is not verifiable through ViewInspector 0.10.3
     /// here. What's pinned is the pure label switch it's built on.
     func testFullscreenLabelIsAPureFunctionOfIsFullscreen() {
-        XCTAssertEqual(TransportBand.fullscreenLabel(isFullscreen: false), "Enter full screen")
-        XCTAssertEqual(TransportBand.fullscreenLabel(isFullscreen: true), "Exit full screen")
+        XCTAssertEqual(ReelTransportBand.fullscreenLabel(isFullscreen: false), "Enter full screen")
+        XCTAssertEqual(ReelTransportBand.fullscreenLabel(isFullscreen: true), "Exit full screen")
     }
 
     // MARK: - 6. Time readout: one combined element, not two Texts
@@ -197,7 +197,7 @@ final class TransportAccessibilityTests: XCTestCase {
     func testTimeReadoutIsOneElementCarryingBothElapsedAndTotal() throws {
         let store = makeStore(length: 6)
         store.currentTime = seconds(1)
-        let band = TransportBand(store: store)
+        let band = ReelTransportBand(store: store)
 
         XCTAssertEqual(CMTimeGetSeconds(store.video.duration), 6, accuracy: 0.001)
 
@@ -211,7 +211,7 @@ final class TransportAccessibilityTests: XCTestCase {
     /// Logic-only. The sentence format itself, independent of the view tree.
     func testTimeReadoutLabelCombinesElapsedAndTotalIntoOneSentence() {
         XCTAssertEqual(
-            TransportBand.timeReadoutLabel(elapsed: "0:01", total: "0:06"),
+            ReelTransportBand.timeReadoutLabel(elapsed: "0:01", total: "0:06"),
             "0:01 of 0:06"
         )
     }
@@ -242,7 +242,7 @@ final class TransportAccessibilityTests: XCTestCase {
     /// the intended signal to update it alongside the new control's own
     /// accessibility coverage.
     func testEveryButtonInTheBandUsesReelIconButtonStyle() throws {
-        let band = TransportBand(store: makeStore(), isFullscreen: .constant(true))
+        let band = ReelTransportBand(store: makeStore(), isFullscreen: .constant(true))
         let buttons = try band.inspect().findAll(ViewType.Button.self)
 
         XCTAssertEqual(buttons.count, 5)
