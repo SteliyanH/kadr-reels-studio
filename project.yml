@@ -26,7 +26,7 @@ packages:
     minorVersion: 0.5.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
-    minorVersion: 0.19.0
+    minorVersion: 0.21.0
   KadrCaptions:
     url: https://github.com/SteliyanH/kadr-captions.git
     minorVersion: 0.12.0
@@ -77,8 +77,8 @@ targets:
         # XcodeGen switch, through ten releases, so `CrashReporter` tagged
         # every Sentry event `reels-studio@0.1.0+1` and no crash could be
         # attributed to the version it came from.
-        CFBundleShortVersionString: "0.14.0"
-        CFBundleVersion: "15"
+        CFBundleShortVersionString: "0.15.0"
+        CFBundleVersion: "16"
     settings:
       base:
         # Changed with the display name, while it is still free to do so: the app

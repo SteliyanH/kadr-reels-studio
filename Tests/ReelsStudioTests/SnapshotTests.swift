@@ -7,7 +7,7 @@ import KadrPersistence
 @testable import ReelsStudio
 
 /// Issue #75 — a thin slice of pixel-snapshot coverage over the editor view
-/// group: ``EditorView``, ``PreviewArea``, ``TransportBand`` and
+/// group: ``EditorView``, ``PreviewArea``, ``ReelTransportBand`` and
 /// ``EditorToolbar``.
 ///
 /// **Why this exists.** Every other test in this target proves *behaviour* —
@@ -224,7 +224,7 @@ final class SnapshotTests: XCTestCase {
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 270, height: 480)))
     }
 
-    // MARK: - TransportBand
+    // MARK: - ReelTransportBand
 
     /// Playhead at zero: skip-back is disabled, the readout reads "0:00 /
     /// 0:06".
@@ -232,7 +232,7 @@ final class SnapshotTests: XCTestCase {
         try requireCIPinnedRuntime()
 
         let store = makeStore(currentTime: .zero)
-        let view = TransportBand(store: store)
+        let view = ReelTransportBand(store: store)
             .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 402, height: 96)))
@@ -244,7 +244,7 @@ final class SnapshotTests: XCTestCase {
         try requireCIPinnedRuntime()
 
         let store = makeStore(currentTime: CMTime(seconds: 3, preferredTimescale: 600))
-        let view = TransportBand(store: store)
+        let view = ReelTransportBand(store: store)
             .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 402, height: 96)))

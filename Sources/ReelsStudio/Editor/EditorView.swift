@@ -64,7 +64,7 @@ struct EditorView: View {
     /// the space. Plain `@State` rather than store state — it's a view mode,
     /// it means nothing to the project, and it should not survive a relaunch.
     ///
-    /// ``TransportBand`` deliberately stays in the stack while this is true:
+    /// ``ReelTransportBand`` deliberately stays in the stack while this is true:
     /// it holds the only way back out. There is no gesture, no system bar and
     /// no other affordance behind it — hiding the band with the rest of the
     /// chrome would strand the user.
@@ -119,7 +119,7 @@ struct EditorView: View {
             // v0.9 — the transport band, between the stage and the timeline
             // where the approved design puts it. It is the one band that
             // survives full screen: see `isFullscreen` above.
-            TransportBand(store: store, isFullscreen: $isFullscreen)
+            ReelTransportBand(store: store, isFullscreen: $isFullscreen)
             if !isFullscreen {
                 TimelineArea(store: store)
                 inspectorBands
