@@ -4,6 +4,25 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.15.1] - 2026-08-31
+
+### Fixed
+
+- **Two dependencies were silently a release behind.** The pin on
+  `kadr-persistence` was `minorVersion: 0.6.0`'s predecessor — `0.5.0`, meaning
+  `<0.6.0` — so `PrefetchedImageStore` never arrived. And `kadr` resolved to
+  `1.0.0` despite an `upToNextMajor` requirement that permits `1.1.0`, because a
+  stale SwiftPM cache and lockfile held it there; `moveFilters` was therefore
+  unreachable.
+
+  Neither showed up as a failure. The app built, all 506 tests passed, and the
+  only symptom was API that existed upstream and could not be called here —
+  which is why it took an explicit `-resolvePackageDependencies` audit rather
+  than a build to notice.
+
+  Now on kadr 1.1.0, kadr-ui 0.21.0, kadr-persistence 0.6.0, kadr-captions
+  0.12.0, kadr-photos 0.11.0, kadr-audio 0.7.0.
+
 ## [0.15.0] - 2026-08-31
 
 ### Changed
