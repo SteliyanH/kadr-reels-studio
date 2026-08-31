@@ -15,7 +15,7 @@ import KadrUI
 /// grading colour here.
 ///
 /// v0.9 — the stage is now *driven*: `isPlaying` / `currentTime` are two-way
-/// with the store, so ``TransportBand`` starts and stops the player by writing
+/// with the store, so ``ReelTransportBand`` starts and stops the player by writing
 /// state. Three things had to be handled here for that to be safe, each marked
 /// at its site below: AVKit's own transport chrome (blocked), kadr-ui's
 /// player rebuild leaking a live time observer (playback is stopped first),
@@ -105,7 +105,7 @@ struct PreviewArea: View {
     /// Takes the composition as a parameter rather than reading `store.video`
     /// itself: `body` already derived it once, and `Project.makeVideo()` runs
     /// afresh on every read. This view re-renders roughly ten times a second
-    /// while the transport is running (see ``TransportBand``), so the house
+    /// while the transport is running (see ``ReelTransportBand``), so the house
     /// rule is one read of the derived composition per body pass — the same
     /// value that feeds the aspect ratio and the rebuild fingerprint feeds the
     /// player.
@@ -135,7 +135,7 @@ struct PreviewArea: View {
                 // `store.isLooping` through here would now work.
                 //
                 // Not doing it in this change: the app-side restart in
-                // `TransportBand` is covered by unit tests, and real playback
+                // `ReelTransportBand` is covered by unit tests, and real playback
                 // cannot be exercised on a virtualised runner, so swapping
                 // tested behaviour for behaviour nothing here can verify is a
                 // bad trade. Worth revisiting on a device.
