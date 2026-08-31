@@ -125,7 +125,7 @@ final class ProjectDocumentTests: XCTestCase {
     func testTextOverlayRoundTrips() throws {
         let overlay = TextOverlayData(
             layerID: "title",
-            text: "Reels Studio",
+            text: "Kadr Studio",
             fontSize: 56,
             fontWeight: .bold,
             colorHex: "#FFFFFF",
@@ -141,7 +141,7 @@ final class ProjectDocumentTests: XCTestCase {
             return XCTFail("Expected .text")
         }
         XCTAssertEqual(t.layerID, "title")
-        XCTAssertEqual(t.text, "Reels Studio")
+        XCTAssertEqual(t.text, "Kadr Studio")
         XCTAssertEqual(t.positionX, 0.5)
         XCTAssertEqual(t.positionY, 0.2)
         XCTAssertEqual(t.anchor, .top)

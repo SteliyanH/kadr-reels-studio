@@ -1,4 +1,4 @@
-# Reels Studio Roadmap
+# Kadr Studio Roadmap
 
 ## v0.1.0 — Editor walking skeleton ✓ shipped
 
@@ -182,7 +182,7 @@ machines and execute on CI). Zero build warnings.
 
 ## v1.0.0 — App Store *(planned)*
 
-- Final name lock (revisit "Reels Studio" before submission — likely conflicts with Meta trademarks).
+- Final name lock (revisit "Kadr Studio" before submission — likely conflicts with Meta trademarks).
 - Real designed app icon family (replaces SF Symbol placeholder).
 - App Store metadata — screenshots, description, age rating, privacy manifest.
 - Submission alongside kadr v1.0.
@@ -196,7 +196,7 @@ machines and execute on CI). Zero build warnings.
 
 ## Compatibility
 
-| Reels Studio | kadr | kadr-ui | kadr-captions | kadr-photos |
+| Kadr Studio | kadr | kadr-ui | kadr-captions | kadr-photos |
 |---|---|---|---|---|
 | 0.1.0 | ≥ 0.9.2 | ≥ 0.6.0 | ≥ 0.4.0 | ≥ 0.4.0 |
 | 0.2.0 | ≥ 0.9.2 | ≥ 0.6.0 | ≥ 0.4.0 | ≥ 0.4.0 |

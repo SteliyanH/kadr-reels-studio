@@ -202,7 +202,7 @@ struct EditorView: View {
             Button("Open Settings") { PhotosAuthorizationGate.openSystemSettings() }
             Button("Not now", role: .cancel) { }
         } message: {
-            Text("Reels Studio needs access to your photo library to import clips. Turn it on in Settings.")
+            Text("Kadr Studio needs access to your photo library to import clips. Turn it on in Settings.")
         }
         .navigationTitle(document.name)
         .hidingSystemNavigationBar()
