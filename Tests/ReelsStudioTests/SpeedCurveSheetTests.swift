@@ -89,8 +89,8 @@ final class SpeedCurveSheetTests: XCTestCase {
         store.applySpeedCurve(id: id, makeCurve())
 
         // Round-trip the runtime project through the document bridge.
-        let document = try store.project.toDocument(name: "Sheet", images: ProjectImageStore())
-        let restored = try document.toRuntimeProject(images: ProjectImageStore())
+        let document = try store.project.toDocument(name: "Sheet", images: ProjectImageStore.temporary())
+        let restored = try document.toRuntimeProject(images: ProjectImageStore.temporary())
         guard let restoredVideo = restored.clips.first as? VideoClip else {
             return XCTFail("Expected VideoClip after round-trip")
         }

@@ -117,7 +117,7 @@ final class ProjectStore {
     /// bytes.
     let images: ProjectImageStore
 
-    init(project: Project, images: ProjectImageStore = ProjectImageStore()) {
+    init(project: Project, images: ProjectImageStore = ProjectImageStore.temporary()) {
         self.project = project
         self.images = images
         // Disable auto-grouping so each mutation becomes its own undo step.

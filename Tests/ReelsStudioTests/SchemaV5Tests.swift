@@ -136,7 +136,7 @@ final class SchemaV5Tests: XCTestCase {
             legacyOverlays: [.text(TextOverlayData(text: "HELLO"))]
         )
         let runtime = original.legacyRuntimeProject()
-        let promoted = try runtime.toDocument(inheriting: original, images: ProjectImageStore())
+        let promoted = try runtime.toDocument(inheriting: original, images: ProjectImageStore.temporary())
         XCTAssertEqual(promoted.schemaVersion, ProjectDocument.currentSchemaVersion)
         // v6 carries text effects inside the style rather than as flattened
         // sibling fields. Absent stays absent: an overlay saved without a

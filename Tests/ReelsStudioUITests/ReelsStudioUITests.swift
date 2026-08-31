@@ -20,6 +20,20 @@ import XCTest
 @MainActor
 final class ReelsStudioUITests: XCTestCase {
 
+    /// How long to wait for a UI element to appear.
+    ///
+    /// Raised from a per-call `5` after `testEditorSettingsGearOpensSheet`
+    /// failed once on CI and passed on a re-run of the same commit, and passed
+    /// 6/6 locally — a loaded hosted runner presenting a sheet, not a defect.
+    ///
+    /// A generous timeout costs nothing when the element appears promptly,
+    /// because `waitForExistence` returns as soon as it does. It only costs
+    /// time on a genuine failure, which is the case where waiting longer is
+    /// worth it anyway. Re-running until green would have hidden this instead
+    /// of fixing it.
+    private static let uiTimeout: TimeInterval = 20
+
+
     private var app: XCUIApplication!
 
     // The `async` variant, because an override inherits its superclass's
@@ -41,7 +55,7 @@ final class ReelsStudioUITests: XCTestCase {
         // Empty-state copy from `ProjectListView.emptyState` — stable since
         // v0.2. Renders as a single static text the first frame.
         XCTAssertTrue(
-            app.staticTexts["No projects yet"].waitForExistence(timeout: 5),
+            app.staticTexts["No projects yet"].waitForExistence(timeout: Self.uiTimeout),
             "Expected empty-state title on cold launch with reset library"
         )
     }
@@ -55,7 +69,7 @@ final class ReelsStudioUITests: XCTestCase {
         // do; the toolbar one is reachable across populated state too so
         // future tests can re-use the same hit point.
         let newProjectButton = app.buttons["New Project"].firstMatch
-        XCTAssertTrue(newProjectButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(newProjectButton.waitForExistence(timeout: Self.uiTimeout))
         newProjectButton.tap()
 
         // EditorView's top toolbar carries the Settings gear from v0.5 — its
@@ -63,7 +77,7 @@ final class ReelsStudioUITests: XCTestCase {
         // mode changes (clip / overlay selection), making it the most stable
         // editor-presence assertion.
         XCTAssertTrue(
-            app.buttons["Settings"].waitForExistence(timeout: 5),
+            app.buttons["Settings"].waitForExistence(timeout: Self.uiTimeout),
             "Tapping New Project should push the editor onto the nav stack"
         )
     }
@@ -73,11 +87,11 @@ final class ReelsStudioUITests: XCTestCase {
     func testSampleButtonImportsAndOpensEditor() {
         app.launch()
         let sampleButton = app.buttons["Sample"]
-        XCTAssertTrue(sampleButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(sampleButton.waitForExistence(timeout: Self.uiTimeout))
         sampleButton.tap()
 
         XCTAssertTrue(
-            app.buttons["Settings"].waitForExistence(timeout: 5),
+            app.buttons["Settings"].waitForExistence(timeout: Self.uiTimeout),
             "Sample import should push the editor"
         )
     }
@@ -90,10 +104,10 @@ final class ReelsStudioUITests: XCTestCase {
         // races the cold-launch render and the tap can miss (matches the
         // pattern in testTappingNewProjectOpensEditor).
         let newProject = app.buttons["New Project"].firstMatch
-        XCTAssertTrue(newProject.waitForExistence(timeout: 5))
+        XCTAssertTrue(newProject.waitForExistence(timeout: Self.uiTimeout))
         newProject.tap()
         let settings = app.buttons["Settings"]
-        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        XCTAssertTrue(settings.waitForExistence(timeout: Self.uiTimeout))
         settings.tap()
 
         // Assert on the Haptics section's "Medium" option button rather than the
@@ -103,7 +117,7 @@ final class ReelsStudioUITests: XCTestCase {
         // their case, and "Medium" is unique to the Haptics section — a stable proof
         // the Settings sheet presented.
         XCTAssertTrue(
-            app.buttons["Medium"].waitForExistence(timeout: 5),
+            app.buttons["Medium"].waitForExistence(timeout: Self.uiTimeout),
             "Tapping the gear should present the Settings sheet"
         )
     }
@@ -113,9 +127,9 @@ final class ReelsStudioUITests: XCTestCase {
     func testBackNavigationReturnsToProjectList() {
         app.launch()
         let newProject = app.buttons["New Project"].firstMatch
-        XCTAssertTrue(newProject.waitForExistence(timeout: 5))
+        XCTAssertTrue(newProject.waitForExistence(timeout: Self.uiTimeout))
         newProject.tap()
-        XCTAssertTrue(app.buttons["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Settings"].waitForExistence(timeout: Self.uiTimeout))
 
         // v0.8 Tier 5b — the editor draws its own nav band (the system bar
         // can't carry the two-line title block or the ruled undo/redo cell
@@ -125,7 +139,7 @@ final class ReelsStudioUITests: XCTestCase {
         // the control being tapped changed.
         app.buttons["Back"].tap()
         XCTAssertTrue(
-            app.staticTexts["Projects"].waitForExistence(timeout: 5),
+            app.staticTexts["Projects"].waitForExistence(timeout: Self.uiTimeout),
             "Back navigation should return to the project list"
         )
     }
@@ -144,13 +158,13 @@ final class ReelsStudioUITests: XCTestCase {
     func testEdgeSwipeFromLeftEdgePopsEditorBackToProjectList() {
         app.launch()
         let newProject = app.buttons["New Project"].firstMatch
-        XCTAssertTrue(newProject.waitForExistence(timeout: 5))
+        XCTAssertTrue(newProject.waitForExistence(timeout: Self.uiTimeout))
         newProject.tap()
 
         // The gear is this suite's standing proof of editor presence.
         let settingsGear = app.buttons["Settings"]
         XCTAssertTrue(
-            settingsGear.waitForExistence(timeout: 5),
+            settingsGear.waitForExistence(timeout: Self.uiTimeout),
             "New Project should push the editor before the swipe is attempted"
         )
 
@@ -167,7 +181,7 @@ final class ReelsStudioUITests: XCTestCase {
             "Edge swipe should pop the editor off the stack, taking its gear with it"
         )
         XCTAssertTrue(
-            app.staticTexts["Projects"].waitForExistence(timeout: 5),
+            app.staticTexts["Projects"].waitForExistence(timeout: Self.uiTimeout),
             "Edge swipe should return to the project list"
         )
     }

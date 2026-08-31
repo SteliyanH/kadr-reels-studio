@@ -10,7 +10,7 @@ final class SchemaV3Tests: XCTestCase {
     /// loads with that exact value — no default coercion.
     func testFixedCenterPlayheadFalseRoundTrips() throws {
         let project = Project(fixedCenterPlayhead: false)
-        let doc = try project.toDocument(images: ProjectImageStore())
+        let doc = try project.toDocument(images: ProjectImageStore.temporary())
         XCTAssertEqual(doc.fixedCenterPlayhead, false)
 
         let encoded = try JSONEncoder().encode(doc)
@@ -23,7 +23,7 @@ final class SchemaV3Tests: XCTestCase {
 
     func testFixedCenterPlayheadTrueRoundTrips() throws {
         let project = Project(fixedCenterPlayhead: true)
-        let doc = try project.toDocument(images: ProjectImageStore())
+        let doc = try project.toDocument(images: ProjectImageStore.temporary())
         let encoded = try JSONEncoder().encode(doc)
         let decoded = try JSONDecoder().decode(ProjectDocument.self, from: encoded)
         XCTAssertTrue(decoded.legacyRuntimeProject().fixedCenterPlayhead)
@@ -90,7 +90,7 @@ final class SchemaV3Tests: XCTestCase {
         let loaded = try decodeDocument(v2Data)
 
         let runtime = loaded.legacyRuntimeProject()
-        let promoted = try runtime.toDocument(inheriting: loaded, images: ProjectImageStore())
+        let promoted = try runtime.toDocument(inheriting: loaded, images: ProjectImageStore.temporary())
 
         XCTAssertEqual(promoted.schemaVersion, ProjectDocument.currentSchemaVersion)
         XCTAssertEqual(promoted.fixedCenterPlayhead, true)
