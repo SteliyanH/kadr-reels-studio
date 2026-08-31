@@ -3,7 +3,7 @@ import CoreGraphics
 import ImageIO
 import UniformTypeIdentifiers
 
-// Reels Studio app icon.
+// Kadr Studio app icon.
 //
 // Modernist: paper ground, flat geometry, no gradient or gloss. The mark is a
 // timeline — three stacked clip bars, the top one cut — because that is the

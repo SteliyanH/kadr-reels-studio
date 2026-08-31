@@ -1,4 +1,4 @@
-Reels Studio is a vertical video editor for short-form video — trim, layer, and export in the shape your footage is actually going to be watched in.
+Kadr Studio is an editor for short-form vertical video — trim, layer, and export in the shape your footage is actually going to be watched in.
 
 EDITING
 • Trim, split, reorder and reverse clips on a pinch-zoomable timeline
@@ -25,4 +25,4 @@ EXPORT
 
 Projects save automatically as you work, and reopen exactly as you left them.
 
-Reels Studio is built on kadr, an open-source Swift video framework. No account. No subscription. Nothing leaves your device unless you export it.
+Built on kadr, the open-source Swift video framework behind it. No account. No subscription. Nothing leaves your device unless you export it.

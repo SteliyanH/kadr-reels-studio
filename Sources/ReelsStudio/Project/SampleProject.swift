@@ -30,7 +30,7 @@ enum SampleProject {
         }
 
         let title = TextOverlay(
-            "Reels Studio",
+            "Kadr Studio",
             style: TextStyle(fontSize: 56, color: .white, alignment: .center, weight: .bold)
         )
         .position(.center)

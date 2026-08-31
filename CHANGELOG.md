@@ -4,6 +4,33 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.13.0] - 2026-08-31
+
+### Changed
+
+- **The app is called Kadr Studio.** "Reels" is a Meta trademark for short-form
+  video, and this app's whole positioning is the association that made the name
+  useful — and made it a risk under App Store guideline 5.2.5. Named after the
+  engine instead: already ours, already the framework's name, unclaimed in this
+  category, and it reads as a tool rather than as a feature of somebody else's
+  app. "Kadr Studio" rather than bare "Kadr" so the app and the library stay
+  distinguishable across seven repositories.
+
+- **Bundle identifier is now `com.steliyanh.kadr-studio`.** Changed while it is
+  still free to: the app has never been submitted, so there is no App Store
+  record, no installed base and no receipt tied to the old identifier. After the
+  first submission this would be a different app entirely.
+
+### Not changed, deliberately
+
+- The Swift module and target stay `ReelsStudio`, and the design-token namespace
+  stays `Reel`. Neither is user-visible and neither carries any trademark
+  exposure; renaming them is a large mechanical diff across every
+  `@testable import` and snapshot name, for no benefit.
+- The repository keeps its name. GitHub redirects would cover it, but three
+  sibling repositories link here and the release URLs are already published —
+  worth doing deliberately, not as a side effect of a rename commit.
+
 ## [0.12.1] - 2026-08-31
 
 ### Fixed

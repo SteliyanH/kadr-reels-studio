@@ -375,7 +375,7 @@ public struct SkippedProject: Identifiable, Hashable, Sendable {
             case .corruptJSON(let s):
                 return s
             case .unsupportedSchema(let v):
-                return "This project was saved by a newer build (schema v\(v)). Update Reels Studio to open it."
+                return "This project was saved by a newer build (schema v\(v)). Update Kadr Studio to open it."
             }
         }
     }

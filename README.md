@@ -1,4 +1,4 @@
-# Reels Studio
+# Kadr Studio
 
 [![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
 [![Platforms](https://img.shields.io/badge/Platforms-iOS%2017+-blue.svg)](https://developer.apple.com)
