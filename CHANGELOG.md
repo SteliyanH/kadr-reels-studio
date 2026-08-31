@@ -4,6 +4,33 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.14.0] - 2026-08-31
+
+### Changed
+
+- **Images live as files, not inside the project.** Every image with no file
+  behind it used to be base64'd into the project JSON — self-contained, and
+  enormous: a ten-photo slideshow at full resolution is on the order of a
+  hundred megabytes of text. They now live in a `Media/` directory beside the
+  projects, and the project references them. A project file is the size of its
+  description again.
+
+- **Image references are relative.** The previous store wrote
+  `file:<absoluteString>`. An iOS container is
+  `/var/mobile/Containers/Data/Application/<UUID>/`, and **that UUID changes** —
+  on reinstall, on restore from backup, sometimes across an OS update. An
+  absolute reference written on Monday could point nowhere on Friday with the
+  project itself perfectly intact. Tokens now name a file and resolve against a
+  directory the app locates at runtime.
+
+- **`ProjectImageStore` is a thin composite** over `KadrPersistence`'s
+  `FileImageStore` rather than a hand-rolled store. Images are content-addressed,
+  so the same photo in two projects is stored once, and unreferenced files are
+  pruned on save — which the embedded-blob format never did.
+
+  Documents written before this still carry `imageBlobs`; those resolve
+  read-only, and the field disappears the first time the project is saved.
+
 ## [0.13.0] - 2026-08-31
 
 ### Changed

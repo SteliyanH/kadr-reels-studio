@@ -33,7 +33,7 @@ final class TimelineZoomAndTracksTests: XCTestCase {
     }
 
     func testZoomSurvivesDocumentRoundTrip() throws {
-        let store = ProjectImageStore()
+        let store = ProjectImageStore.temporary()
         let project = Project(zoom: TimelineZoom(pixelsPerSecond: 75))
         let document = try project.toDocument(name: "Zoomed", images: store)
         XCTAssertEqual(document.zoomPixelsPerSecond, 75)
@@ -42,7 +42,7 @@ final class TimelineZoomAndTracksTests: XCTestCase {
     }
 
     func testNilZoomRoundTripsAsAbsentField() throws {
-        let store = ProjectImageStore()
+        let store = ProjectImageStore.temporary()
         let document = try Project().toDocument(name: "NoZoom", images: store)
         XCTAssertNil(document.zoomPixelsPerSecond)
         XCTAssertNil(try document.toRuntimeProject(images: store).zoom)
