@@ -23,7 +23,7 @@ packages:
     from: 1.0.0
   KadrPersistence:
     url: https://github.com/SteliyanH/kadr-persistence.git
-    minorVersion: 0.5.0
+    minorVersion: 0.6.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
     minorVersion: 0.21.0
@@ -77,8 +77,8 @@ targets:
         # XcodeGen switch, through ten releases, so `CrashReporter` tagged
         # every Sentry event `reels-studio@0.1.0+1` and no crash could be
         # attributed to the version it came from.
-        CFBundleShortVersionString: "0.15.0"
-        CFBundleVersion: "16"
+        CFBundleShortVersionString: "0.15.1"
+        CFBundleVersion: "17"
     settings:
       base:
         # Changed with the display name, while it is still free to do so: the app
