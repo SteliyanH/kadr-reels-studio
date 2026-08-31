@@ -84,7 +84,11 @@ struct EditorView: View {
         // One store for the whole editing session, seeded with whatever the
         // document already carries so re-saving an unchanged project produces
         // identical bytes rather than re-minting every image token.
-        let images = ProjectImageStore(blobs: document.imageBlobs ?? [:])
+        // The library's media directory, so images written here are the ones
+        // the next launch finds. A pre-move document's blobs come along and are
+        // resolved read-only until the next save writes them out as files.
+        let images = (try? library.makeImageStore(blobs: document.imageBlobs ?? [:]))
+            ?? ProjectImageStore.temporary()
         let project = (try? document.toRuntimeProject(images: images)) ?? Project()
         self._store = State(initialValue: ProjectStore(project: project, images: images))
     }
@@ -202,7 +206,7 @@ struct EditorView: View {
             Button("Open Settings") { PhotosAuthorizationGate.openSystemSettings() }
             Button("Not now", role: .cancel) { }
         } message: {
-            Text("Reels Studio needs access to your photo library to import clips. Turn it on in Settings.")
+            Text("Kadr Studio needs access to your photo library to import clips. Turn it on in Settings.")
         }
         .navigationTitle(document.name)
         .hidingSystemNavigationBar()

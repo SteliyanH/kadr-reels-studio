@@ -1,11 +1,11 @@
 # Privacy Policy
 
-**Reels Studio**
+**Kadr Studio**
 Last updated 28 August 2026
 
 ## The short version
 
-Reels Studio does not collect your personal information, does not require an
+Kadr Studio does not collect your personal information, does not require an
 account, and does not upload your video anywhere. Your projects and your media
 stay on your device.
 
@@ -45,7 +45,7 @@ whatever you sent it to, not by this policy.
 
 ## Children
 
-Reels Studio is not directed at children and collects no personal information
+Kadr Studio is not directed at children and collects no personal information
 from anyone, of any age.
 
 ## Changes

@@ -36,7 +36,7 @@ final class ProjectListViewTests: XCTestCase {
         // Create a project, mutate the runtime project, save back through
         // the library, re-init a fresh library — the mutation should survive.
         var doc = try library.newProject(name: "AutoSave")
-        var project = try doc.toRuntimeProject(images: ProjectImageStore())
+        var project = try doc.toRuntimeProject(images: ProjectImageStore.temporary())
         XCTAssertEqual(project.clips.count, 0)
 
         // Add a title clip.
@@ -48,7 +48,7 @@ final class ProjectListViewTests: XCTestCase {
         project.clips.append(title)
 
         // Persist.
-        let updated = try project.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        let updated = try project.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore.temporary())
         try library.save(updated)
         doc = updated
 

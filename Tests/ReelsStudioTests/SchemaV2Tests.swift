@@ -185,7 +185,7 @@ final class SchemaV2Tests: XCTestCase {
         // Document → runtime → document, verifying the curve survives both
         // legs of the bridge.
         let runtime = doc.legacyRuntimeProject()
-        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore.temporary())
         guard case .video(let v) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .video")
         }
@@ -211,7 +211,7 @@ final class SchemaV2Tests: XCTestCase {
         let runtime = doc.legacyRuntimeProject()
         XCTAssertEqual(runtime.clips.count, 1)
         XCTAssertNotNil(runtime.clips.first as? Track)
-        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore.temporary())
         guard case .track(let t) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .track")
         }
@@ -243,7 +243,7 @@ final class SchemaV2Tests: XCTestCase {
         )
         let doc = ProjectDocument(name: "Anim", legacyClips: [.image(clipData)])
         let runtime = doc.legacyRuntimeProject()
-        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore.temporary())
         guard case .image(let i) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .image")
         }

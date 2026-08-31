@@ -106,7 +106,7 @@ final class ProjectLibrary {
             modifiedAt: Date(),
             schemaVersion: ProjectDocument.currentSchemaVersion,
             composition: original.composition,
-            imageBlobs: original.imageBlobs,
+            imageBlobs: original.imageBlobs,   // carried so a pre-move document keeps opening
             zoomPixelsPerSecond: original.zoomPixelsPerSecond,
             fixedCenterPlayhead: original.fixedCenterPlayhead,
             accentColorHex: original.accentColorHex
@@ -119,6 +119,24 @@ final class ProjectLibrary {
 
     /// `~/Library/Application Support/ReelsStudio/Projects/`. Created if it
     /// doesn't exist. Internal — exposed for tests.
+    /// Where a library's images live: one directory beside the project files,
+    /// shared by every project in it.
+    ///
+    /// Shared rather than per-project because the store is content-addressed —
+    /// two projects using the same photo store it once, and a per-project
+    /// directory would store it twice and prune it twice.
+    nonisolated internal static func mediaDirectory(for directoryURL: URL) -> URL {
+        directoryURL.appendingPathComponent("Media", isDirectory: true)
+    }
+
+    /// A store over this library's media directory.
+    ///
+    /// - Parameter blobs: `imageBlobs` from a document written before images
+    ///   moved out of the JSON. Resolved, never written back.
+    func makeImageStore(blobs: [String: Data] = [:]) throws -> ProjectImageStore {
+        try ProjectImageStore(directory: Self.mediaDirectory(for: directoryURL), blobs: blobs)
+    }
+
     nonisolated internal static func defaultDirectoryURL(
         fileManager: FileManager
     ) throws -> URL {
@@ -252,7 +270,9 @@ final class ProjectLibrary {
         if doc.schemaVersion > ProjectDocument.currentSchemaVersion {
             throw ProjectLibraryError.unsupportedSchema(doc.schemaVersion)
         }
-        return doc.needsMigration ? try migrateToV6(doc) : doc
+        return doc.needsMigration
+            ? try migrateToV6(doc, mediaDirectory: mediaDirectory(for: url.deletingLastPathComponent()))
+            : doc
     }
 
     /// Convert a v1–v5 document to v6, in memory.
@@ -268,8 +288,11 @@ final class ProjectLibrary {
     /// registers every `ImageStorage.url` with the store first, so a
     /// photo-library import stays a `file:` reference instead of being
     /// re-embedded as bytes.
-    nonisolated internal static func migrateToV6(_ document: ProjectDocument) throws -> ProjectDocument {
-        let store = ProjectImageStore()
+    nonisolated internal static func migrateToV6(
+        _ document: ProjectDocument,
+        mediaDirectory: URL
+    ) throws -> ProjectDocument {
+        let store = try ProjectImageStore(directory: mediaDirectory)
         document.seedLegacyImages(into: store)
         let project = document.legacyRuntimeProject()
         do {
@@ -279,7 +302,6 @@ final class ProjectLibrary {
             // opening it and saying so. Everything the app can author survives;
             // `ProjectMigrationTests` pins that.
             let composition = try KadrCoding.encode(project.makeVideo(), allowingLoss: true, images: store)
-            let tokens = ProjectDocument.imageTokens(in: composition)
             return ProjectDocument(
                 id: document.id,
                 name: document.name,
@@ -287,7 +309,11 @@ final class ProjectLibrary {
                 modifiedAt: document.modifiedAt,
                 schemaVersion: ProjectDocument.currentSchemaVersion,
                 composition: composition,
-                imageBlobs: store.blobs(reachableFrom: tokens),
+                // Nothing embedded any more: the images are files in the media
+                // directory, and the composition names them. A document
+                // migrated before this still carries its blobs, and loses them
+                // the first time it is saved.
+                imageBlobs: nil,
                 zoomPixelsPerSecond: document.zoomPixelsPerSecond,
                 fixedCenterPlayhead: document.fixedCenterPlayhead,
                 accentColorHex: document.accentColorHex
@@ -375,7 +401,7 @@ public struct SkippedProject: Identifiable, Hashable, Sendable {
             case .corruptJSON(let s):
                 return s
             case .unsupportedSchema(let v):
-                return "This project was saved by a newer build (schema v\(v)). Update Reels Studio to open it."
+                return "This project was saved by a newer build (schema v\(v)). Update Kadr Studio to open it."
             }
         }
     }

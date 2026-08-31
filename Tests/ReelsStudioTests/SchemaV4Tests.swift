@@ -100,7 +100,7 @@ final class SchemaV4Tests: XCTestCase {
         let loaded = try decoder.decode(ProjectDocument.self, from: v3Data)
 
         let runtime = loaded.legacyRuntimeProject()
-        let promoted = try runtime.toDocument(inheriting: loaded, images: ProjectImageStore())
+        let promoted = try runtime.toDocument(inheriting: loaded, images: ProjectImageStore.temporary())
 
         // Promotion target tracks `currentSchemaVersion` rather than pinning
         // to a specific number — when v5+ landed this test would otherwise

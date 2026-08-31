@@ -25,7 +25,7 @@ struct Project {
     /// Captions baked as `AVMetadataItem` group at export. Empty by default.
     var captions: [Caption]
 
-    /// Export preset. Reels Studio defaults to `.reelsAndShorts` (vertical 1080×1920);
+    /// Export preset. Kadr Studio defaults to `.reelsAndShorts` (vertical 1080×1920);
     /// the export sheet lets the user override.
     var preset: Preset
 

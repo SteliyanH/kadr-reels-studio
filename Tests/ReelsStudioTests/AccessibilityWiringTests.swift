@@ -38,7 +38,7 @@ final class ProjectRowAccessibilityTests: XCTestCase {
 
     func testSingularClipLabel() throws {
         let doc = try Project(clips: [TitleSequence("a", duration: 1.0)])
-            .toDocument(name: "x", images: ProjectImageStore())
+            .toDocument(name: "x", images: ProjectImageStore.temporary())
         let desc = ProjectRow.accessibilityDescription(for: doc)
         XCTAssertTrue(desc.contains("1 clip,") || desc.hasSuffix("1 clip"))
         XCTAssertFalse(desc.contains("1 clips"))
@@ -49,7 +49,7 @@ final class ProjectRowAccessibilityTests: XCTestCase {
             TitleSequence("a", duration: 1.0),
             TitleSequence("b", duration: 1.0),
             TitleSequence("c", duration: 1.0),
-        ]).toDocument(name: "x", images: ProjectImageStore())
+        ]).toDocument(name: "x", images: ProjectImageStore.temporary())
         let desc = ProjectRow.accessibilityDescription(for: doc)
         XCTAssertTrue(desc.contains("3 clips"))
     }

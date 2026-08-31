@@ -106,13 +106,13 @@ final class ProjectThumbnailRendererTests: XCTestCase {
         let doc = try Project(clips: [
             TitleSequence("a", duration: 2.0),
             TitleSequence("b", duration: 4.0),
-        ]).toDocument(name: "Six seconds", images: ProjectImageStore())
+        ]).toDocument(name: "Six seconds", images: ProjectImageStore.temporary())
         XCTAssertEqual(ProjectThumbnailTile.durationLabel(for: doc), "0:06")
     }
 
     func testDurationLabelPadsSecondsPastAMinute() throws {
         let doc = try Project(clips: [TitleSequence("a", duration: 65.0)])
-            .toDocument(name: "Long", images: ProjectImageStore())
+            .toDocument(name: "Long", images: ProjectImageStore.temporary())
         XCTAssertEqual(ProjectThumbnailTile.durationLabel(for: doc), "1:05")
     }
 

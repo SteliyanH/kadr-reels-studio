@@ -1,150 +1,99 @@
 import Foundation
-import CryptoKit
 import Kadr
 import KadrPersistence
 
-/// How this app names the images in a composition, so `KadrPersistence` can
-/// write them down.
+/// How this app names the images in a composition.
 ///
-/// An `ImageClip` holds a decoded `PlatformImage` and nothing else — by the time
-/// a composition reaches the encoder, whether that image came from the photo
-/// library or was synthesised in-process is no longer knowable from the image.
-/// That provenance is the app's to remember, which is why `ImageStore` is a
-/// protocol the host implements rather than something the package guesses at.
+/// A thin composite over ``KadrPersistence/FileImageStore``: images live as
+/// files in the library's media directory, and the project references them.
 ///
-/// Two kinds of token, matching what the app has always stored:
+/// ## Why not keep the bytes in the document
 ///
-/// - `file:<url>` — an image that lives somewhere on disk. Only the location is
-///   written to the project file.
-/// - `png:<sha256>` — an image with no file behind it (a synthesised swatch, a
-///   pasted bitmap). The PNG bytes travel in the document, keyed by their own
-///   hash.
+/// It used to. Every image with no file behind it was base64'd into the project
+/// JSON, which made a project self-contained and made it enormous — a ten-photo
+/// slideshow at full resolution is on the order of a hundred megabytes of text.
+/// Referencing is what every editor worth the name does.
 ///
-/// Hashing rather than counting matters: a token must be **stable across saves**.
-/// A store that minted `image-1`, `image-2`, … per encode would rewrite every
-/// byte of the project file on every save, defeating the sorted-key determinism
-/// the format is built for, and making "is this project dirty?" unanswerable.
+/// ## Why the tokens are relative
+///
+/// The store writes `file:<name>.png`, resolved against a directory the app
+/// locates at runtime. The previous version wrote `file:<absoluteString>`, and
+/// an iOS container path carries a UUID that changes on reinstall and on
+/// restore from backup — so an absolute reference could point nowhere while the
+/// project itself was perfectly intact.
+///
+/// ## Legacy blobs
+///
+/// A document written before this change carries its images in `imageBlobs`.
+/// Those still resolve, read-only, so nothing stops opening; the next save
+/// writes them out as files and the field disappears on its own.
 final class ProjectImageStore: ImageStore, @unchecked Sendable {
 
-    private let lock = NSLock()
+    private let files: FileImageStore
+    private let legacyBlobs: [String: Data]
 
-    /// Tokens for images whose origin the app knows, keyed by instance identity.
-    /// Populated on import and on load.
-    private var tokensByImage: [ObjectIdentifier: String] = [:]
-
-    /// Images already resolved, so a decode → encode cycle reuses the same
-    /// instances and therefore the same tokens.
-    private var imagesByToken: [String: PlatformImage] = [:]
-
-    /// PNG payloads for `png:` tokens. Serialised with the document.
-    private(set) var blobs: [String: Data] = [:]
-
-    init(blobs: [String: Data] = [:]) {
-        self.blobs = blobs
-    }
-
-    // MARK: - Registration
-
-    /// Record that `image` came from `url`, so it is stored by reference rather
-    /// than by embedding its bytes. Call this at import time.
-    func register(_ image: PlatformImage, from url: URL) {
-        lock.lock(); defer { lock.unlock() }
-        let token = "file:\(url.absoluteString)"
-        tokensByImage[ObjectIdentifier(image)] = token
-        imagesByToken[token] = image
+    /// - Parameters:
+    ///   - directory: where images are kept. One directory per library, not per
+    ///     project — content addressing means two projects using the same photo
+    ///     store it once.
+    ///   - blobs: `imageBlobs` from an older document, resolved but never written.
+    init(directory: URL, blobs: [String: Data] = [:]) throws {
+        self.files = try FileImageStore(directory: directory)
+        self.legacyBlobs = blobs
     }
 
     // MARK: - ImageStore
 
     func token(for image: PlatformImage) throws -> String {
-        lock.lock()
-        if let known = tokensByImage[ObjectIdentifier(image)] {
-            lock.unlock()
-            return known
-        }
-        lock.unlock()
-
-        guard let png = Self.pngData(from: image) else {
-            throw ProjectImageStoreError.notEncodable
-        }
-        let token = "png:\(Self.hex(SHA256.hash(data: png)))"
-
-        lock.lock(); defer { lock.unlock() }
-        tokensByImage[ObjectIdentifier(image)] = token
-        imagesByToken[token] = image
-        blobs[token] = png
-        return token
+        try files.token(for: image)
     }
 
     func image(for token: String) throws -> PlatformImage {
-        lock.lock()
-        if let cached = imagesByToken[token] {
-            lock.unlock()
-            return cached
-        }
-        let blob = blobs[token]
-        lock.unlock()
-
-        let resolved: PlatformImage?
-        if token.hasPrefix("file:") {
-            let raw = String(token.dropFirst("file:".count))
-            resolved = URL(string: raw).flatMap { url in
-                (try? Data(contentsOf: url)).flatMap(PlatformImage.init(data:))
+        do {
+            return try files.image(for: token)
+        } catch {
+            // A `png:` token from a document written before the switch. Falling
+            // back rather than failing is what makes the upgrade invisible.
+            guard let data = legacyBlobs[token], let image = PlatformImage(data: data) else {
+                throw error
             }
-        } else if let blob {
-            resolved = PlatformImage(data: blob)
-        } else {
-            resolved = nil
+            return image
         }
+    }
 
-        guard let image = resolved else {
-            throw ProjectImageStoreError.unresolvable(token)
+    /// A store over a fresh temporary directory.
+    ///
+    /// For tests and previews. Named rather than defaulted, because a store
+    /// that silently wrote to a temporary directory in production would lose
+    /// every image the next time the system cleaned it up.
+    /// Non-throwing, so it can sit in a default argument. If a directory
+    /// cannot be created under `/tmp` the process has problems this store
+    /// cannot help with, and failing loudly here beats a store that silently
+    /// resolves nothing.
+    static func temporary() -> ProjectImageStore {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kadr-studio-images-\(UUID().uuidString)")
+        guard let store = try? ProjectImageStore(directory: directory) else {
+            preconditionFailure("could not create a temporary image directory at \(directory.path)")
         }
-        lock.lock()
-        imagesByToken[token] = image
-        tokensByImage[ObjectIdentifier(image)] = token
-        lock.unlock()
-        return image
+        return store
     }
 
-    // MARK: - Helpers
+    // MARK: - Provenance
 
-    /// Only the blobs still referenced by `tokens`. Called before a save so a
-    /// project file doesn't accumulate the bytes of every image ever deleted
-    /// from it.
-    func blobs(reachableFrom tokens: Set<String>) -> [String: Data] {
-        lock.lock(); defer { lock.unlock() }
-        return blobs.filter { tokens.contains($0.key) }
+    /// Record that `image` came from `url`, copying it into the store.
+    ///
+    /// Called when migrating a legacy document whose images were referenced by
+    /// absolute path. Copying rather than re-referencing is the point: the
+    /// original may sit in a temporary directory, or in a container path that
+    /// will not survive the next install.
+    func adopt(_ image: PlatformImage, from url: URL) {
+        _ = try? files.token(for: image)
     }
 
-    private static func hex(_ digest: SHA256Digest) -> String {
-        digest.map { String(format: "%02x", $0) }.joined()
-    }
-
-    private static func pngData(from image: PlatformImage) -> Data? {
-        #if canImport(UIKit)
-        return image.pngData()
-        #else
-        guard let tiff = image.tiffRepresentation,
-              let rep = NSBitmapImageRep(data: tiff) else { return nil }
-        return rep.representation(using: .png, properties: [:])
-        #endif
-    }
-}
-
-enum ProjectImageStoreError: Error, LocalizedError, Equatable {
-    /// The image could not be turned into PNG bytes, so there is nothing to store.
-    case notEncodable
-    /// A token in the document resolves to nothing — the file moved, or the blob
-    /// was pruned.
-    case unresolvable(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .notEncodable:
-            return "An image in this project couldn't be saved."
-        case .unresolvable:
-            return "An image in this project is missing."
-        }
+    /// Delete stored images no live composition refers to.
+    @discardableResult
+    func prune(keeping tokens: Set<String>) throws -> Int {
+        try files.prune(keeping: tokens)
     }
 }

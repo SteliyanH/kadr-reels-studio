@@ -215,9 +215,10 @@ struct ProjectListView: View {
             // user lands on a real on-disk project they can keep editing.
             let runtime = SampleProject.make()
             var doc = try library.newProject(name: "Sample")
-            // The sample is built from synthesised colour swatches — images with
-            // no file behind them — so their bytes travel in the document.
-            doc = try runtime.toDocument(inheriting: doc, name: "Sample", images: ProjectImageStore())
+            // The sample is built from synthesised colour swatches. They have
+            // no file behind them, so the store writes them into the library's
+            // media directory and the project references them from there.
+            doc = try runtime.toDocument(inheriting: doc, name: "Sample", images: library.makeImageStore())
             try library.save(doc)
             path.append(doc.id)
         } catch {

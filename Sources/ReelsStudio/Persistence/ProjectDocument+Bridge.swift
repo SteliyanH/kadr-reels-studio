@@ -94,7 +94,7 @@ extension ProjectDocument {
 
     nonisolated static func seed(_ storage: ImageStorage, into store: ProjectImageStore) {
         guard case let .url(url) = storage, let image = platformImage(from: storage) else { return }
-        store.register(image, from: url)
+        store.adopt(image, from: url)
     }
 
     // MARK: Clip dispatch
@@ -404,7 +404,10 @@ extension Project {
         images store: ProjectImageStore
     ) throws -> ProjectDocument {
         let composition = try KadrCoding.encode(makeVideo(), images: store)
-        let tokens = ProjectDocument.imageTokens(in: composition)
+        // Drop image files this composition no longer refers to. Best-effort:
+        // a project that fails to tidy up is a smaller problem than a project
+        // that fails to save.
+        _ = try? store.prune(keeping: ProjectDocument.imageTokens(in: composition))
         return ProjectDocument(
             id: existing?.id ?? UUID(),
             name: existing?.name ?? name,
@@ -412,10 +415,10 @@ extension Project {
             modifiedAt: Date(),
             schemaVersion: ProjectDocument.currentSchemaVersion,
             composition: composition,
-            // Only the blobs this composition still references. Without the
-            // filter a project file grows by the bytes of every image ever
-            // deleted from it.
-            imageBlobs: store.blobs(reachableFrom: tokens),
+            // Images are files in the library's media directory now, named by
+            // the composition. Nothing is embedded, so a project file stays the
+            // size of its description rather than the size of its media.
+            imageBlobs: nil,
             zoomPixelsPerSecond: zoom?.pixelsPerSecond,
             fixedCenterPlayhead: fixedCenterPlayhead,
             accentColorHex: accentColor.flatMap { color in

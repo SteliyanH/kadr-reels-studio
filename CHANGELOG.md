@@ -4,6 +4,60 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.14.0] - 2026-08-31
+
+### Changed
+
+- **Images live as files, not inside the project.** Every image with no file
+  behind it used to be base64'd into the project JSON — self-contained, and
+  enormous: a ten-photo slideshow at full resolution is on the order of a
+  hundred megabytes of text. They now live in a `Media/` directory beside the
+  projects, and the project references them. A project file is the size of its
+  description again.
+
+- **Image references are relative.** The previous store wrote
+  `file:<absoluteString>`. An iOS container is
+  `/var/mobile/Containers/Data/Application/<UUID>/`, and **that UUID changes** —
+  on reinstall, on restore from backup, sometimes across an OS update. An
+  absolute reference written on Monday could point nowhere on Friday with the
+  project itself perfectly intact. Tokens now name a file and resolve against a
+  directory the app locates at runtime.
+
+- **`ProjectImageStore` is a thin composite** over `KadrPersistence`'s
+  `FileImageStore` rather than a hand-rolled store. Images are content-addressed,
+  so the same photo in two projects is stored once, and unreferenced files are
+  pruned on save — which the embedded-blob format never did.
+
+  Documents written before this still carry `imageBlobs`; those resolve
+  read-only, and the field disappears the first time the project is saved.
+
+## [0.13.0] - 2026-08-31
+
+### Changed
+
+- **The app is called Kadr Studio.** "Reels" is a Meta trademark for short-form
+  video, and this app's whole positioning is the association that made the name
+  useful — and made it a risk under App Store guideline 5.2.5. Named after the
+  engine instead: already ours, already the framework's name, unclaimed in this
+  category, and it reads as a tool rather than as a feature of somebody else's
+  app. "Kadr Studio" rather than bare "Kadr" so the app and the library stay
+  distinguishable across seven repositories.
+
+- **Bundle identifier is now `com.steliyanh.kadr-studio`.** Changed while it is
+  still free to: the app has never been submitted, so there is no App Store
+  record, no installed base and no receipt tied to the old identifier. After the
+  first submission this would be a different app entirely.
+
+### Not changed, deliberately
+
+- The Swift module and target stay `ReelsStudio`, and the design-token namespace
+  stays `Reel`. Neither is user-visible and neither carries any trademark
+  exposure; renaming them is a large mechanical diff across every
+  `@testable import` and snapshot name, for no benefit.
+- The repository keeps its name. GitHub redirects would cover it, but three
+  sibling repositories link here and the release URLs are already published —
+  worth doing deliberately, not as a side effect of a rename commit.
+
 ## [0.12.1] - 2026-08-31
 
 ### Fixed

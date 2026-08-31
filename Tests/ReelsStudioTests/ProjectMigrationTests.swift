@@ -15,6 +15,17 @@ import KadrPersistence
 @MainActor
 final class ProjectMigrationTests: XCTestCase {
 
+    /// Decode a file without going through `read`, which migrates on the way.
+    ///
+    /// A test that wants to drive `migrateToV6` with its own media directory
+    /// has to bypass the migration `read` already performs — otherwise it
+    /// migrates an already-migrated document, whose legacy payload is empty.
+    private func decodeRaw(at url: URL) throws -> ProjectDocument {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(ProjectDocument.self, from: try Data(contentsOf: url))
+    }
+
     private func write(_ document: ProjectDocument) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("migration-\(UUID().uuidString).json")
@@ -168,25 +179,48 @@ final class ProjectMigrationTests: XCTestCase {
 
     // MARK: - Images
 
-    func testAnEmbeddedImageSurvivesAsABlob() throws {
+    func testAnEmbeddedImageBecomesAFile() throws {
+        // Before this, an image with no file behind it was base64'd into the
+        // project JSON. It is now written into the library's media directory
+        // and referenced — the project file stays the size of its description.
         let png = ProjectMigrationTests.tinyPNG()
+        let media = FileManager.default.temporaryDirectory
+            .appendingPathComponent("media-\(UUID().uuidString)")
         let url = try write(legacyDocument(clips: [
             .image(ImageClipData(storage: .embeddedPNG(png), durationSeconds: 2)),
         ]))
-        let migrated = try ProjectLibrary.read(at: url)
+        let migrated = try ProjectLibrary.migrateToV6(decodeRaw(at: url), mediaDirectory: media)
 
         guard case .image(let image) = migrated.compositionClips.first else {
             return XCTFail("Expected an image clip")
         }
-        // No file behind it, so its bytes travel in the document under a
-        // content-addressed token.
-        XCTAssertTrue(image.imageToken.hasPrefix("png:"))
-        XCTAssertNotNil(migrated.imageBlobs?[image.imageToken])
+        XCTAssertTrue(image.imageToken.hasPrefix("file:"))
+        XCTAssertNil(migrated.imageBlobs, "images should no longer travel in the document")
+        XCTAssertEqual(
+            try FileManager.default.contentsOfDirectory(atPath: media.path).count, 1,
+            "the image should have been written into the media directory"
+        )
         XCTAssertEqual(image.duration.time.seconds, 2, accuracy: 0.0001)
     }
 
+    func testAMigratedTokenIsRelative() throws {
+        // An absolute path would break after a reinstall: the container UUID
+        // changes while the project file stays perfectly intact.
+        let media = FileManager.default.temporaryDirectory
+            .appendingPathComponent("media-\(UUID().uuidString)")
+        let url = try write(legacyDocument(clips: [
+            .image(ImageClipData(storage: .embeddedPNG(ProjectMigrationTests.tinyPNG()), durationSeconds: 1)),
+        ]))
+        let migrated = try ProjectLibrary.migrateToV6(decodeRaw(at: url), mediaDirectory: media)
+        guard case .image(let image) = migrated.compositionClips.first else {
+            return XCTFail("Expected an image clip")
+        }
+        XCTAssertFalse(image.imageToken.contains("/"), "token should name a file, not a path")
+        XCTAssertFalse(image.imageToken.contains(media.path))
+    }
+
     func testImageTokensAreContentAddressedAndStableAcrossSaves() throws {
-        let store = ProjectImageStore()
+        let store = ProjectImageStore.temporary()
         let image = ProjectMigrationTests.tinyImage()
         let first = try store.token(for: image)
         let second = try store.token(for: image)
@@ -194,30 +228,34 @@ final class ProjectMigrationTests: XCTestCase {
         // A store that minted a fresh token per encode would rewrite every byte
         // of the project file on every save.
         XCTAssertEqual(first, second)
-        XCTAssertTrue(first.hasPrefix("png:"))
+        XCTAssertTrue(first.hasPrefix("file:"))
     }
 
-    func testUnreferencedBlobsArePrunedOnSave() throws {
-        let store = ProjectImageStore()
-        _ = try store.token(for: ProjectMigrationTests.tinyImage())
-        XCTAssertEqual(store.blobs.count, 1)
+    func testUnreferencedImagesArePrunedOnSave() throws {
+        let media = FileManager.default.temporaryDirectory
+            .appendingPathComponent("media-\(UUID().uuidString)")
+        let store = try ProjectImageStore(directory: media)
+        let kept = try store.token(for: ProjectMigrationTests.tinyImage())
+        _ = try store.token(for: ProjectMigrationTests.tinyImage(CGSize(width: 6, height: 6)))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: media.path).count, 2)
 
-        // A project that dropped its only image should not keep carrying it.
-        XCTAssertTrue(store.blobs(reachableFrom: []).isEmpty)
+        // A project that dropped an image should not keep carrying its bytes.
+        XCTAssertEqual(try store.prune(keeping: [kept]), 1)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: media.path).count, 1)
     }
 
     // MARK: - Fixtures
 
-    private static func tinyImage() -> PlatformImage {
+    private static func tinyImage(_ size: CGSize = CGSize(width: 2, height: 2)) -> PlatformImage {
         #if canImport(UIKit)
-        return UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { context in
+        return UIGraphicsImageRenderer(size: size).image { context in
             UIColor.red.setFill()
-            context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
+            context.fill(CGRect(origin: .zero, size: size))
         }
         #else
-        let image = NSImage(size: CGSize(width: 2, height: 2))
+        let image = NSImage(size: size)
         image.lockFocus(); NSColor.red.setFill()
-        NSBezierPath(rect: CGRect(x: 0, y: 0, width: 2, height: 2)).fill()
+        NSBezierPath(rect: CGRect(origin: .zero, size: size)).fill()
         image.unlockFocus()
         return image
         #endif

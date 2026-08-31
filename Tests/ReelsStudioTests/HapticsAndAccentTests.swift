@@ -43,13 +43,13 @@ final class HapticEngineTests: XCTestCase {
 final class AccentColorRoundTripTests: XCTestCase {
 
     private func roundTrip(_ project: Project) throws -> Project {
-        let doc = try project.toDocument(images: ProjectImageStore())
+        let doc = try project.toDocument(images: ProjectImageStore.temporary())
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(doc)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(ProjectDocument.self, from: data).toRuntimeProject(images: ProjectImageStore())
+        return try decoder.decode(ProjectDocument.self, from: data).toRuntimeProject(images: ProjectImageStore.temporary())
     }
 
     // MARK: - Defaults
@@ -104,7 +104,7 @@ final class AccentColorRoundTripTests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         let doc = try decoder.decode(ProjectDocument.self, from: stripped)
         XCTAssertNil(doc.accentColorHex)
-        XCTAssertNil(try doc.toRuntimeProject(images: ProjectImageStore()).accentColor)
+        XCTAssertNil(try doc.toRuntimeProject(images: ProjectImageStore.temporary()).accentColor)
     }
 
     // MARK: - Hex shape
@@ -113,7 +113,7 @@ final class AccentColorRoundTripTests: XCTestCase {
     /// regression-guards the additive use of the v0.2 PlatformColor helper.
     func testAccentHexHasExpectedShape() throws {
         let project = Project(accentColor: Color(red: 1, green: 0, blue: 0))
-        let doc = try project.toDocument(images: ProjectImageStore())
+        let doc = try project.toDocument(images: ProjectImageStore.temporary())
         let hex = try? XCTUnwrap(doc.accentColorHex)
         // Either #RRGGBB (6 chars after #) or #RRGGBBAA (8 chars after #).
         XCTAssertTrue(hex?.hasPrefix("#") ?? false)
@@ -142,7 +142,7 @@ final class AccentColorRoundTripTests: XCTestCase {
             let store = ProjectStore(project: Project())
             store.setAccentColor(accent)
 
-            let doc = try store.project.toDocument(images: ProjectImageStore())
+            let doc = try store.project.toDocument(images: ProjectImageStore.temporary())
             XCTAssertEqual(doc.schemaVersion, ProjectDocument.currentSchemaVersion, "\(name) did not encode at the current schema")
 
             let restored = try roundTrip(store.project)
@@ -166,7 +166,7 @@ final class AccentColorRoundTripTests: XCTestCase {
         store.setAccentColor(nil)
         XCTAssertNil(store.project.accentColor)
 
-        let doc = try store.project.toDocument(images: ProjectImageStore())
+        let doc = try store.project.toDocument(images: ProjectImageStore.temporary())
         XCTAssertEqual(doc.schemaVersion, ProjectDocument.currentSchemaVersion)
         XCTAssertNil(doc.accentColorHex)
 

@@ -125,7 +125,7 @@ final class ProjectDocumentTests: XCTestCase {
     func testTextOverlayRoundTrips() throws {
         let overlay = TextOverlayData(
             layerID: "title",
-            text: "Reels Studio",
+            text: "Kadr Studio",
             fontSize: 56,
             fontWeight: .bold,
             colorHex: "#FFFFFF",
@@ -141,7 +141,7 @@ final class ProjectDocumentTests: XCTestCase {
             return XCTFail("Expected .text")
         }
         XCTAssertEqual(t.layerID, "title")
-        XCTAssertEqual(t.text, "Reels Studio")
+        XCTAssertEqual(t.text, "Kadr Studio")
         XCTAssertEqual(t.positionX, 0.5)
         XCTAssertEqual(t.positionY, 0.2)
         XCTAssertEqual(t.anchor, .top)
@@ -243,10 +243,10 @@ final class ProjectDocumentTests: XCTestCase {
                 ))
             ]
         )
-        let runtime = try original.toRuntimeProject(images: ProjectImageStore())
+        let runtime = try original.toRuntimeProject(images: ProjectImageStore.temporary())
         XCTAssertEqual(runtime.clips.count, 1)
         XCTAssertEqual(runtime.overlays.count, 1)
-        let rebuilt = try runtime.toDocument(inheriting: original, images: ProjectImageStore())
+        let rebuilt = try runtime.toDocument(inheriting: original, images: ProjectImageStore.temporary())
         XCTAssertEqual(rebuilt.id, original.id)
         XCTAssertEqual(rebuilt.compositionClips.count, 1)
         XCTAssertEqual(rebuilt.composition?.video.overlays.count, 1)
@@ -316,8 +316,8 @@ final class ProjectDocumentTests: XCTestCase {
             opacity: 1.0
         )
         let doc = ProjectDocument(name: "Color", legacyOverlays: [.text(original)])
-        let runtime = try doc.toRuntimeProject(images: ProjectImageStore())
-        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        let runtime = try doc.toRuntimeProject(images: ProjectImageStore.temporary())
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore.temporary())
         // v6 stores colour as components rather than hex. #FF8800 is
         // (1.0, 0.533, 0.0) — the assertion this test has always been about is
         // that the colour arrives at all, which is the bug that lost
@@ -339,8 +339,8 @@ final class ProjectDocumentTests: XCTestCase {
             transform: ProjectTransform(centerX: 0.25, centerY: 0.75, rotation: 0, scale: 1.0, anchor: .center)
         )
         let doc = ProjectDocument(name: "Title", legacyClips: [.title(title)])
-        let runtime = try doc.toRuntimeProject(images: ProjectImageStore())
-        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        let runtime = try doc.toRuntimeProject(images: ProjectImageStore.temporary())
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore.temporary())
         guard case .title(let restored) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .title")
         }
@@ -359,8 +359,8 @@ final class ProjectDocumentTests: XCTestCase {
             filters: [.exposure(0.5), .vignette(0.7)]
         )
         let doc = ProjectDocument(name: "F", legacyClips: [.video(clipData)])
-        let runtime = try doc.toRuntimeProject(images: ProjectImageStore())
-        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore())
+        let runtime = try doc.toRuntimeProject(images: ProjectImageStore.temporary())
+        let rebuilt = try runtime.toDocument(inheriting: doc, name: doc.name, images: ProjectImageStore.temporary())
         guard case .video(let v) = rebuilt.compositionClips.first else {
             return XCTFail("Expected .video")
         }
@@ -380,7 +380,7 @@ final class ProjectDocumentTests: XCTestCase {
             .filter(.mono)
             .filter(.brightness(0.5))
         let project = Project(clips: [clip])
-        let doc = try project.toDocument(name: "Mixed", images: ProjectImageStore())
+        let doc = try project.toDocument(name: "Mixed", images: ProjectImageStore.temporary())
         guard case .video(let v) = doc.compositionClips.first else {
             return XCTFail("Expected .video")
         }
@@ -405,7 +405,7 @@ final class ProjectDocumentTests: XCTestCase {
         let clip = VideoClip(url: URL(fileURLWithPath: "/tmp/x.mp4"))
             .filter(.chromaKey(key))
         let project = Project(clips: [clip])
-        let doc = try project.toDocument(name: "ChromaKey", images: ProjectImageStore())
+        let doc = try project.toDocument(name: "ChromaKey", images: ProjectImageStore.temporary())
         guard case .video(let v) = doc.compositionClips.first,
               let filter = v.filters.first, filter.kind == "chromaKey" else {
             return XCTFail("Expected .chromaKey filter")
@@ -456,7 +456,7 @@ final class ProjectDocumentTests: XCTestCase {
                 .title(TitleSequenceData(text: "Hi", durationSeconds: 0.5)),
             ]
         )
-        let runtime = try doc.toRuntimeProject(images: ProjectImageStore())
+        let runtime = try doc.toRuntimeProject(images: ProjectImageStore.temporary())
         XCTAssertEqual(runtime.clips.count, 1) // image dropped, title kept
     }
 }
