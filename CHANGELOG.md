@@ -4,6 +4,25 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.12.1] - 2026-08-31
+
+### Fixed
+
+- **Adding a text animation stopped the project saving.** v0.12.0 encodes the
+  composition strictly, and kadr-persistence reported *every* `TextAnimation` as
+  unsaveable — so choosing a fade, slide or scale from the overlay animation
+  picker made autosave throw. The editor showed "Couldn't save" and every edit
+  after that point stayed in memory only.
+
+  Fixed by kadr-persistence 0.4.0, which encodes the three animations kadr
+  ships. `AnimatedOverlaySaveTests` runs each kind the picker can emit through
+  `applyOverlayTextAnimation` — the mutation the picker actually calls — and
+  asserts the save succeeds and the animation survives a reopen.
+
+  The last of those tests asserts the general form rather than the instance:
+  nothing the editor can author may be something the document format refuses.
+  Assuming that, instead of testing it, is how this shipped.
+
 ## [0.12.0] - 2026-08-28
 
 Persistence moves to `kadr-persistence`, and the app becomes submittable.
