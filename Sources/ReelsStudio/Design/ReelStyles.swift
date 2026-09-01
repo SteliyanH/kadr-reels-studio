@@ -104,6 +104,7 @@ struct ReelSecondaryButtonStyle: ButtonStyle {
                 .frame(maxWidth: isBlock ? .infinity : nil, alignment: .leading)
                 .frame(minHeight: Reel.minHitTarget)
                 .background(configuration.isPressed ? palette.accentTint : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: palette.radius.md))
                 .overlay(
                     RoundedRectangle(cornerRadius: palette.radius.md)
                         .strokeBorder(palette.accent, lineWidth: palette.ruleWidth)
@@ -230,6 +231,7 @@ struct ReelTag: View {
             .padding(.horizontal, Reel.Space.s2)
             .padding(.vertical, Reel.Space.s1)
             .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: palette.radius.sm))
             .overlay(
                 RoundedRectangle(cornerRadius: palette.radius.sm)
                     .strokeBorder(

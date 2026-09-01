@@ -113,6 +113,7 @@ struct ExportSheet: View {
             // The app-wide selected-cell pattern: `accentTint` fill, 2pt
             // accent rule. Never an ad-hoc accent opacity.
             .background(isSelected ? palette.accentTint : palette.surface)
+            .clipShape(RoundedRectangle(cornerRadius: palette.radius.sm))
             .overlay(
                 RoundedRectangle(cornerRadius: palette.radius.sm)
                     .strokeBorder(

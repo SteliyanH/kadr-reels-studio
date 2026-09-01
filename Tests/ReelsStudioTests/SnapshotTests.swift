@@ -314,6 +314,20 @@ final class SnapshotTests: XCTestCase {
     // studio cases above apply `.reelSurface(.studio)`: a view snapshotted in
     // isolation does not inherit the ground its host would have given it.
 
+    // **The library baselines carry a 169pt top gap that the app does not.**
+    // Measured, not estimated: content starts at y=506 of 2622 (3x), against
+    // y=12 for the editor baseline. `ProjectListView` draws its own header
+    // flush to the safe-area top — see `navHeader` — so this band is not the
+    // app's appearance. It is `NavigationStack` reserving nav-bar space in
+    // isolation, which `hidingSystemNavigationBar()` cannot suppress without
+    // a real window; `.ignoresSafeArea()` was tried and moves it by 0pt.
+    //
+    // Left in deliberately. The gap is stable across runs, and everything
+    // below it — ground, accent, radii, hairline rules, type — is exactly
+    // what ships, which is what these baselines are here to protect. Do not
+    // "fix" the app to close it: the offset lives in the snapshot harness,
+    // not in `ProjectListView`.
+
     /// A library with one project, so a row and its hairline separator render
     /// rather than the empty state.
     private func makeSeededLibrary() throws -> ProjectLibrary {

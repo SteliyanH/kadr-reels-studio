@@ -106,6 +106,7 @@ struct TransitionsSheet: View {
             // named `accentTint` fill (never an ad-hoc accent opacity) and a
             // 2pt accent rule.
             .background(isSelected ? palette.accentTint : palette.surface)
+            .clipShape(RoundedRectangle(cornerRadius: palette.radius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: palette.radius.md)
                     .stroke(isSelected ? palette.accent : .clear, lineWidth: palette.ruleWidth)

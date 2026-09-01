@@ -201,10 +201,15 @@ Persistence moves to `kadr-persistence`, and the app becomes submittable.
   other. A source-scan test fails the build if a chrome surface reaches for
   the editor's globals again.
 
-- **The segmented control's selection overflowed its own rounded border.** It
-  overlays a rounded stroke but never clipped its content, so the square
-  segment fills ran past the border and squared its corners off. Dormant until
-  now: the editor's radius is 0, which makes the clip a no-op.
+- **Five controls drew a rounded border over a square fill.** The segmented
+  control, the transition cards, the export and layers cells and the
+  secondary button each overlay a `RoundedRectangle` stroke onto a
+  `.background(...)` that was never clipped, so the fill ran square into the
+  corners the stroke was rounding. Dormant until now: the editor's radius is
+  0, which makes the clip a no-op and the two shapes agree.
+
+  A test now scans for the pattern — a rounded stroke with an unclipped fill
+  behind it — and fails with the file and line.
 
 ### Fixed
 

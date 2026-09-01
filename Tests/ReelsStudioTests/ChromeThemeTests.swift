@@ -208,4 +208,46 @@ final class ChromeThemeTests: XCTestCase {
             + "globals: \(offenders.joined(separator: ", "))"
         )
     }
+
+    /// A rounded stroke drawn over an unclipped square fill.
+    ///
+    /// Three separate views shipped this: `ReelSegmentedControl`, the
+    /// transition cards, and the export/layers cells. Each overlays a
+    /// `RoundedRectangle` stroke onto a `.background(...)` that is never
+    /// clipped, so the fill runs square into the corners the stroke is
+    /// rounding. On the editor's ground the radius is 0 and the two agree,
+    /// which is why every one of them looked correct until chrome started
+    /// rounding — and why no assertion over the tokens could see it.
+    func testNoRoundedStrokeSitsOnAnUnclippedFill() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().appendingPathComponent("Sources/ReelsStudio")
+        guard let walker = FileManager.default.enumerator(
+            at: root, includingPropertiesForKeys: nil
+        ) else { return XCTFail("could not walk \(root.path)") }
+
+        var offenders: [String] = []
+        for case let file as URL in walker where file.pathExtension == "swift" {
+            let lines = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+            for (n, line) in lines.enumerated() {
+                guard line.contains("RoundedRectangle(cornerRadius: palette.radius") else { continue }
+                let ahead = lines[n..<min(n + 3, lines.count)].joined()
+                guard ahead.contains("stroke") else { continue }   // a fill is fine unclipped
+                let behind = lines[max(0, n - 8)..<n].joined()
+                let hasFill = behind.contains(".background(") || behind.contains(".background {")
+                let clipped = behind.contains("clipShape")
+                    || lines[n..<min(n + 4, lines.count)].joined().contains("clipShape")
+                if hasFill && !clipped {
+                    offenders.append("\(file.lastPathComponent):\(n + 1)")
+                }
+            }
+        }
+        XCTAssertTrue(
+            offenders.isEmpty,
+            "a rounded stroke over an unclipped fill squares off its own corners "
+            + "on any ground with a radius — clip the fill to the same shape: "
+            + "\(offenders.joined(separator: ", "))"
+        )
+    }
 }
