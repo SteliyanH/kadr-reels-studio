@@ -1062,3 +1062,65 @@ Target: **~100 new tests** across the cycle. Suite floor 65 → ~165.
 
 - **Schema bump** v1 → v2. Forward migration is automatic — v1 fields read; v2-only fields default to `nil` / `[]`. Backward migration *not* supported (a v2 document opened by an old build rejects with `unsupportedSchema`).
 - Every v0.2 user flow continues working unchanged.
+
+---
+
+## Two-theme chrome (v0.16)
+
+**Status:** ✓ Implemented
+
+App chrome — library, sheets, settings, export — follows the system appearance.
+The editor does not: it is dark in both, because footage cannot be colour-judged
+against a light field. The step from a light library into a dark editor is
+intentional and marks the change of mode.
+
+### The decision that had to be made first
+
+The approved v0.7 design and the Modernist migration recorded above are two
+different languages, and they collide on three tokens: **radius** (8–16 vs 0),
+**separators** (0.5px hairline vs 2px rule) and **accent** (system blue vs red).
+
+**Resolution: the handoff governs chrome, Modernist governs the editor.** Chrome
+gets its own geometry under `Reel.Chrome` — `Radius.sm/md/lg/sheet` and
+`ruleWidth = 0.5` — leaving `Reel.Radius` at 0 and `Reel.ruleWidth` at 2 for the
+editor, untouched. Two languages in one app, on purpose, divided along the line
+where the app changes mode.
+
+This is a deliberate narrowing of the Modernist migration's scope, not a
+reversal of it. The section above still describes the editor exactly.
+
+### The accent picker
+
+`Project.accentColor` stays. The icon quotes system blue and does not track it —
+an app icon is branding, not a live reflection of user state, the same way
+Photos and Notes do not follow their in-app accents.
+
+### Palettes
+
+| Palette | Ground | Accent | Where |
+|---|---|---|---|
+| `chromeLight` | `#F2F2F7` | `#007AFF` | chrome, light appearance |
+| `chromeDark` | `#0C0C0E` | `#0A84FF` | chrome, dark appearance |
+| `print` | `#F3F2F2` | `#EC3013` | Modernist print ground (unchanged) |
+| `studio` | `#0C0C0E` | `#FF563C` | the editor (unchanged) |
+
+Resolved by `ReelPalette.chrome(for:)`, which deliberately cannot return
+`studio` — routing the editor through an appearance resolver would make its
+darkness an accident waiting to be "fixed".
+
+### Two things the audit changed
+
+- **A new `warning` role.** On the Modernist grounds it *is* the accent, which
+  keeps that system's mono-plus-one rule. On chrome it is `#FF9500`, because
+  chrome's accent is system blue and a blue warning reads as information.
+- **`accentText` is darker than `accent` on light chrome.** `#007AFF` on a white
+  row is 4.02:1 — it clears AA for large text and fails for body. `#0062CC` is
+  5.80:1. The dark ground needs no such step: `#0A84FF` on `#1D1D20` is 4.61:1.
+  `ChromeThemeTests` asserts the ratios rather than the values.
+
+### A bug this surfaced
+
+The project duration chip filled with `palette.text` and labelled with
+`palette.onAccent`. On `chromeDark` both are white, so the label vanished into
+its own background. It is an *inverted* chip, not an accent one, so the label is
+`palette.bg` — which is what `ToastView` had been doing correctly all along.

@@ -65,7 +65,12 @@ struct ProjectThumbnailTile: View {
         if let label = ProjectThumbnailTile.durationLabel(for: document) {
             Text(label)
                 .font(Reel.Typography.numeric)
-                .foregroundStyle(palette.onAccent)
+                // `bg`, not `onAccent`: this is an *inverted* chip — a
+                // `text`-coloured fill — not an accent one. On a dark chrome
+                // ground `onAccent` and `text` are both white, so the label
+                // vanished into its own background. `ToastView` inverts the
+                // same way and was already correct.
+                .foregroundStyle(palette.bg)
                 .frame(maxWidth: .infinity)
                 .frame(height: Reel.thumbnailChipHeight)
                 .background(palette.text)

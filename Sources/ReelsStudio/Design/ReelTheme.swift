@@ -36,6 +36,36 @@ enum Reel {
         static let lg: CGFloat = 0
     }
 
+    // MARK: - Chrome geometry
+
+    /// Geometry for **app chrome only** — library, sheets, settings, export.
+    ///
+    /// The editor keeps ``Reel/Radius`` (0) and ``Reel/ruleWidth`` (2), which is
+    /// the Modernist system as authored. Chrome follows the approved v0.7
+    /// design instead: rounded blocks and hairline separators, because that is
+    /// what a list of projects on an iOS ground is expected to look like.
+    ///
+    /// Two languages in one app, deliberately. The step from a light library
+    /// into a dark editor is the point — footage cannot be judged against a
+    /// light field, and the change of language marks the change of mode.
+    enum Chrome {
+        enum Radius {
+            /// Timeline cells and small chips.
+            static let sm: CGFloat = 4
+            /// Thumbnails and toolbar cells.
+            static let md: CGFloat = 8
+            /// Rows and the New button.
+            static let lg: CGFloat = 10
+            /// Sheet top corners.
+            static let sheet: CGFloat = 16
+        }
+
+        /// Hairline separators, per the approved design. Deliberately *not*
+        /// ``Reel/ruleWidth``: the editor's 2px rule is load-bearing there and
+        /// wrong here.
+        static let ruleWidth: CGFloat = 0.5
+    }
+
     // MARK: - Rules
 
     /// Dividers are 2px, always — never a hairline, never dropped for
@@ -265,6 +295,13 @@ struct ReelPalette: Equatable {
     var accentText: Color
     /// What sits on top of a solid accent fill.
     var onAccent: Color
+    /// Something needs attention but nothing is broken — a project file that
+    /// would not load, a lossy save.
+    ///
+    /// The Modernist grounds have no warning role by design: mono plus one
+    /// accent, and the accent carries it. Chrome does need one, because its
+    /// accent is system blue and a blue warning reads as information.
+    var warning: Color
     /// Shadow ink, and how much of the `Elevation` opacity to use.
     var shadowInk: Color
     var elevationScale: Double
@@ -282,6 +319,7 @@ struct ReelPalette: Equatable {
         accentTint: Reel.Accent.a200,
         accentText: Reel.Accent.a700,
         onAccent: Color(hex: 0xF3F2F2),
+        warning: Color(hex: 0xEC3013),   // Modernist: the accent carries it
         shadowInk: Reel.Neutral.n900,
         elevationScale: 1.0
     )
@@ -299,9 +337,66 @@ struct ReelPalette: Equatable {
         accentTint: Reel.Accent.a500.opacity(0.18),
         accentText: Reel.Accent.a400,
         onAccent: Color(hex: 0x201E1D),
+        warning: Reel.Accent.a500,       // Modernist: the accent carries it
         shadowInk: .black,
         elevationScale: 2.2
     )
+}
+
+extension ReelPalette {
+
+    /// App chrome on a light ground. The approved v0.7 design, mapped onto iOS
+    /// light-mode system values.
+    ///
+    /// Distinct from ``print``, which is the Modernist print ground and carries
+    /// the red accent. Chrome quotes system blue; the editor keeps red.
+    static let chromeLight = ReelPalette(
+        bg: Color(hex: 0xF2F2F7),
+        surface: Color(hex: 0xFFFFFF),
+        surfaceRaised: Color(hex: 0xF2F2F7),
+        text: Color(hex: 0x000000),
+        textMuted: Color(hex: 0x3C3C43).opacity(0.60),
+        divider: Color(hex: 0x3C3C43).opacity(0.29),
+        accent: Color(hex: 0x007AFF),
+        accentPressed: Color(hex: 0x0062CC),
+        accentTint: Color(hex: 0x007AFF).opacity(0.12),
+        // Darker than the accent on purpose. #007AFF on a white row is 4.02:1
+        // — it clears AA for large text and *fails* for body. #0062CC is
+        // 5.80:1. This is precisely the gap the role exists to cover; the dark
+        // ground needs no such step, where the accent is already 4.61:1.
+        accentText: Color(hex: 0x0062CC),
+        onAccent: .white,
+        warning: Color(hex: 0xFF9500),
+        shadowInk: .black,
+        elevationScale: 1.0
+    )
+
+    /// App chrome on a dark ground. The approved v0.7 design.
+    static let chromeDark = ReelPalette(
+        bg: Color(hex: 0x0C0C0E),
+        surface: Color(hex: 0x1D1D20),
+        surfaceRaised: Color(hex: 0x26262A),
+        text: .white,
+        textMuted: Color(hex: 0xEBEBF5).opacity(0.50),
+        divider: Color.white.opacity(0.08),
+        accent: Color(hex: 0x0A84FF),
+        accentPressed: Color(hex: 0x0069DB),
+        accentTint: Color(hex: 0x0A84FF).opacity(0.16),
+        accentText: Color(hex: 0x0A84FF),
+        onAccent: .white,
+        warning: Color(hex: 0xFF9500),
+        shadowInk: .black,
+        elevationScale: 2.2
+    )
+
+    /// The chrome palette for a system appearance.
+    ///
+    /// Chrome only. ``studio`` is not reachable through here — the editor is
+    /// dark in both appearances by design, and routing it through a resolver
+    /// would make that an accident waiting to be "fixed".
+    static func chrome(for scheme: ColorScheme) -> ReelPalette {
+        scheme == .dark ? .chromeDark : .chromeLight
+    }
 }
 
 extension ReelPalette {

@@ -138,6 +138,7 @@ struct SettingsView: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: Reel.Space.s6) {
+                    appearanceSection
                     accentSection
                     playbackSection
                     hapticsSection
@@ -163,6 +164,22 @@ struct SettingsView: View {
                 SettingsView.commit(newValue, to: store)
             }
         )
+    }
+
+    // MARK: - Appearance
+
+    private var appearanceSection: some View {
+        @Bindable var settings = settings
+        return VStack(alignment: .leading, spacing: Reel.Space.s3) {
+            Text("Appearance · All projects").reelLabel()
+            ReelSegmentedControl(
+                options: AppearanceChoice.allCases.map { ($0, $0.displayName) },
+                selection: $settings.appearance
+            )
+            Text("The editor stays dark whichever you pick — footage can't be colour-judged against a light field.")
+                .font(Reel.Typography.caption)
+                .foregroundStyle(palette.textMuted)
+        }
     }
 
     @ViewBuilder

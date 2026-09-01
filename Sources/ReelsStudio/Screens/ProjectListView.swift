@@ -33,6 +33,7 @@ struct ProjectListView: View {
     /// alert keeps the list robust.
     @State private var errorMessage: String?
 
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.reelPalette) private var palette
 
     var body: some View {
@@ -76,9 +77,10 @@ struct ProjectListView: View {
             }
         }
         // v0.8 Tier 2 — the library is app chrome; chrome is the print
-        // ground. Set once, at the root. `EditorView` re-establishes
-        // `.studio` for its own subtree when pushed.
-        .reelSurface(.print)
+        // ground. Set once, at the root, and following the system appearance.
+        // `EditorView` re-establishes `.studio` for its own subtree when
+        // pushed — the editor is dark in both appearances.
+        .reelSurface(.chrome(for: colorScheme))
     }
 
     /// Skipped-project file selected for the JSON detail sheet.
@@ -512,10 +514,12 @@ struct SkippedProjectRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Reel.Space.s3) {
-            // v0.8 Tier 3 / Decision 4 — the scheme has no warning role. This
-            // is the one place the accent flags a problem.
+            // There is a warning role now. On the Modernist grounds it *is*
+            // the accent, which keeps that system's mono-plus-one rule; on
+            // chrome it is amber, because chrome's accent is system blue and a
+            // blue warning reads as information rather than a problem.
             Image(systemName: iconName)
-                .foregroundStyle(palette.accent)
+                .foregroundStyle(palette.warning)
                 .font(Reel.Typography.h4)
             VStack(alignment: .leading, spacing: Reel.Space.s1) {
                 Text(skipped.id)

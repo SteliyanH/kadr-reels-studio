@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// App-wide preferences. UserDefaults-backed; separate from
 /// ``ProjectDocument`` because these are device-environment scoped, not
@@ -21,6 +22,17 @@ final class AppSettings {
 
     var hapticIntensity: HapticIntensity {
         didSet { defaults.set(hapticIntensity.rawValue, forKey: Keys.hapticIntensity) }
+    }
+
+    /// Which appearance the app's chrome follows.
+    ///
+    /// Device-scoped, like ``hapticIntensity`` — an appearance preference
+    /// travels with the person, not with the project, so this is not a
+    /// `ProjectDocument` field and needs no schema bump.
+    ///
+    /// The editor is unaffected: it is dark in both appearances by design.
+    var appearance: AppearanceChoice {
+        didSet { defaults.set(appearance.rawValue, forKey: Keys.appearance) }
     }
 
     /// Whether to send a diagnostic report when the app crashes.
@@ -58,11 +70,21 @@ final class AppSettings {
         // false for an absent key, which would silently opt every existing
         // user out on upgrade rather than leaving the default in place.
         self.crashReportingEnabled = defaults.object(forKey: Keys.crashReportingEnabled) as? Bool ?? true
+        if let raw = defaults.string(forKey: Keys.appearance),
+           let parsed = AppearanceChoice(rawValue: raw) {
+            self.appearance = parsed
+        } else {
+            // Following the system is the behaviour every build before this
+            // one effectively had — chrome was light because nothing read the
+            // appearance, so `.system` is the least surprising default.
+            self.appearance = .system
+        }
     }
 
     private enum Keys {
         static let hapticIntensity = "reels-studio.hapticIntensity"
         static let crashReportingEnabled = "reels-studio.crashReportingEnabled"
+        static let appearance = "reels-studio.appearance"
     }
 }
 
@@ -79,6 +101,29 @@ enum HapticIntensity: String, Codable, CaseIterable, Sendable {
         case .off: return "Off"
         case .light: return "Light"
         case .medium: return "Medium"
+        }
+    }
+}
+
+/// Which appearance the app's chrome follows.
+enum AppearanceChoice: String, Codable, CaseIterable, Sendable {
+    case system, light, dark
+
+    var displayName: String {
+        switch self {
+        case .system: return NSLocalizedString("settings.appearance.system", comment: "")
+        case .light:  return NSLocalizedString("settings.appearance.light", comment: "")
+        case .dark:   return NSLocalizedString("settings.appearance.dark", comment: "")
+        }
+    }
+
+    /// What to hand `preferredColorScheme`. `nil` means "follow the device",
+    /// which is exactly what SwiftUI wants for the system case.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light:  return .light
+        case .dark:   return .dark
         }
     }
 }

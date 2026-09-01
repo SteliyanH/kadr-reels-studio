@@ -298,3 +298,8 @@
 "transport.fullscreen.enter" = "Enter full screen";
 "transport.fullscreen.exit" = "Exit full screen";
 "transport.time.a11y" = "%1$@ of %2$@";
+
+/* Settings — appearance */
+"settings.appearance.system" = "System";
+"settings.appearance.light" = "Light";
+"settings.appearance.dark" = "Dark";

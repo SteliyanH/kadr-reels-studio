@@ -48,3 +48,6 @@ fastlane/test_output
 .bundle/
 vendor/bundle/
 Gemfile.lock
+
+# Design handoff bundles — reference material, not source.
+design_handoff_*/
