@@ -1086,14 +1086,26 @@ gets its own geometry under `Reel.Chrome` — `Radius.sm/md/lg/sheet` and
 editor, untouched. Two languages in one app, on purpose, divided along the line
 where the app changes mode.
 
-The rule width is carried on `ReelPalette`, not read from `Reel.Chrome`
-directly. A component such as `ReelRule` or a stroked thumbnail appears on
+Both the rule width and the three corner radii are carried on `ReelPalette`,
+not read from `Reel.Chrome` directly. A component such as `ReelRule` or a stroked thumbnail appears on
 both grounds, and asking it to know which one it is on is exactly the kind of
-knowledge that goes stale. Reading `palette.ruleWidth` makes each surface
-correct by construction. `ChromeThemeTests` scans `Sheets/`, `Screens/`,
-`Export/` and `Settings/` for any remaining reference to the global and fails
-the build if one appears — the guard is mutation-checked, so it is known to
-bite rather than merely known to pass.
+knowledge that goes stale. Reading `palette.ruleWidth` and `palette.radius`
+makes each surface correct by construction. `ChromeThemeTests` scans `Sheets/`, `Screens/`,
+`Export/` and `Settings/` for any remaining reference to either global and
+fails the build if one appears — the guard is mutation-checked, so it is known
+to bite rather than merely known to pass.
+
+Defining the tokens was not the same as adopting them, and the gap was
+invisible from inside the test suite: `Reel.Chrome.Radius` and
+`Reel.Chrome.ruleWidth` both existed, and both had passing tests asserting
+they differed from the editor's values, while every chrome view went on
+drawing square corners and 2px rules. What the tests were checking was that
+the constants held the numbers they were written with. The light/dark
+snapshots are what actually showed it, and they turned up a second defect in
+the same stroke: `ReelSegmentedControl` overlays a rounded border but never
+clipped its content, so once chrome rounded, the square segment fills
+overflowed and squared the corners off again. Both were only ever visible as
+pixels.
 
 This is a deliberate narrowing of the Modernist migration's scope, not a
 reversal of it. The section above still describes the editor exactly.

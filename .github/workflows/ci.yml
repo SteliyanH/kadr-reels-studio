@@ -276,7 +276,7 @@ jobs:
           # gains or loses a test method (and in snapshot-record.yml, which
           # carries the same constant). If this number is wrong, the job is
           # red until a human reconciles it; that is the intended behaviour.
-          EXPECTED_TESTS=7
+          EXPECTED_TESTS=13
           SUMMARY=$(grep -E 'Executed [0-9]+ test' xcodebuild-snapshot.log | tail -1)
           if [ -z "$SUMMARY" ]; then
             echo "::error::No 'Executed N tests' summary line in xcodebuild's output at all. A missing summary is a red, never a green — the test bundle never got far enough to report. See the uploaded snapshot-diffs artifact for the full log."

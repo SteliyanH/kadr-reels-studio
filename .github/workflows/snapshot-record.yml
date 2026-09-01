@@ -180,7 +180,7 @@ jobs:
           # method would propose a baseline PR missing that baseline, and the
           # `snapshot` job would then be green against a test that no longer
           # exists.
-          EXPECTED_TESTS=7
+          EXPECTED_TESTS=13
           SUMMARY=$(grep -E 'Executed [0-9]+ test' xcodebuild-record.log | tail -1)
           if [ -z "$SUMMARY" ]; then
             echo "::error::No 'Executed N tests' summary line in xcodebuild's output at all. A missing summary is a red, never a green — the test bundle never got far enough to report, so nothing was recorded. See the uploaded snapshot-record-log artifact."

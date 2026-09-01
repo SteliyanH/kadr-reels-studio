@@ -155,6 +155,15 @@ final class ChromeThemeTests: XCTestCase {
 
     // MARK: - The rule belongs to the ground
 
+    func testChromeRoundsItsCornersAndTheEditorStaysSquare() {
+        XCTAssertEqual(ReelPalette.chromeLight.radius, .chrome)
+        XCTAssertEqual(ReelPalette.chromeDark.radius, .chrome)
+        XCTAssertEqual(ReelPalette.studio.radius, .modernist)
+        XCTAssertEqual(ReelPalette.print.radius, .modernist)
+        XCTAssertEqual(Reel.Radii.modernist, Reel.Radii(sm: 0, md: 0, lg: 0))
+        XCTAssertGreaterThan(Reel.Radii.chrome.lg, 0)
+    }
+
     func testChromeRulesAtAHairlineAndTheEditorStillRulesAtTwo() {
         XCTAssertEqual(ReelPalette.chromeLight.ruleWidth, Reel.Chrome.ruleWidth)
         XCTAssertEqual(ReelPalette.chromeDark.ruleWidth, Reel.Chrome.ruleWidth)
@@ -167,7 +176,7 @@ final class ChromeThemeTests: XCTestCase {
     /// has to be right on both without knowing which one it is on. If a call
     /// site reaches for the global instead, it hardcodes the editor's 2px rule
     /// into chrome and this suite cannot see it — so assert on the source.
-    func testNoChromeSurfaceReachesForTheGlobalRuleWidth() throws {
+    func testNoChromeSurfaceReachesForTheEditorsGeometry() throws {
         let root = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()   // ReelsStudioTests
             .deletingLastPathComponent()   // Tests
@@ -182,15 +191,21 @@ final class ChromeThemeTests: XCTestCase {
             ) else { continue }
             for case let file as URL in walker where file.pathExtension == "swift" {
                 let source = try String(contentsOf: file, encoding: .utf8)
-                for (n, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated()
-                where line.contains("Reel.ruleWidth") {
-                    offenders.append("\(dir)/\(file.lastPathComponent):\(n + 1)")
+                for (n, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
+                    // `Reel.Chrome.Radius` is legitimate — the sheet corner is
+                    // set on the presentation, which has no palette to read.
+                    let usesGlobal = line.contains("Reel.ruleWidth")
+                        || (line.contains("Reel.Radius.") && !line.contains("Reel.Chrome.Radius"))
+                    if usesGlobal {
+                        offenders.append("\(dir)/\(file.lastPathComponent):\(n + 1)")
+                    }
                 }
             }
         }
         XCTAssertTrue(
             offenders.isEmpty,
-            "chrome must rule from its palette, not the editor's global: \(offenders.joined(separator: ", "))"
+            "chrome must take its geometry from its palette, not the editor's "
+            + "globals: \(offenders.joined(separator: ", "))"
         )
     }
 }

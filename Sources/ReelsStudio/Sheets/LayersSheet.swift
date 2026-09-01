@@ -136,7 +136,7 @@ struct LayersSheet: View {
         .frame(minHeight: Reel.minHitTarget)
         .background(isSelected ? palette.accentTint : palette.surfaceRaised)
         .overlay(
-            RoundedRectangle(cornerRadius: Reel.Radius.sm)
+            RoundedRectangle(cornerRadius: palette.radius.sm)
                 .strokeBorder(
                     isSelected ? palette.accent : Color.clear,
                     lineWidth: palette.ruleWidth

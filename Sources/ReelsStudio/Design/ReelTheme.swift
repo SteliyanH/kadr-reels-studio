@@ -36,6 +36,18 @@ enum Reel {
         static let lg: CGFloat = 0
     }
 
+    /// A ground's three corner radii, resolved through ``ReelPalette/radius``.
+    struct Radii: Equatable, Sendable {
+        var sm: CGFloat
+        var md: CGFloat
+        var lg: CGFloat
+
+        /// The editor: square, as the Modernist system was authored.
+        static let modernist = Radii(sm: Radius.sm, md: Radius.md, lg: Radius.lg)
+        /// Chrome: rounded, per the approved v0.7 design.
+        static let chrome = Radii(sm: Chrome.Radius.sm, md: Chrome.Radius.md, lg: Chrome.Radius.lg)
+    }
+
     // MARK: - Chrome geometry
 
     /// Geometry for **app chrome only** — library, sheets, settings, export.
@@ -307,6 +319,13 @@ struct ReelPalette: Equatable {
     /// accent, and the accent carries it. Chrome does need one, because its
     /// accent is system blue and a blue warning reads as information.
     var warning: Color
+    /// Corner radii on this ground: 0 in the editor, rounded in chrome.
+    ///
+    /// Carried here for the same reason as ``ruleWidth`` — `ReelCard`,
+    /// `ReelIconButtonStyle` and the thumbnail tile all render on both
+    /// grounds, and a shared component cannot name one ground's radius
+    /// without being wrong on the other.
+    var radius: Reel.Radii
     /// How wide a separator is on this ground.
     ///
     /// The Modernist grounds rule at 2px — load-bearing there, and the guide
@@ -332,6 +351,7 @@ struct ReelPalette: Equatable {
         accentText: Reel.Accent.a700,
         onAccent: Color(hex: 0xF3F2F2),
         warning: Color(hex: 0xEC3013),   // Modernist: the accent carries it
+        radius: Reel.Radii.modernist,
         ruleWidth: Reel.ruleWidth,
         shadowInk: Reel.Neutral.n900,
         elevationScale: 1.0
@@ -351,6 +371,7 @@ struct ReelPalette: Equatable {
         accentText: Reel.Accent.a400,
         onAccent: Color(hex: 0x201E1D),
         warning: Reel.Accent.a500,       // Modernist: the accent carries it
+        radius: Reel.Radii.modernist,
         ruleWidth: Reel.ruleWidth,
         shadowInk: .black,
         elevationScale: 2.2
@@ -381,6 +402,7 @@ extension ReelPalette {
         accentText: Color(hex: 0x0062CC),
         onAccent: .white,
         warning: Color(hex: 0xFF9500),
+        radius: Reel.Radii.chrome,
         ruleWidth: Reel.Chrome.ruleWidth,
         shadowInk: .black,
         elevationScale: 1.0
@@ -400,6 +422,7 @@ extension ReelPalette {
         accentText: Color(hex: 0x0A84FF),
         onAccent: .white,
         warning: Color(hex: 0xFF9500),
+        radius: Reel.Radii.chrome,
         ruleWidth: Reel.Chrome.ruleWidth,
         shadowInk: .black,
         elevationScale: 2.2

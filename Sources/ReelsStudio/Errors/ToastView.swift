@@ -28,7 +28,7 @@ struct ToastView: View {
         .padding(.horizontal, Reel.Space.s4)
         .padding(.vertical, Reel.Space.s3)
         .background(
-            RoundedRectangle(cornerRadius: Reel.Radius.md)
+            RoundedRectangle(cornerRadius: palette.radius.md)
                 .fill(palette.text)
         )
         .reelElevation(.md)

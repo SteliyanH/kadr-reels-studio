@@ -48,9 +48,9 @@ struct ProjectThumbnailTile: View {
             }
         }
         .overlay(alignment: .bottom) { durationChip }
-        .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
+        .clipShape(RoundedRectangle(cornerRadius: palette.radius.md))
         .overlay(
-            RoundedRectangle(cornerRadius: Reel.Radius.md)
+            RoundedRectangle(cornerRadius: palette.radius.md)
                 .strokeBorder(palette.divider, style: frameStroke)
         )
         .onAppear { loadIfNeeded() }

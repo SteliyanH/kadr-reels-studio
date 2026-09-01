@@ -114,7 +114,7 @@ struct ExportSheet: View {
             // accent rule. Never an ad-hoc accent opacity.
             .background(isSelected ? palette.accentTint : palette.surface)
             .overlay(
-                RoundedRectangle(cornerRadius: Reel.Radius.sm)
+                RoundedRectangle(cornerRadius: palette.radius.sm)
                     .strokeBorder(
                         isSelected ? palette.accent : Color.clear,
                         lineWidth: palette.ruleWidth

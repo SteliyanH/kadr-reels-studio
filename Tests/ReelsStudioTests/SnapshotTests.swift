@@ -27,11 +27,20 @@ import KadrPersistence
 /// pinned and `isPlaying` false, so nothing in the tree is mid-animation or
 /// mid-load when the frame is captured.
 ///
-/// **No baselines are committed.** This machine is not a canonical renderer
-/// (it isn't even a *unique* one — two simulators on it both answer to
-/// "iPhone 17 Pro"). Baselines live only in CI's pinned-runtime job; see
-/// ``requireCIPinnedRuntime()`` below for how that's enforced, and do not
-/// commit a `__Snapshots__/` directory alongside this file.
+/// **Baselines are committed, but only CI may record them.** They live in
+/// `Tests/ReelsStudioTests/__Snapshots__/` and are what CI compares each run
+/// against — without them committed there is nothing to compare to, and the
+/// job would re-record silently and never fail. What must *not* happen is a
+/// baseline recorded here: this machine is not a canonical renderer (it isn't
+/// even a *unique* one — two simulators on it both answer to "iPhone 17 Pro"),
+/// so a laptop-recorded baseline pins a rendering CI cannot reproduce. Record
+/// only through the manual `snapshot-record.yml` workflow, and review the
+/// resulting image diff before merging it; see ``requireCIPinnedRuntime()``.
+///
+/// **Adding or removing a test here is a two-file change.** Both `ci.yml` and
+/// `snapshot-record.yml` assert an exact `EXPECTED_TESTS` count, so that a
+/// case which quietly stops being discovered fails the build instead of
+/// passing as silence. Update both alongside any change to this file.
 @MainActor
 final class SnapshotTests: XCTestCase {
 
@@ -287,5 +296,103 @@ final class SnapshotTests: XCTestCase {
         .reelSurface(.studio)
 
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 402, height: 140)))
+    }
+
+    // MARK: - Chrome, both themes
+
+    // Issue #75's remaining slice, and the reason it is worth pixels: chrome
+    // is the only part of the app whose appearance is *derived* rather than
+    // fixed. `ReelPalette.chrome(for:)` resolves against the environment's
+    // colour scheme, so every chrome surface has two correct renderings and a
+    // regression in either one is invisible to the other. The behaviour tests
+    // in ChromeThemeTests prove the palette resolves; only these prove the
+    // views actually wear what it resolved to.
+    //
+    // Each pair is the same view under both schemes. The scheme is set with
+    // `.environment(\.colorScheme,)` — the same signal `chrome(for:)` reads in
+    // the app — and the ground is applied explicitly for the same reason the
+    // studio cases above apply `.reelSurface(.studio)`: a view snapshotted in
+    // isolation does not inherit the ground its host would have given it.
+
+    /// A library with one project, so a row and its hairline separator render
+    /// rather than the empty state.
+    private func makeSeededLibrary() throws -> ProjectLibrary {
+        let library = try makeLibrary()
+        _ = try library.newProject(name: "Snapshot Fixture")
+        return library
+    }
+
+    private func assertChrome(
+        _ view: some View,
+        scheme: ColorScheme,
+        height: CGFloat,
+        file: StaticString = #filePath,
+        testName: String = #function,
+        line: UInt = #line
+    ) {
+        // Top-aligned and expanded to fill before the ground goes on, for
+        // the same reason the studio cases pad the stage: an isolated view
+        // sizes to its content, so without this the screen floats in the
+        // middle of the canvas and the ground covers only the part it
+        // occupies. Neither is what the app shows.
+        let grounded = view
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .environment(\.colorScheme, scheme)
+            .reelSurface(.chrome(for: scheme))
+        assertSnapshot(
+            of: grounded,
+            as: .image(layout: .fixed(width: 402, height: height)),
+            file: file, testName: testName, line: line
+        )
+    }
+
+    func testProjectListLight() throws {
+        try requireCIPinnedRuntime()
+        let view = ProjectListView(library: try makeSeededLibrary())
+            .environment(ToastCenter())
+            .environment(AppSettings.shared)
+        assertChrome(view, scheme: .light, height: 874)
+    }
+
+    func testProjectListDark() throws {
+        try requireCIPinnedRuntime()
+        let view = ProjectListView(library: try makeSeededLibrary())
+            .environment(ToastCenter())
+            .environment(AppSettings.shared)
+        assertChrome(view, scheme: .dark, height: 874)
+    }
+
+    func testSettingsLight() throws {
+        try requireCIPinnedRuntime()
+        let view = SettingsView(store: makeStore())
+            .environment(ToastCenter())
+            .environment(AppSettings.shared)
+        assertChrome(view, scheme: .light, height: 874)
+    }
+
+    func testSettingsDark() throws {
+        try requireCIPinnedRuntime()
+        let view = SettingsView(store: makeStore())
+            .environment(ToastCenter())
+            .environment(AppSettings.shared)
+        assertChrome(view, scheme: .dark, height: 874)
+    }
+
+    /// The sheet stands for all thirteen: they share `ReelSheetChrome`, so a
+    /// break in the shared chrome shows up here.
+    func testTransitionsSheetLight() throws {
+        try requireCIPinnedRuntime()
+        let view = TransitionsSheet(store: makeStore(), clipID: "clip-a")
+            .environment(ToastCenter())
+            .environment(AppSettings.shared)
+        assertChrome(view, scheme: .light, height: 560)
+    }
+
+    func testTransitionsSheetDark() throws {
+        try requireCIPinnedRuntime()
+        let view = TransitionsSheet(store: makeStore(), clipID: "clip-a")
+            .environment(ToastCenter())
+            .environment(AppSettings.shared)
+        assertChrome(view, scheme: .dark, height: 560)
     }
 }

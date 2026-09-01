@@ -546,8 +546,8 @@ extension EditorView {
         let palette = ReelPalette.studio
         return KadrAppearance(
             // Modernist is square and flat: zero radius, no ambient shadow.
-            cornerRadius: Reel.Radius.md,
-            laneCornerRadius: Reel.Radius.md,
+            cornerRadius: palette.radius.md,
+            laneCornerRadius: palette.radius.md,
             strokeWidth: palette.ruleWidth,
             elevation: 0,
             // White reads on any frame and stops competing with the accent —
@@ -725,7 +725,7 @@ private struct NavPairCellStyle: ButtonStyle {
                 .foregroundStyle(palette.text)
                 .frame(width: Reel.minHitTarget, height: Reel.minHitTarget)
                 .background(configuration.isPressed ? palette.accentTint : palette.surface)
-                .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.sm))
+                .clipShape(RoundedRectangle(cornerRadius: palette.radius.sm))
                 .opacity(isEnabled ? 1 : Reel.pairedControlDisabledOpacity)
                 .contentShape(Rectangle())
         }
