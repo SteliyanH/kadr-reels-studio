@@ -108,7 +108,7 @@ struct TransitionsSheet: View {
             .background(isSelected ? palette.accentTint : palette.surface)
             .overlay(
                 RoundedRectangle(cornerRadius: Reel.Radius.md)
-                    .stroke(isSelected ? palette.accent : .clear, lineWidth: Reel.ruleWidth)
+                    .stroke(isSelected ? palette.accent : .clear, lineWidth: palette.ruleWidth)
             )
             .contentShape(Rectangle())
         }

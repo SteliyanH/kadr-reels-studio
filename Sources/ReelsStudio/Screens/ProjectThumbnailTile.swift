@@ -84,10 +84,10 @@ struct ProjectThumbnailTile: View {
     private var frameStroke: StrokeStyle {
         document.compositionClips.isEmpty
             ? StrokeStyle(
-                lineWidth: Reel.ruleWidth,
+                lineWidth: palette.ruleWidth,
                 dash: [Reel.Space.s1, Reel.Space.s1]
               )
-            : StrokeStyle(lineWidth: Reel.ruleWidth)
+            : StrokeStyle(lineWidth: palette.ruleWidth)
     }
 
     // MARK: - Duration

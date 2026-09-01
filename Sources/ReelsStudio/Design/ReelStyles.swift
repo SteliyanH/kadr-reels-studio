@@ -106,7 +106,7 @@ struct ReelSecondaryButtonStyle: ButtonStyle {
                 .background(configuration.isPressed ? palette.accentTint : Color.clear)
                 .overlay(
                     RoundedRectangle(cornerRadius: Reel.Radius.md)
-                        .strokeBorder(palette.accent, lineWidth: Reel.ruleWidth)
+                        .strokeBorder(palette.accent, lineWidth: palette.ruleWidth)
                 )
                 .opacity(isEnabled ? 1 : 0.45)
                 .contentShape(Rectangle())
@@ -234,7 +234,7 @@ struct ReelTag: View {
                 RoundedRectangle(cornerRadius: Reel.Radius.sm)
                     .strokeBorder(
                         variant == .outline ? palette.divider : Color.clear,
-                        lineWidth: Reel.ruleWidth
+                        lineWidth: palette.ruleWidth
                     )
             )
     }
@@ -306,7 +306,7 @@ private struct ReelRule: ViewModifier {
         content.overlay(alignment: edge == .top ? .top : .bottom) {
             Rectangle()
                 .fill(palette.divider)
-                .frame(height: Reel.ruleWidth)
+                .frame(height: palette.ruleWidth)
         }
     }
 }
@@ -390,13 +390,13 @@ struct ReelSegmentedControl<Value: Hashable>: View {
                 if index < options.count - 1 {
                     Rectangle()
                         .fill(palette.divider)
-                        .frame(width: Reel.ruleWidth)
+                        .frame(width: palette.ruleWidth)
                 }
             }
         }
         .overlay(
             RoundedRectangle(cornerRadius: Reel.Radius.sm)
-                .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
+                .strokeBorder(palette.divider, lineWidth: palette.ruleWidth)
         )
     }
 }
@@ -500,10 +500,10 @@ struct ReelSlider: View {
                 ZStack(alignment: .leading) {
                     Rectangle()
                         .fill(palette.divider)
-                        .frame(height: Reel.ruleWidth)
+                        .frame(height: palette.ruleWidth)
                     Rectangle()
                         .fill(palette.accent)
-                        .frame(width: geo.size.width * fraction, height: Reel.ruleWidth)
+                        .frame(width: geo.size.width * fraction, height: palette.ruleWidth)
                     Rectangle()
                         .fill(palette.text)
                         .frame(width: Reel.Space.s2, height: Reel.Space.s4)

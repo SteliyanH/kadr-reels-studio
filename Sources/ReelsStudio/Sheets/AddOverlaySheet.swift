@@ -210,7 +210,7 @@ private struct TextOverlayTab: View {
                         .strokeBorder(
                             palette.accent,
                             style: StrokeStyle(
-                                lineWidth: Reel.ruleWidth,
+                                lineWidth: palette.ruleWidth,
                                 dash: [Reel.Space.s1, Reel.Space.s1]
                             )
                         )
@@ -222,7 +222,7 @@ private struct TextOverlayTab: View {
         )
         .overlay(
             Rectangle()
-                .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
+                .strokeBorder(palette.divider, lineWidth: palette.ruleWidth)
         )
         .frame(maxWidth: .infinity)
         .accessibilityHidden(true)
@@ -288,7 +288,7 @@ private struct TextOverlayTab: View {
                                 Rectangle()
                                     .strokeBorder(
                                         color == swatch.color ? palette.text : palette.divider,
-                                        lineWidth: Reel.ruleWidth
+                                        lineWidth: palette.ruleWidth
                                     )
                             )
                             .contentShape(Rectangle())
@@ -429,7 +429,7 @@ private struct PhotoOverlayTab: View {
             .reelGrayscale()
             .overlay(
                 Rectangle()
-                    .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
+                    .strokeBorder(palette.divider, lineWidth: palette.ruleWidth)
             )
             .accessibilityHidden(true)
         #else
@@ -440,7 +440,7 @@ private struct PhotoOverlayTab: View {
             .reelGrayscale()
             .overlay(
                 Rectangle()
-                    .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
+                    .strokeBorder(palette.divider, lineWidth: palette.ruleWidth)
             )
             .accessibilityHidden(true)
         #endif

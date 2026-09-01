@@ -1086,6 +1086,15 @@ gets its own geometry under `Reel.Chrome` — `Radius.sm/md/lg/sheet` and
 editor, untouched. Two languages in one app, on purpose, divided along the line
 where the app changes mode.
 
+The rule width is carried on `ReelPalette`, not read from `Reel.Chrome`
+directly. A component such as `ReelRule` or a stroked thumbnail appears on
+both grounds, and asking it to know which one it is on is exactly the kind of
+knowledge that goes stale. Reading `palette.ruleWidth` makes each surface
+correct by construction. `ChromeThemeTests` scans `Sheets/`, `Screens/`,
+`Export/` and `Settings/` for any remaining reference to the global and fails
+the build if one appears — the guard is mutation-checked, so it is known to
+bite rather than merely known to pass.
+
 This is a deliberate narrowing of the Modernist migration's scope, not a
 reversal of it. The section above still describes the editor exactly.
 

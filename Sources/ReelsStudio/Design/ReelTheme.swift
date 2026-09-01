@@ -63,6 +63,11 @@ enum Reel {
         /// Hairline separators, per the approved design. Deliberately *not*
         /// ``Reel/ruleWidth``: the editor's 2px rule is load-bearing there and
         /// wrong here.
+        ///
+        /// Views read this through ``ReelPalette/ruleWidth`` rather than
+        /// naming it directly — a component that appears on both grounds
+        /// cannot know which one it is on. ``ChromeThemeTests`` fails the
+        /// build if a chrome surface reaches for the global instead.
         static let ruleWidth: CGFloat = 0.5
     }
 
@@ -302,6 +307,13 @@ struct ReelPalette: Equatable {
     /// accent, and the accent carries it. Chrome does need one, because its
     /// accent is system blue and a blue warning reads as information.
     var warning: Color
+    /// How wide a separator is on this ground.
+    ///
+    /// The Modernist grounds rule at 2px — load-bearing there, and the guide
+    /// forbids softening it. Chrome hairlines at 0.5, per the approved design.
+    /// Carried on the palette rather than read from a global so that a view
+    /// used on both grounds is correct on both without knowing which it is on.
+    var ruleWidth: CGFloat
     /// Shadow ink, and how much of the `Elevation` opacity to use.
     var shadowInk: Color
     var elevationScale: Double
@@ -320,6 +332,7 @@ struct ReelPalette: Equatable {
         accentText: Reel.Accent.a700,
         onAccent: Color(hex: 0xF3F2F2),
         warning: Color(hex: 0xEC3013),   // Modernist: the accent carries it
+        ruleWidth: Reel.ruleWidth,
         shadowInk: Reel.Neutral.n900,
         elevationScale: 1.0
     )
@@ -338,6 +351,7 @@ struct ReelPalette: Equatable {
         accentText: Reel.Accent.a400,
         onAccent: Color(hex: 0x201E1D),
         warning: Reel.Accent.a500,       // Modernist: the accent carries it
+        ruleWidth: Reel.ruleWidth,
         shadowInk: .black,
         elevationScale: 2.2
     )
@@ -367,6 +381,7 @@ extension ReelPalette {
         accentText: Color(hex: 0x0062CC),
         onAccent: .white,
         warning: Color(hex: 0xFF9500),
+        ruleWidth: Reel.Chrome.ruleWidth,
         shadowInk: .black,
         elevationScale: 1.0
     )
@@ -385,6 +400,7 @@ extension ReelPalette {
         accentText: Color(hex: 0x0A84FF),
         onAccent: .white,
         warning: Color(hex: 0xFF9500),
+        ruleWidth: Reel.Chrome.ruleWidth,
         shadowInk: .black,
         elevationScale: 2.2
     )

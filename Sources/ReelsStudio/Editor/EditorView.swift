@@ -548,7 +548,7 @@ extension EditorView {
             // Modernist is square and flat: zero radius, no ambient shadow.
             cornerRadius: Reel.Radius.md,
             laneCornerRadius: Reel.Radius.md,
-            strokeWidth: Reel.ruleWidth,
+            strokeWidth: palette.ruleWidth,
             elevation: 0,
             // White reads on any frame and stops competing with the accent —
             // the one place the design deviates from "red = accent".
@@ -687,7 +687,7 @@ private struct EditorNavBar: View {
 
             Rectangle()
                 .fill(palette.divider)
-                .frame(width: Reel.ruleWidth, height: Reel.minHitTarget)
+                .frame(width: palette.ruleWidth, height: Reel.minHitTarget)
 
             Button(action: onRedo) {
                 Image(systemName: "arrow.uturn.forward")

@@ -139,7 +139,7 @@ struct LayersSheet: View {
             RoundedRectangle(cornerRadius: Reel.Radius.sm)
                 .strokeBorder(
                     isSelected ? palette.accent : Color.clear,
-                    lineWidth: Reel.ruleWidth
+                    lineWidth: palette.ruleWidth
                 )
         )
         .contentShape(Rectangle())

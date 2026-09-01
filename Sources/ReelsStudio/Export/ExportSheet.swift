@@ -117,7 +117,7 @@ struct ExportSheet: View {
                 RoundedRectangle(cornerRadius: Reel.Radius.sm)
                     .strokeBorder(
                         isSelected ? palette.accent : Color.clear,
-                        lineWidth: Reel.ruleWidth
+                        lineWidth: palette.ruleWidth
                     )
             )
             .contentShape(Rectangle())
@@ -138,7 +138,7 @@ struct ExportSheet: View {
         Rectangle()
             .strokeBorder(
                 isSelected ? palette.accent : palette.divider,
-                lineWidth: Reel.ruleWidth
+                lineWidth: palette.ruleWidth
             )
             .frame(width: aspect.width * scale, height: aspect.height * scale)
             .frame(

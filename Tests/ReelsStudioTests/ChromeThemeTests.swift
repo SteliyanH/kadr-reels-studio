@@ -152,4 +152,45 @@ final class ChromeThemeTests: XCTestCase {
         XCTAssertEqual(AppSettings(defaults: defaults).hapticIntensity, haptics)
         XCTAssertTrue(AppSettings(defaults: defaults).crashReportingEnabled)
     }
+
+    // MARK: - The rule belongs to the ground
+
+    func testChromeRulesAtAHairlineAndTheEditorStillRulesAtTwo() {
+        XCTAssertEqual(ReelPalette.chromeLight.ruleWidth, Reel.Chrome.ruleWidth)
+        XCTAssertEqual(ReelPalette.chromeDark.ruleWidth, Reel.Chrome.ruleWidth)
+        XCTAssertEqual(ReelPalette.studio.ruleWidth, Reel.ruleWidth)
+        XCTAssertEqual(ReelPalette.print.ruleWidth, Reel.ruleWidth)
+        XCTAssertLessThan(Reel.Chrome.ruleWidth, Reel.ruleWidth)
+    }
+
+    /// The reason the width moved onto the palette: a view used on both grounds
+    /// has to be right on both without knowing which one it is on. If a call
+    /// site reaches for the global instead, it hardcodes the editor's 2px rule
+    /// into chrome and this suite cannot see it — so assert on the source.
+    func testNoChromeSurfaceReachesForTheGlobalRuleWidth() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // ReelsStudioTests
+            .deletingLastPathComponent()   // Tests
+            .deletingLastPathComponent()   // repo root
+            .appendingPathComponent("Sources/ReelsStudio")
+        let chromeDirs = ["Sheets", "Screens", "Export", "Settings"]
+        var offenders: [String] = []
+        for dir in chromeDirs {
+            let base = root.appendingPathComponent(dir)
+            guard let walker = FileManager.default.enumerator(
+                at: base, includingPropertiesForKeys: nil
+            ) else { continue }
+            for case let file as URL in walker where file.pathExtension == "swift" {
+                let source = try String(contentsOf: file, encoding: .utf8)
+                for (n, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated()
+                where line.contains("Reel.ruleWidth") {
+                    offenders.append("\(dir)/\(file.lastPathComponent):\(n + 1)")
+                }
+            }
+        }
+        XCTAssertTrue(
+            offenders.isEmpty,
+            "chrome must rule from its palette, not the editor's global: \(offenders.joined(separator: ", "))"
+        )
+    }
 }
