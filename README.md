@@ -1,37 +1,23 @@
 # Kadr Studio
 
+[![CI](https://github.com/SteliyanH/kadr-reels-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/SteliyanH/kadr-reels-studio/actions/workflows/ci.yml)
 [![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
 [![Platforms](https://img.shields.io/badge/Platforms-iOS%2017+-blue.svg)](https://developer.apple.com)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 [![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/steliyanh)
 
-**Reels-style video editor — flagship reference app for [Kadr](https://github.com/SteliyanH/kadr).**
+**A short-form vertical video editor, and the reference app for [kadr](https://github.com/SteliyanH/kadr).**
 
-A real consumer codebase using every kadr + kadr-ui + kadr-captions + kadr-photos component end-to-end. Pick clips from Photos, drop them on a multi-lane timeline, layer overlays + filters + animated text, attach background music with auto-ducking, ingest captions from a file, and export to a Reels / TikTok / Square / Cinema preset.
+A real consumer codebase exercising all six kadr packages end to end. Import from Photos, arrange on a multi-lane timeline, layer overlays, filters and animated text, add music with auto-ducking or record a voiceover, bring in captions from a file, and export to a vertical, square or cinema preset — with projects that save and reopen exactly as you left them.
 
 ## Status
 
-**v0.11.0 shipped — correctness catch-up.** Runs on kadr 0.17.x + kadr-ui 0.16.x + kadr-captions 0.10.x + kadr-photos 0.9.x, current with the family after three cycles a release behind. No new features: three guaranteed stack overflows in the colour pickers are fixed, kadr's error text now reaches the interface with the recovery suggestion attached rather than the description alone, and the app reports its own version honestly for the first time since v0.1.0. `SWIFT_TREAT_WARNINGS_AS_ERRORS` is on — the recursions had been warned about for three releases and nothing had to act on it. Earlier cycles: v0.10.0 (transport band + snapshot harness + the Modernist design system), v0.7.0 (editor UX catch-up to CapCut-baseline parity).
+Actively developed. See [Releases](https://github.com/SteliyanH/kadr-reels-studio/releases)
+for what shipped and [CHANGELOG.md](CHANGELOG.md) for the detail — linked rather
+than summarised, because a README that restates its own latest version is wrong
+within a week. This one claimed v0.11.0 for four releases.
 
-| Layer | What's wired |
-|---|---|
-| **Launch** | `ProjectListView` → tap a project to open the editor; `+ New Project` / `Sample` empty-state CTAs; swipe-to-delete |
-| **Persistence** | schema v5 Codable `ProjectDocument` — round-trips every kadr clip / overlay / filter (with kadr v0.11 `FilterID`s) + per-property `Animation<T>` keyframes + speed curves + per-project zoom + fixed-center-playhead flag + accent color + text stroke / shadow on text overlays and titles; v1 – v4 documents continue loading; corrupt / future-schema files surface in a "Skipped projects" recovery section |
-| **Errors** | three-tier `AppError` model — transient toast / resumable sheet / catastrophic alert; single `.toastHost(_:)` modifier installed at app root |
-| **Undo / Redo** | `UndoManager`-backed snapshot history with action names; per-action granularity via `groupsByEvent = false`; top-bar arrow buttons |
-| **Two-tier toolbar** | `EditorToolbar` swaps between root verbs / clip-action / overlay-action / multi-select rows with a uniform spring crossfade; selection-driven; long-press a clip → multi-select mode |
-| **Clip actions** | `Split` (`splitClip(id:at:)` at the playhead), `Duplicate`, `Speed` (pushes `SpeedCurveSheet`), `Filters` (pushes `FiltersSheet` — per-filter sliders + add-menu + swipe-to-delete), `Delete` (with medium-thud haptic) |
-| **Overlay actions** | `Duplicate`, `Forward` / `Back` (z-order shift), `Delete` (with thud). Tap an overlay directly on the preview → `OverlayHost.onLayerTap` routes to selection |
-| **Track creation** | Long-press a clip → multi-select mode → tap to extend → toolbar `Wrap` collapses the contiguous range into a `Track {}` block (transitions ride along). Failure modes surface as transient toasts |
-| **Haptics** | `HapticEngine` actor (`snap` / `thud` / `success`): pinch-zoom + drag-to-reorder fire `snap`; delete fires `thud`; export completion fires `success` |
-| **Timeline** | per-project pinch-zoom (no undo pollution); fixed-center playhead with `ScrollViewReader` + 1×1 anchor; multi-track `Track {}` blocks with reorder / trim wiring |
-| **Accent threading** | `Project.accentColor: Color?` (per-project, persisted, nil = system tint); `.tint(_:)` applied at the editor root threads through every `.tint`-aware surface |
-| **Captions** | tabbed `AddCaptionsSheet` — Edit (`KadrUI.CaptionEditor`) / Import (SRT / VTT / iTT / ASS / SSA) |
-| **Add Overlay** | three-tab sheet — Text / Image / Sticker, backed by kadr-photos `PhotoPicker` |
-| **Settings** | gear icon → `SettingsView`: Appearance (System/Custom accent + `ColorPicker`), Playback (fixed-center playhead), Haptics (Off/Light/Medium). `AppSettings` UserDefaults-backed for app-level prefs; per-project prefs live on `Project` and round-trip through schema v3 |
-| **Accessibility** | every interactive site has `.accessibilityLabel` / `.accessibilityHint` / `.accessibilityValue` where applicable. `.help(_:)` tooltips on iPad + Mac. Disabled state (e.g. Export with no clips) greyed-not-hidden with a "why" tooltip |
-
-See [CHANGELOG.md](CHANGELOG.md) for the full release entry, [ROADMAP.md](ROADMAP.md) for what's next (v1.0 App Store submission — name lock, icon, metadata, Dynamic Type / Reduce Motion audit), and [DESIGN.md](DESIGN.md) for the v0.1 → v0.5 RFCs.
+Not yet on the App Store.
 
 ## Why this exists
 
@@ -39,21 +25,62 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release entry, [ROADMAP.md](ROADMA
 2. **Marketing material.** Screenshots / GIFs into launch posts; App Store listing as a real free indie app.
 3. **Reference implementation.** New contributors read the source instead of squinting at unit tests. Real consumer code beats unit tests for "how do I use this" questions.
 
-## Why "reels"
+## Why a short-form editor
 
-- Aligns with the launch narrative — FFmpegKit / Pixel SDK retired, vertical short-form video is exactly the gap kadr fills.
-- Maps onto kadr's surface — `Preset.reelsAndShorts` is top-billed; multi-track + overlays + BGM ducking + pinned SFX + filters are exactly the reels-style editor primitives.
-- Concrete scope. Story / reels editors have well-understood UI conventions (CapCut, InShot, Indie Aesthetic Editor); less product-design thrash than a "general video editor".
+- **It maps onto kadr's surface.** `Preset.reelsAndShorts` is top-billed, and
+  multi-track composition, overlays, ducked background music and per-clip filters
+  are exactly the primitives this kind of editor needs. Building it exercises the
+  library where the library claims to be strong.
+- **The scope is concrete.** Short-form editors have well-understood conventions,
+  which means less product-design thrash than a "general video editor" and more
+  time spent on whether the API underneath actually works.
+
+> **On the name.** This was *Reels Studio* until v0.13.0. "Reels" is a Meta
+> trademark for short-form video, and the app's positioning was precisely the
+> association that made the name useful and made it a risk under App Store
+> guideline 5.2.5. It is **Kadr Studio** now — named for the engine, which was
+> always the more honest description. The repository keeps its original name so
+> existing links and release URLs still resolve.
 
 ## Building
 
-The project is a Swift Package today (`swift build` / `swift test` work). Distribution via Xcode `.xcodeproj` lands in a follow-up — the source layout in `Sources/ReelsStudio/` is already the editor app's expected shape, so wrapping in an Xcode iOS app target is mechanical.
+The Xcode project is **generated** from `project.yml` by
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) and is not committed, so
+generate it first:
 
 ```bash
 git clone https://github.com/SteliyanH/kadr-reels-studio.git
 cd kadr-reels-studio
-swift build
+brew install xcodegen
+make project
+open ReelsStudio.xcodeproj
 ```
+
+Edit `project.yml`, not the `.xcodeproj` — the latter is overwritten on every
+generate. `Info.plist` values live there too.
+
+Signing needs your own team: set `DEVELOPMENT_TEAM` in `project.yml`, or build
+for the Simulator with `CODE_SIGNING_ALLOWED=NO`.
+
+## Requirements
+
+iOS 17 · Xcode 16 · Swift 6 · [XcodeGen](https://github.com/yonaskolb/XcodeGen)
+
+## The kadr ecosystem
+
+This app is the consumer; the libraries are the point.
+
+| Package | What this app uses it for |
+|---|---|
+| [`kadr`](https://github.com/SteliyanH/kadr) | Composition and export — the whole timeline is a `Video`. |
+| [`kadr-ui`](https://github.com/SteliyanH/kadr-ui) | Preview, timeline, transport, inspector, keyframe editor. |
+| [`kadr-persistence`](https://github.com/SteliyanH/kadr-persistence) | Saving and reopening projects. |
+| [`kadr-audio`](https://github.com/SteliyanH/kadr-audio) | Music library, voiceover recording, loudness. |
+| [`kadr-captions`](https://github.com/SteliyanH/kadr-captions) | Importing SRT / VTT caption files. |
+| [`kadr-photos`](https://github.com/SteliyanH/kadr-photos) | The photo-library picker and asset resolution. |
+
+Most of the API gaps closed across those packages were found here, by building
+against the published surface rather than from inside them.
 
 ## License
 
