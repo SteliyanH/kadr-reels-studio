@@ -189,18 +189,24 @@ private struct ReelSheetChrome: ViewModifier {
 
     let detents: Set<PresentationDetent>
 
+    /// Chrome follows the system appearance. The editor does not — see
+    /// ``ReelPalette/chrome(for:)``.
+    @Environment(\.colorScheme) private var colorScheme
+
     func body(content: Content) -> some View {
-        content
+        // Resolved once so the ground and the presentation background cannot
+        // disagree — they did, briefly, when they were two separate literals.
+        let palette = ReelPalette.chrome(for: colorScheme)
+        return content
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            // Sheets are chrome; chrome is the print ground.
-            .reelSurface(.print)
+            .reelSurface(palette)
             .reelElevation(.lg)
             .presentationDetents(detents)
             // The app draws the grabber itself — see `ReelSheetGrabber`.
             .presentationDragIndicator(.hidden)
-            // Radius is zero everywhere, including the two corners UIKit
-            // rounds for a sheet by default.
-            .presentationCornerRadius(Reel.Radius.lg)
-            .presentationBackground(ReelPalette.print.bg)
+            // Chrome rounds its sheet corners; the editor's zero radius stays
+            // the editor's. See `Reel.Chrome.Radius`.
+            .presentationCornerRadius(Reel.Chrome.Radius.sheet)
+            .presentationBackground(palette.bg)
     }
 }

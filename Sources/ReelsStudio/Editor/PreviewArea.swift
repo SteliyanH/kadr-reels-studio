@@ -75,7 +75,7 @@ struct PreviewArea: View {
         // ground-tinted role. Decision 5's "never grayscale the stage" applies
         // to the same surface for the same reason.
         .background(Reel.stageInk)
-        .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
+        .clipShape(RoundedRectangle(cornerRadius: palette.radius.md))
         // The chip rides the *fitted* frame, not the band: `.aspectRatio(.fit)`
         // resolves this view's own bounds to the letterboxed rectangle, so a
         // `.topLeading` overlay lands in the video's corner on every device

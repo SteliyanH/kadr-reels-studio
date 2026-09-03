@@ -48,9 +48,9 @@ struct ProjectThumbnailTile: View {
             }
         }
         .overlay(alignment: .bottom) { durationChip }
-        .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
+        .clipShape(RoundedRectangle(cornerRadius: palette.radius.md))
         .overlay(
-            RoundedRectangle(cornerRadius: Reel.Radius.md)
+            RoundedRectangle(cornerRadius: palette.radius.md)
                 .strokeBorder(palette.divider, style: frameStroke)
         )
         .onAppear { loadIfNeeded() }
@@ -65,7 +65,12 @@ struct ProjectThumbnailTile: View {
         if let label = ProjectThumbnailTile.durationLabel(for: document) {
             Text(label)
                 .font(Reel.Typography.numeric)
-                .foregroundStyle(palette.onAccent)
+                // `bg`, not `onAccent`: this is an *inverted* chip — a
+                // `text`-coloured fill — not an accent one. On a dark chrome
+                // ground `onAccent` and `text` are both white, so the label
+                // vanished into its own background. `ToastView` inverts the
+                // same way and was already correct.
+                .foregroundStyle(palette.bg)
                 .frame(maxWidth: .infinity)
                 .frame(height: Reel.thumbnailChipHeight)
                 .background(palette.text)
@@ -79,10 +84,10 @@ struct ProjectThumbnailTile: View {
     private var frameStroke: StrokeStyle {
         document.compositionClips.isEmpty
             ? StrokeStyle(
-                lineWidth: Reel.ruleWidth,
+                lineWidth: palette.ruleWidth,
                 dash: [Reel.Space.s1, Reel.Space.s1]
               )
-            : StrokeStyle(lineWidth: Reel.ruleWidth)
+            : StrokeStyle(lineWidth: palette.ruleWidth)
     }
 
     // MARK: - Duration

@@ -178,6 +178,39 @@ Persistence moves to `kadr-persistence`, and the app becomes submittable.
 
 ## [Unreleased]
 
+### Added
+
+- **A light and a dark chrome, and an appearance setting to choose between
+  them.** The library, sheets, settings and export now follow the system
+  appearance, or a fixed light/dark chosen in Settings. The editor stays dark
+  whichever is picked — footage cannot be colour-judged against a light field,
+  and the change of language is what marks the change of mode.
+
+### Fixed
+
+- **App chrome shipped square-cornered with the editor's 2px rules.** Both
+  `Reel.Chrome.Radius` and `Reel.Chrome.ruleWidth` existed, and both had
+  passing tests asserting they differed from the editor's values — but no view
+  read them. Chrome drew with `Reel.Radius` (all zeros) and `Reel.ruleWidth`
+  (2) throughout, so what the tests were really checking is that the constants
+  held the numbers they were written with.
+
+  Both now live on `ReelPalette`, resolved per ground, because the components
+  in question — `ReelCard`, `ReelRule`, `ReelIconButtonStyle`, the thumbnail
+  tile — render on both grounds and cannot name one without being wrong on the
+  other. A source-scan test fails the build if a chrome surface reaches for
+  the editor's globals again.
+
+- **Five controls drew a rounded border over a square fill.** The segmented
+  control, the transition cards, the export and layers cells and the
+  secondary button each overlay a `RoundedRectangle` stroke onto a
+  `.background(...)` that was never clipped, so the fill ran square into the
+  corners the stroke was rounding. Dormant until now: the editor's radius is
+  0, which makes the clip a no-op and the two shapes agree.
+
+  A test now scans for the pattern — a rounded stroke with an unclipped fill
+  behind it — and fails with the file and line.
+
 ### Fixed
 
 - **Preview audio was silenced by the ring/silent switch.** The app ran under

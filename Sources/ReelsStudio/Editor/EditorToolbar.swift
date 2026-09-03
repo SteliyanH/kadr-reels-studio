@@ -348,7 +348,7 @@ struct EditorToolbar: View {
             if isRuled {
                 Rectangle()
                     .fill(palette.divider)
-                    .frame(width: Reel.ruleWidth)
+                    .frame(width: palette.ruleWidth)
             }
         }
         // Default VoiceOver output combines the image's localized name and
