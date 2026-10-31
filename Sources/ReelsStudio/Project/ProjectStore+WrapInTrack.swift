@@ -25,11 +25,17 @@ extension ProjectStore {
     /// automatically when we walk `[minIndex...maxIndex]`). Non-contiguous
     /// selections are rejected so we don't silently reorder the chain.
     ///
-    /// The Track starts where the first wrapped clip started, so the wrapped
-    /// clips keep their place in time. kadr draws a Track over the main
-    /// chain, so a Track anchored anywhere else would cover the wrong part
-    /// of the video. Async because an untrimmed `VideoClip` only knows its
-    /// duration once its asset loads.
+    /// Wrapping keeps every clip where it was in time:
+    /// - The Track starts where the first wrapped clip started. kadr draws a
+    ///   Track over the main chain, so a Track anchored anywhere else would
+    ///   cover the wrong part of the video.
+    /// - The wrapped clips leave a black gap of the same length in the main
+    ///   chain, so the clips after them don't slide earlier underneath the
+    ///   Track. The gap is an ordinary image clip the user can select, trim
+    ///   or delete. It's left out when nothing in the chain would move.
+    ///
+    /// Async because an untrimmed `VideoClip` only knows its duration once
+    /// its asset loads.
     ///
     /// On `.ok`, multi-select state is cleared and `selectedClipID` is set
     /// to the new Track's `clipID` (well — Tracks don't have a `clipID`, so
@@ -44,17 +50,22 @@ extension ProjectStore {
         }
 
         let revisionBefore = revision
-        let start = await Self.timelineStart(ofClipAt: range.lowerBound, in: project.clips)
-        // The project changed while durations loaded, so `range` and `start`
+        let place = await Self.timelinePlace(of: range, in: project.clips)
+        // The project changed while durations loaded, so `range` and `place`
         // may describe clips that moved. Start over against the new state.
         guard revision == revisionBefore else { return await wrapInTrack(ids: ids) }
 
         let inner = Array(project.clips[range])
-        let track = Track(at: start) {
+        let track = Track(at: place.start) {
             for c in inner { c }
         }
+        var replacement: [any Clip] = [track]
+        if Self.chainNeedsGap(replacing: range, in: project.clips), place.span > .zero {
+            let gap = ImageClip.color(.black, duration: place.span).id(ClipID(UUID().uuidString))
+            replacement.insert(gap, at: 0)
+        }
         applyMutation("Wrap in Track") { project in
-            project.clips.replaceSubrange(range, with: [track])
+            project.clips.replaceSubrange(range, with: replacement)
         }
 
         // The Track has no clipID, so the inspector can't select it from
@@ -101,18 +112,25 @@ extension ProjectStore {
         return .wrap(lo...hi)
     }
 
-    /// Where the clip at `index` starts in the composition, the way kadr's
-    /// engine places it.
+    /// Where the clips in `range` sit in the composition, the way kadr's
+    /// engine places them: when the first one starts, and how much of the
+    /// main chain they take up.
     ///
     /// A clip with an explicit start time starts there. A chained clip starts
     /// after every chained clip before it, pulled back by the overlap of each
     /// transition in between: a dissolve or slide overlaps its neighbours by
     /// its duration, a fade doesn't overlap. Tracks and clips with explicit
-    /// start times sit outside the chain and don't move it.
-    nonisolated static func timelineStart(ofClipAt index: Int, in clips: [any Clip]) async -> CMTime {
-        if let explicit = clips[index].startTime { return explicit }
+    /// start times sit outside the chain, so they don't move it and take up
+    /// none of it.
+    nonisolated static func timelinePlace(
+        of range: ClosedRange<Int>,
+        in clips: [any Clip]
+    ) async -> (start: CMTime, span: CMTime) {
         var cursor = CMTime.zero
-        for clip in clips[..<index] {
+        var chainStart = CMTime.zero
+        for index in 0...range.upperBound {
+            if index == range.lowerBound { chainStart = cursor }
+            let clip = clips[index]
             if clip is Track || clip.startTime != nil { continue }
             if let transition = clip as? Transition {
                 cursor = CMTimeSubtract(cursor, overlap(of: transition))
@@ -120,7 +138,18 @@ extension ProjectStore {
                 cursor = CMTimeAdd(cursor, await placedDuration(of: clip))
             }
         }
-        return CMTimeMaximum(cursor, .zero)
+        let start = clips[range.lowerBound].startTime ?? CMTimeMaximum(chainStart, .zero)
+        return (start, CMTimeMaximum(CMTimeSubtract(cursor, chainStart), .zero))
+    }
+
+    /// Whether lifting `range` out of the main chain needs a gap left behind.
+    /// It does when chained clips follow, since they would slide earlier, and
+    /// when a transition comes right before, since the chain can't end on one.
+    nonisolated static func chainNeedsGap(replacing range: ClosedRange<Int>, in clips: [any Clip]) -> Bool {
+        let inChain: (any Clip) -> Bool = { !($0 is Track) && $0.startTime == nil }
+        let followed = clips[(range.upperBound + 1)...].contains(where: inChain)
+        let afterTransition = clips[..<range.lowerBound].last(where: inChain) is Transition
+        return followed || afterTransition
     }
 
     private nonisolated static func overlap(of transition: Transition) -> CMTime {
