@@ -263,14 +263,17 @@ struct EditorToolbar: View {
                     label: "Wrap",
                     hint: "Wraps the selected clips in a track"
                 ) {
-                    let result = store.wrapInTrack(ids: store.selectedClipIDs)
-                    if result != .ok {
-                        toasts.show(
-                            .transient(
-                                message: "Can't wrap",
-                                detail: EditorToolbar.wrapFailureDetail(result)
+                    let ids = store.selectedClipIDs
+                    Task {
+                        let result = await store.wrapInTrack(ids: ids)
+                        if result != .ok {
+                            toasts.show(
+                                .transient(
+                                    message: "Can't wrap",
+                                    detail: EditorToolbar.wrapFailureDetail(result)
+                                )
                             )
-                        )
+                        }
                     }
                 }
             )

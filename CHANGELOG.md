@@ -211,6 +211,17 @@ Persistence moves to `kadr-persistence`, and the app becomes submittable.
   A test now scans for the pattern — a rounded stroke with an unclipped fill
   behind it — and fails with the file and line.
 
+- **Wrap in Track moved the wrapped clips to 0:00.** The new Track was always
+  anchored at the start of the video, wherever the clips had been. Until kadr
+  1.1.1 that was hidden: kadr drew the main chain over a Track, so the wrapped
+  clips mostly vanished. kadr 1.1.1 draws a Track on top, as documented, and
+  the clips then played over the opening of the video.
+
+  The Track now starts where the first wrapped clip started, following the
+  overlap of any dissolve or slide before it. Clips from Photos arrive
+  untrimmed and report no duration until their file is read, so the wrap now
+  reads it first.
+
 ### Fixed
 
 - **Preview audio was silenced by the ring/silent switch.** The app ran under
