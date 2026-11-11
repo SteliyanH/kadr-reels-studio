@@ -77,8 +77,8 @@ targets:
         # XcodeGen switch, through ten releases, so `CrashReporter` tagged
         # every Sentry event `reels-studio@0.1.0+1` and no crash could be
         # attributed to the version it came from.
-        CFBundleShortVersionString: "0.15.1"
-        CFBundleVersion: "17"
+        CFBundleShortVersionString: "0.16.0"
+        CFBundleVersion: "18"
     settings:
       base:
         # Changed with the display name, while it is still free to do so: the app
