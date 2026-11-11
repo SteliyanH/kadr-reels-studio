@@ -4,6 +4,61 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.16.0] - 2026-11-11
+
+A light and a dark chrome, and Wrap in Track fixed for kadr 1.1.1.
+
+### Added
+
+- **A light and a dark chrome, and an appearance setting to choose between
+  them.** The library, sheets, settings and export now follow the system
+  appearance, or a fixed light/dark chosen in Settings. The editor stays dark
+  whichever is picked — footage cannot be colour-judged against a light field,
+  and the change of language is what marks the change of mode.
+
+### Fixed
+
+- **App chrome shipped square-cornered with the editor's 2px rules.** Both
+  `Reel.Chrome.Radius` and `Reel.Chrome.ruleWidth` existed, and both had
+  passing tests asserting they differed from the editor's values — but no view
+  read them. Chrome drew with `Reel.Radius` (all zeros) and `Reel.ruleWidth`
+  (2) throughout, so what the tests were really checking is that the constants
+  held the numbers they were written with.
+
+  Both now live on `ReelPalette`, resolved per ground, because the components
+  in question — `ReelCard`, `ReelRule`, `ReelIconButtonStyle`, the thumbnail
+  tile — render on both grounds and cannot name one without being wrong on the
+  other. A source-scan test fails the build if a chrome surface reaches for
+  the editor's globals again.
+
+- **Five controls drew a rounded border over a square fill.** The segmented
+  control, the transition cards, the export and layers cells and the
+  secondary button each overlay a `RoundedRectangle` stroke onto a
+  `.background(...)` that was never clipped, so the fill ran square into the
+  corners the stroke was rounding. Dormant until now: the editor's radius is
+  0, which makes the clip a no-op and the two shapes agree.
+
+  A test now scans for the pattern — a rounded stroke with an unclipped fill
+  behind it — and fails with the file and line.
+
+- **Wrap in Track moved the wrapped clips to 0:00.** The new Track was always
+  anchored at the start of the video, wherever the clips had been. Until kadr
+  1.1.1 that was hidden: kadr drew the main chain over a Track, so the wrapped
+  clips mostly vanished. kadr 1.1.1 draws a Track on top, as documented, and
+  the clips then played over the opening of the video.
+
+  The Track now starts where the first wrapped clip started, following the
+  overlap of any dissolve or slide before it. Clips from Photos arrive
+  untrimmed and report no duration until their file is read, so the wrap now
+  reads it first.
+
+  The wrapped clips also leave a black gap of the same length in the main
+  chain, the way an editor's "lift" does. Before, the clips after them slid
+  earlier and played underneath the Track. The gap is an ordinary clip that can
+  be trimmed or deleted. It's left out when nothing would move, and it also
+  stops the chain ending on a transition when the clip right after one is
+  wrapped, which kadr refuses to build.
+
 ## [0.15.1] - 2026-08-31
 
 ### Fixed
@@ -156,6 +211,12 @@ Persistence moves to `kadr-persistence`, and the app becomes submittable.
   0.19.0, kadr-captions 0.12.0, kadr-photos 0.11.0, kadr-audio 0.7.0,
   kadr-persistence 0.3.0.
 
+- **kadr-audio added.** Adopting it required all four adapters to accept the
+  same kadr minor first. They had drifted onto three different ones under `.upToNextMinor` pins,
+  so **no single kadr version satisfied them all** and this app had no resolvable
+  dependency graph at all. Nothing reported that until something tried to depend
+  on two of them at once.
+
 ### Added
 
 - **An app icon.** The set held only a `Contents.json` — no image at all, which
@@ -175,10 +236,6 @@ Persistence moves to `kadr-persistence`, and the app becomes submittable.
 
 - **`AccentColor.colorset` was empty**, so the global accent fell back to system
   blue anywhere the Reel palette wasn't applied explicitly.
-
-## [Unreleased]
-
-### Fixed
 
 - **Preview audio was silenced by the ring/silent switch.** The app ran under
   `.soloAmbient`, iOS's default for an app that never configures a session — so a
@@ -200,17 +257,6 @@ Persistence moves to `kadr-persistence`, and the app becomes submittable.
   `AudioFile.inspect(_:)` now runs before the track reaches the composition, and
   the failure names the file: *"“holiday.mov” doesn't contain any audio. Pick a
   music or voice file — a video file won't work here."*
-
-### Changed
-
-- **kadr family moved to the 0.20 line**, and **kadr-audio added**: kadr 0.20.x,
-  kadr-ui 0.18.x, kadr-captions 0.11.x, kadr-photos 0.10.x, kadr-audio 0.6.x.
-
-  Adopting kadr-audio required all four adapters to accept the same kadr minor
-  first. They had drifted onto three different ones under `.upToNextMinor` pins,
-  so **no single kadr version satisfied them all** and this app had no resolvable
-  dependency graph at all. Nothing reported that until something tried to depend
-  on two of them at once.
 
 ## [0.11.0] - 2026-08-25
 

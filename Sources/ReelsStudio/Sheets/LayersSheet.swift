@@ -135,11 +135,12 @@ struct LayersSheet: View {
         .padding(.vertical, Reel.Space.s2)
         .frame(minHeight: Reel.minHitTarget)
         .background(isSelected ? palette.accentTint : palette.surfaceRaised)
+        .clipShape(RoundedRectangle(cornerRadius: palette.radius.sm))
         .overlay(
-            RoundedRectangle(cornerRadius: Reel.Radius.sm)
+            RoundedRectangle(cornerRadius: palette.radius.sm)
                 .strokeBorder(
                     isSelected ? palette.accent : Color.clear,
-                    lineWidth: Reel.ruleWidth
+                    lineWidth: palette.ruleWidth
                 )
         )
         .contentShape(Rectangle())

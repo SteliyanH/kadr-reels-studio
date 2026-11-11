@@ -546,9 +546,9 @@ extension EditorView {
         let palette = ReelPalette.studio
         return KadrAppearance(
             // Modernist is square and flat: zero radius, no ambient shadow.
-            cornerRadius: Reel.Radius.md,
-            laneCornerRadius: Reel.Radius.md,
-            strokeWidth: Reel.ruleWidth,
+            cornerRadius: palette.radius.md,
+            laneCornerRadius: palette.radius.md,
+            strokeWidth: palette.ruleWidth,
             elevation: 0,
             // White reads on any frame and stops competing with the accent —
             // the one place the design deviates from "red = accent".
@@ -687,7 +687,7 @@ private struct EditorNavBar: View {
 
             Rectangle()
                 .fill(palette.divider)
-                .frame(width: Reel.ruleWidth, height: Reel.minHitTarget)
+                .frame(width: palette.ruleWidth, height: Reel.minHitTarget)
 
             Button(action: onRedo) {
                 Image(systemName: "arrow.uturn.forward")
@@ -725,7 +725,7 @@ private struct NavPairCellStyle: ButtonStyle {
                 .foregroundStyle(palette.text)
                 .frame(width: Reel.minHitTarget, height: Reel.minHitTarget)
                 .background(configuration.isPressed ? palette.accentTint : palette.surface)
-                .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.sm))
+                .clipShape(RoundedRectangle(cornerRadius: palette.radius.sm))
                 .opacity(isEnabled ? 1 : Reel.pairedControlDisabledOpacity)
                 .contentShape(Rectangle())
         }

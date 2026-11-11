@@ -50,6 +50,10 @@ struct ReelsStudioApp: App {
                 .environment(toastCenter)
                 .environment(settings)
                 .toastHost(toastCenter)
+                // `nil` for `.system`, which is what SwiftUI wants for "follow
+                // the device". Applied at the root so sheets — presented
+                // outside the view hierarchy — inherit it too.
+                .preferredColorScheme(settings.appearance.colorScheme)
         }
     }
 }
@@ -87,6 +91,7 @@ struct LibraryHostView: View {
     var host: LibraryHost
 
     @Environment(\.reelPalette) private var palette
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         if let library = host.library {
@@ -111,10 +116,12 @@ struct LibraryHostView: View {
             .frame(maxWidth: Reel.emptyStateMeasure, alignment: .leading)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(Reel.Space.s4)
-            // v0.8 Tier 2 — the library-failure screen is app chrome; chrome
-            // is the print ground. The happy path is `ProjectListView`, which
-            // establishes the same ground at its own root.
-            .reelSurface(.print)
+            // v0.8 Tier 2 — the library-failure screen is app chrome, and
+            // chrome follows the system appearance. The happy path is
+            // `ProjectListView`, which establishes the same ground at its own
+            // root. `LibraryHostView` exists precisely so this can read the
+            // environment — an `App` cannot.
+            .reelSurface(.chrome(for: colorScheme))
         }
     }
 }

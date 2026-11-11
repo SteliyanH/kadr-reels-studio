@@ -72,7 +72,7 @@ struct ReelPrimaryButtonStyle: ButtonStyle {
                 .frame(maxWidth: isBlock ? .infinity : nil, alignment: .leading)
                 .frame(minHeight: Reel.minHitTarget)
                 .background(configuration.isPressed ? palette.accentPressed : palette.accent)
-                .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
+                .clipShape(RoundedRectangle(cornerRadius: palette.radius.md))
                 .opacity(isEnabled ? 1 : 0.45)
                 .contentShape(Rectangle())
         }
@@ -104,9 +104,10 @@ struct ReelSecondaryButtonStyle: ButtonStyle {
                 .frame(maxWidth: isBlock ? .infinity : nil, alignment: .leading)
                 .frame(minHeight: Reel.minHitTarget)
                 .background(configuration.isPressed ? palette.accentTint : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: palette.radius.md))
                 .overlay(
-                    RoundedRectangle(cornerRadius: Reel.Radius.md)
-                        .strokeBorder(palette.accent, lineWidth: Reel.ruleWidth)
+                    RoundedRectangle(cornerRadius: palette.radius.md)
+                        .strokeBorder(palette.accent, lineWidth: palette.ruleWidth)
                 )
                 .opacity(isEnabled ? 1 : 0.45)
                 .contentShape(Rectangle())
@@ -168,7 +169,7 @@ struct ReelIconButtonStyle: ButtonStyle {
                 .foregroundStyle(isProminent ? palette.onAccent : palette.text)
                 .frame(width: Reel.minHitTarget, height: Reel.minHitTarget)
                 .background(fill)
-                .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.sm))
+                .clipShape(RoundedRectangle(cornerRadius: palette.radius.sm))
                 .opacity(isEnabled ? 1 : 0.45)
                 .contentShape(Rectangle())
         }
@@ -230,11 +231,12 @@ struct ReelTag: View {
             .padding(.horizontal, Reel.Space.s2)
             .padding(.vertical, Reel.Space.s1)
             .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: palette.radius.sm))
             .overlay(
-                RoundedRectangle(cornerRadius: Reel.Radius.sm)
+                RoundedRectangle(cornerRadius: palette.radius.sm)
                     .strokeBorder(
                         variant == .outline ? palette.divider : Color.clear,
-                        lineWidth: Reel.ruleWidth
+                        lineWidth: palette.ruleWidth
                     )
             )
     }
@@ -306,7 +308,7 @@ private struct ReelRule: ViewModifier {
         content.overlay(alignment: edge == .top ? .top : .bottom) {
             Rectangle()
                 .fill(palette.divider)
-                .frame(height: Reel.ruleWidth)
+                .frame(height: palette.ruleWidth)
         }
     }
 }
@@ -320,7 +322,7 @@ private struct ReelCard: ViewModifier {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(padding)
             .background(palette.surface)
-            .clipShape(RoundedRectangle(cornerRadius: Reel.Radius.md))
+            .clipShape(RoundedRectangle(cornerRadius: palette.radius.md))
     }
 }
 
@@ -390,13 +392,19 @@ struct ReelSegmentedControl<Value: Hashable>: View {
                 if index < options.count - 1 {
                     Rectangle()
                         .fill(palette.divider)
-                        .frame(width: Reel.ruleWidth)
+                        .frame(width: palette.ruleWidth)
                 }
             }
         }
+        // Clip before the border goes on. The segment fills are square and
+        // run to the control's edge, so on a ground with a radius they
+        // overflow the rounded border and square off its corners. On the
+        // editor's ground the radius is 0 and this is a no-op — which is
+        // why the bug only appeared once chrome started rounding.
+        .clipShape(RoundedRectangle(cornerRadius: palette.radius.sm))
         .overlay(
-            RoundedRectangle(cornerRadius: Reel.Radius.sm)
-                .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
+            RoundedRectangle(cornerRadius: palette.radius.sm)
+                .strokeBorder(palette.divider, lineWidth: palette.ruleWidth)
         )
     }
 }
@@ -500,10 +508,10 @@ struct ReelSlider: View {
                 ZStack(alignment: .leading) {
                     Rectangle()
                         .fill(palette.divider)
-                        .frame(height: Reel.ruleWidth)
+                        .frame(height: palette.ruleWidth)
                     Rectangle()
                         .fill(palette.accent)
-                        .frame(width: geo.size.width * fraction, height: Reel.ruleWidth)
+                        .frame(width: geo.size.width * fraction, height: palette.ruleWidth)
                     Rectangle()
                         .fill(palette.text)
                         .frame(width: Reel.Space.s2, height: Reel.Space.s4)

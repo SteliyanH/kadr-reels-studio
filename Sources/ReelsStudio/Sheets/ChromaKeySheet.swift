@@ -114,7 +114,7 @@ struct ChromaKeySheet: View {
         if let samplePoint {
             GeometryReader { proxy in
                 Rectangle()
-                    .strokeBorder(palette.text, lineWidth: Reel.ruleWidth)
+                    .strokeBorder(palette.text, lineWidth: palette.ruleWidth)
                     .frame(width: Reel.reticleSize, height: Reel.reticleSize)
                     .position(
                         x: samplePoint.x * proxy.size.width,
@@ -136,7 +136,7 @@ struct ChromaKeySheet: View {
                     .frame(width: Reel.swatchSize, height: Reel.swatchSize)
                     .overlay(
                         Rectangle()
-                            .strokeBorder(palette.divider, lineWidth: Reel.ruleWidth)
+                            .strokeBorder(palette.divider, lineWidth: palette.ruleWidth)
                     )
                 // Commander's ruling: this picker is functional, not chrome.
                 // The sheet around it is restyled; the control itself is left
