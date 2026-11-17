@@ -247,8 +247,9 @@ extension ProjectStore {
     /// — `TextOverlay` keyframes use the enum-driven `textAnimation`
     /// surface instead.
     func addOverlayKeyframe(layerID: LayerID, property: OverlayProperty, time: CMTime) {
+        let canvas = video.preset.resolution
         updateOverlay(id: layerID, actionName: "Add Keyframe") { overlay in
-            ProjectStore.upsertOverlayKeyframe(overlay, property: property, time: time)
+            ProjectStore.upsertOverlayKeyframe(overlay, property: property, time: time, canvas: canvas)
         }
     }
 
@@ -266,10 +267,14 @@ extension ProjectStore {
 
     // MARK: - Pure overlay-keyframe transforms
 
+    /// `canvas` is the composition's render size. A size keyframe on an overlay
+    /// with no explicit size records the size kadr draws it at, so adding the
+    /// keyframe does not resize it. (It used to record the full canvas.)
     nonisolated static func upsertOverlayKeyframe(
         _ overlay: any Overlay,
         property: OverlayProperty,
-        time: CMTime
+        time: CMTime,
+        canvas: CGSize
     ) -> any Overlay {
         switch property {
         case .position:
@@ -277,7 +282,7 @@ extension ProjectStore {
             let updated = upsertKeyframe(overlay.positionAnimation, time: time, value: value)
             return setPositionAnimation(overlay, animation: updated)
         case .size:
-            let value = overlay.size ?? .normalized(width: 1.0, height: 1.0)
+            let value = overlay.size ?? OverlayDefaults.naturalSize(of: overlay, canvas: canvas)
             let updated = upsertKeyframe(overlay.sizeAnimation, time: time, value: value)
             return setSizeAnimation(overlay, animation: updated)
         }

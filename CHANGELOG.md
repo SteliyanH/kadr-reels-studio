@@ -4,6 +4,34 @@ All notable changes to Reels Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Text, captions and photos land where they are placed, in preview and in export.
+
+### Fixed
+
+- **Text and burned-in captions are placed where they are put.** With kadr
+  1.2, text without an explicit size is laid out in a box that fits it, so
+  centred text is centred and bottom captions sit at the bottom. Before, the
+  export drew centred text near the top of the frame and bottom captions near
+  the top as well. Bold text is bold.
+- **The preview matches the export.** With kadr-ui 0.22, overlay text is drawn
+  at the export's scale, so a 56 pt title no longer previews about three times
+  too big and cut short to "…".
+- **A new photo or sticker starts at a size that fits.** It used to have no
+  size, so the export drew it at its full imported size (up to 1024 pixels),
+  covering most of a reel, while the preview showed a small box. It now starts
+  scaled to fit half the canvas width and 40% of its height, and the inspector
+  changes it as before.
+- **Adding a size keyframe no longer resizes the overlay.** On an overlay
+  without an explicit size, the first size keyframe recorded the full canvas,
+  so the overlay jumped to fill the frame. It now records the size the overlay
+  is drawn at.
+
+### Changed
+
+- kadr 1.2.0, kadr-ui 0.22.0 and kadr-captions 0.13.0.
+
 ## [0.16.0] - 2026-11-11
 
 A light and a dark chrome, and Wrap in Track fixed for kadr 1.1.1.
