@@ -34,6 +34,8 @@ Sources/ReelsStudio/Info.plist
 .cursor/
 .aider*
 .continue/
+.war-council/
+war-council.yaml
 
 # fastlane (v0.6 Tier 8)
 build/
