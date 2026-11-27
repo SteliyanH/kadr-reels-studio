@@ -19,17 +19,17 @@ settings:
 packages:
   Kadr:
     url: https://github.com/SteliyanH/kadr.git
-    # kadr is 1.0: `from:` is .upToNextMajor and now means what it says.
-    from: 1.0.0
+    # kadr is 1.x: `from:` is .upToNextMajor. 1.2 sizes un-sized text to fit.
+    from: 1.2.0
   KadrPersistence:
     url: https://github.com/SteliyanH/kadr-persistence.git
     minorVersion: 0.6.0
   KadrUI:
     url: https://github.com/SteliyanH/kadr-ui.git
-    minorVersion: 0.21.0
+    minorVersion: 0.22.0
   KadrCaptions:
     url: https://github.com/SteliyanH/kadr-captions.git
-    minorVersion: 0.12.0
+    minorVersion: 0.13.0
   KadrPhotos:
     url: https://github.com/SteliyanH/kadr-photos.git
     minorVersion: 0.11.0
@@ -77,8 +77,8 @@ targets:
         # XcodeGen switch, through ten releases, so `CrashReporter` tagged
         # every Sentry event `reels-studio@0.1.0+1` and no crash could be
         # attributed to the version it came from.
-        CFBundleShortVersionString: "0.16.0"
-        CFBundleVersion: "18"
+        CFBundleShortVersionString: "0.16.1"
+        CFBundleVersion: "19"
     settings:
       base:
         # Changed with the display name, while it is still free to do so: the app

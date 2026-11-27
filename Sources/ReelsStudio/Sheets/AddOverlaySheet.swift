@@ -485,20 +485,27 @@ private struct PhotoOverlayTab: View {
     private func addPhotoOverlay() {
         guard let image = pickedImage else { return }
         let layerID = LayerID(UUID().uuidString)
+        // Without a size kadr draws the photo at its full pixel size, which covers
+        // most of a reel. Start it at a size that fits; the inspector can change it.
+        let size = OverlayDefaults.pixelSize(of: image).flatMap {
+            OverlayDefaults.addedImageSize(pixels: $0, canvas: store.video.preset.resolution)
+        }
         switch kind {
         case .image:
-            let overlay = ImageOverlay(image)
+            var overlay = ImageOverlay(image)
                 .position(.center)
                 .anchor(.center)
                 .opacity(opacity)
                 .id(layerID)
+            if let size { overlay = overlay.size(size) }
             store.append(overlay: overlay)
         case .sticker:
-            let overlay = StickerOverlay(image)
+            var overlay = StickerOverlay(image)
                 .position(.center)
                 .anchor(.center)
                 .opacity(opacity)
                 .id(layerID)
+            if let size { overlay = overlay.size(size) }
             store.append(overlay: overlay)
         }
         dismiss()

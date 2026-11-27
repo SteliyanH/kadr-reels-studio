@@ -121,9 +121,9 @@ jobs:
       # enough — a first cut of the picker below fell back to a plain name
       # sort and landed on "iPhone Air" purely because "Air" outsorts "17
       # Pro" alphabetically, an accident that would silently re-pick a
-      # different model if the runner's device list ever reordered. Match
-      # the repo's existing convention (war-council.yaml's `tests` gate) so
-      # there is one deliberately-chosen device, not a sort-order accident.
+      # different model if the runner's device list ever reordered. Use the
+      # same device the local test runs use, so there is one
+      # deliberately-chosen device, not a sort-order accident.
       SNAPSHOT_IOS_DEVICE: 'iPhone 17 Pro'
 
     steps:
@@ -250,7 +250,7 @@ jobs:
           XCODEBUILD_EXIT=${PIPESTATUS[0]}
 
           # This repo has already shipped a permanently-green gate that ran
-          # 0 tests (see war-council.yaml's history on the a11y gate) — a
+          # 0 tests (an `-only-testing:` filter naming a file, not a class) — a
           # "TEST SUCCEEDED" or even a clean exit code proves nothing on its
           # own. An executed-count check ALONE is not enough either: the
           # first cut of this guard was itself permanently green. When every
