@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-11-27
+
 Text, captions and photos land where they are placed, in preview and in export.
 
 ### Fixed
